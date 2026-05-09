@@ -210,7 +210,10 @@ function IOSDevice({
       </div>
       {/* nav + content */}
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {title !== undefined && <IOSNavBar title={title} dark={dark} />}
+        {title !== undefined
+          ? <IOSNavBar title={title} dark={dark} />
+          : <div style={{ height: 62, flexShrink: 0 }} />
+        }
         <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
         {keyboard && <IOSKeyboard dark={dark} />}
       </div>
