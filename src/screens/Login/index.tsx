@@ -1,9 +1,9 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Logo } from '@/components/shared/Logo'
 import { TourneyMark } from '@/components/shared/TourneyMark'
 import { useAuthStore } from '@/stores/auth.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
+import { MOCK_ME } from '@/data/mock'
 import { asset } from '@/lib/utils'
 
 export function LoginScreen() {
@@ -12,23 +12,21 @@ export function LoginScreen() {
 }
 
 function useEnter() {
-  const [loading, setLoading] = useState(false)
-  const { signInWithEmail } = useAuthStore()
+  const setUser = useAuthStore((s) => s.setUser)
   const navigate = useNavigate()
 
-  const handleEnter = async () => {
-    setLoading(true)
-    await signInWithEmail('mock@suprema.group')
+  const handleEnter = () => {
+    setUser(MOCK_ME)
     navigate('/home')
   }
 
-  return { loading, handleEnter }
+  return { handleEnter }
 }
 
 // ─── Mobile ───────────────────────────────────────────────────────────────────
 
 function LoginMobile() {
-  const { loading, handleEnter } = useEnter()
+  const { handleEnter } = useEnter()
 
   return (
     <div className="min-h-dvh flex flex-col relative bg-ink">
@@ -51,12 +49,8 @@ function LoginMobile() {
           só pra galera da firma
         </p>
 
-        <button
-          onClick={handleEnter}
-          disabled={loading}
-          className="btn-yellow w-full justify-center disabled:opacity-50"
-        >
-          {loading ? 'ENTRANDO…' : 'ENTRAR →'}
+        <button onClick={handleEnter} className="btn-yellow w-full justify-center">
+          ENTRAR →
         </button>
 
         <p className="font-mono text-[10px] text-paper/30 tracking-eyebrow text-center mt-6">
@@ -70,7 +64,7 @@ function LoginMobile() {
 // ─── Desktop ──────────────────────────────────────────────────────────────────
 
 function LoginDesktop() {
-  const { loading, handleEnter } = useEnter()
+  const { handleEnter } = useEnter()
 
   return (
     <div className="min-h-dvh flex bg-paper">
@@ -92,7 +86,7 @@ function LoginDesktop() {
         </div>
       </div>
 
-      {/* Right — Form */}
+      {/* Right — Button */}
       <div className="w-full lg:w-[480px] flex flex-col justify-center px-10 py-12 bg-paper">
         <Logo height={40} className="mb-10" />
 
@@ -105,12 +99,8 @@ function LoginDesktop() {
           só pra galera da Suprema
         </p>
 
-        <button
-          onClick={handleEnter}
-          disabled={loading}
-          className="btn-yellow w-full justify-center disabled:opacity-50"
-        >
-          {loading ? 'ENTRANDO…' : 'ENTRAR →'}
+        <button onClick={handleEnter} className="btn-yellow w-full justify-center">
+          ENTRAR →
         </button>
 
         <p className="font-mono text-[10px] text-ink-4 text-center mt-4">

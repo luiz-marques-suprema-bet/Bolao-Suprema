@@ -31,6 +31,7 @@ export const useAuthStore = create<AuthState>()(
           user,
           isAuthenticated: !!user,
           profileComplete: !!(user?.firstName && user?.dept),
+          isLoading: false,
         }),
 
       signInWithEmail: async (email: string) => {
