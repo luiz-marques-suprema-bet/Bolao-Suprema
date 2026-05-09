@@ -42,13 +42,14 @@ export type MatchStage =
 export interface Match {
   id: string
   stage: MatchStage
-  stageLabel: string // e.g. "OITAVAS · 1"
+  stageLabel: string // e.g. "GRUPO A · MD1" / "OITAVAS · 1"
+  group?: string     // e.g. 'A' … 'L' (group stage only)
   home: Team
   away: Team
   homeScore: number | null
   awayScore: number | null
-  date: string // e.g. "SEX 03 JUL"
-  time: string // e.g. "16:00"
+  date: string // e.g. "QUI 11 JUN"
+  time: string // e.g. "15:00"
   venue: string
   status: MatchStatus
   liveMinute?: string // e.g. "68'"

@@ -149,10 +149,14 @@ function PredictionMobile({ idx, setIdx }: { idx: number; setIdx: (i: number) =>
       </div>
 
       <div className="flex-1 px-4 py-6 space-y-6">
-        {/* Date / venue */}
-        <div className="text-center">
-          <p className="font-serif-it text-green-deep text-xl">palpita aí, jogador.</p>
-          <p className="font-mono text-[10px] text-ink-3 mt-1">{match.date} · {match.time} · {match.venue.split('·')[0].trim()}</p>
+        {/* Editorial heading */}
+        <div>
+          <div className="font-display text-6xl leading-none text-ink">PALPITA</div>
+          <div className="flex items-baseline gap-3">
+            <span className="font-serif-it text-4xl text-green-deep leading-none">aí,</span>
+            <span className="font-mono text-[11px] tracking-eyebrow text-ink-3 self-end mb-1">jogador.</span>
+          </div>
+          <p className="font-mono text-[10px] text-ink-3 mt-2">{match.date} · {match.time} · {match.venue.split('·')[0].trim()}</p>
         </div>
 
         {/* Match card */}
@@ -234,8 +238,12 @@ function PredictionDesktop({ idx, setIdx }: { idx: number; setIdx: (i: number) =
           {/* Center — main */}
           <div className="flex flex-col gap-6">
             <div>
-              <h2 className="font-serif-it text-green-deep text-3xl">palpita aí, jogador.</h2>
-              <p className="font-mono text-[11px] text-ink-3 mt-1">{match.date} · {match.time} · {match.venue}</p>
+              <div className="font-display text-7xl leading-none text-ink">PALPITA</div>
+              <div className="flex items-baseline gap-4">
+                <span className="font-serif-it text-5xl text-green-deep leading-none">aí,</span>
+                <span className="font-mono text-[11px] tracking-eyebrow text-ink-3 self-end mb-1">jogador.</span>
+              </div>
+              <p className="font-mono text-[11px] text-ink-3 mt-2">{match.date} · {match.time} · {match.venue}</p>
             </div>
 
             <div className="border-2 border-ink p-6">
