@@ -126,6 +126,17 @@ export interface RankingEntry {
 
 // ─── Chat / Resenha ──────────────────────────────────────────────────────────
 
+export interface PollOption {
+  id: string
+  text: string
+}
+
+export interface ChatPoll {
+  question: string
+  options: PollOption[]
+  votes: Record<string, string> // userId → optionId
+}
+
 export interface ChatMessage {
   id: string
   userId: string
@@ -136,6 +147,10 @@ export interface ChatMessage {
   color: string
   time: string
   text: string
+  type?: 'text' | 'gif' | 'poll'
+  gifUrl?: string
+  isPinned?: boolean
+  poll?: ChatPoll
   reaction?: string
   isYou?: boolean
   createdAt: string

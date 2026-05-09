@@ -162,6 +162,21 @@ export const MOCK_CHAT: ChatMessage[] = [
   { id: 'c2', userId: 'u3', channelId: 'geral', who: 'Camila Rocha', dept: 'Produto', initials: 'CR', color: '#6FB4FF', time: '14:03', text: 'Vi sim, absurdo demais 😭 meu palpite foi por água', createdAt: new Date().toISOString() },
   { id: 'c3', userId: 'user-1', channelId: 'geral', who: 'Felipe Souza', dept: 'Design', initials: 'FS', color: '#00A651', time: '14:04', text: 'LAMENTÁVEL. Eu acertei o 1-1 já pensando nisso', isYou: true, reaction: '⚽', createdAt: new Date().toISOString() },
   { id: 'c4', userId: 'u4', channelId: 'geral', who: 'Rafael Torres', dept: 'Marketing', initials: 'RT', color: '#C9A856', time: '14:05', text: 'Galera, ainda dá tempo de colar no ranking. GER × MEX às 18h', createdAt: new Date().toISOString() },
+  {
+    id: 'poll-1', userId: 'admin', channelId: 'geral', who: 'Admin', dept: 'Suprema Gaming', initials: 'AD', color: '#0D0D0D',
+    time: '14:07', text: 'Quem vai ser campeão da Copa 2026?', type: 'poll',
+    poll: {
+      question: 'Quem vai ser campeão da Copa 2026?',
+      options: [
+        { id: 'o1', text: 'Brasil 🇧🇷' },
+        { id: 'o2', text: 'Argentina 🇦🇷' },
+        { id: 'o3', text: 'França 🇫🇷' },
+        { id: 'o4', text: 'Alemanha 🇩🇪' },
+      ],
+      votes: { u2: 'o1', u3: 'o2', u4: 'o1', u5: 'o3', u6: 'o1' },
+    },
+    createdAt: new Date().toISOString(),
+  },
   { id: 'c5', userId: 'u5', channelId: 'geral', who: 'Ana Lima', dept: 'Financeiro', initials: 'AL', color: '#E63946', time: '14:08', text: 'Minha aposta tá na Holanda hoje. 2-0 e fechei!', createdAt: new Date().toISOString() },
   { id: 'c6', userId: 'u6', channelId: 'geral', who: 'Pedro Alves', dept: 'Jurídico', initials: 'PA', color: '#1D3557', time: '14:10', text: 'Brasil vai passar com goleada na quarta 🔥', reaction: '🔥', createdAt: new Date().toISOString() },
 ]
