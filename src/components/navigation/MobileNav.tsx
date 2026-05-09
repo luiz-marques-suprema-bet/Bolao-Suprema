@@ -2,11 +2,11 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { id: 'home', label: 'HOME', icon: '⚽', path: '/home' },
-  { id: 'bracket', label: 'CHAVE', icon: '◈', path: '/bracket' },
-  { id: 'prediction', label: 'PALPITAR', icon: '✦', path: '/prediction' },
-  { id: 'ranking', label: 'RANKING', icon: '▲', path: '/ranking' },
-  { id: 'resenha', label: 'RESENHA', icon: '◉', path: '/resenha' },
+  { id: 'home',       label: 'HOME',     icon: '⚽', path: '/home' },
+  { id: 'boletim',   label: 'BOLETIM',  icon: '◧', path: '/boletim' },
+  { id: 'prediction',label: 'PALPITAR', icon: '✦', path: '/prediction' },
+  { id: 'ranking',   label: 'RANKING',  icon: '▲', path: '/ranking' },
+  { id: 'resenha',   label: 'RESENHA',  icon: '◉', path: '/resenha' },
 ]
 
 export function MobileNav() {

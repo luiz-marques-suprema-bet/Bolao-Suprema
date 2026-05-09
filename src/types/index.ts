@@ -164,6 +164,21 @@ export interface ChatChannel {
   isActive?: boolean
 }
 
+// ─── Boletim / Canvas CMS ────────────────────────────────────────────────────
+
+export interface Boletim {
+  id: string
+  label: string       // e.g. "REGRAS", "BRASIL", "AGENDA"
+  title: string
+  subtitle?: string
+  body: string
+  imageUrl?: string
+  authorId: string
+  authorName: string
+  createdAt: string
+  isPinned?: boolean
+}
+
 // ─── Admin ───────────────────────────────────────────────────────────────────
 
 export type AdminMatchAction = 'open' | 'close' | 'set_result' | 'set_live'

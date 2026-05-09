@@ -5,12 +5,14 @@ import type { Prediction } from '@/types'
 interface PredictionState {
   predictions: Record<string, Prediction> // matchId → Prediction
   drafts: Record<string, { home: number; away: number }> // matchId → draft
+  championPick: string | null
 
   setDraft: (matchId: string, home: number, away: number) => void
   clearDraft: (matchId: string) => void
   confirmPrediction: (prediction: Prediction) => void
   getPrediction: (matchId: string) => Prediction | undefined
   getDraft: (matchId: string) => { home: number; away: number } | undefined
+  setChampionPick: (teamCode: string) => void
 }
 
 export const usePredictionStore = create<PredictionState>()(
@@ -18,6 +20,7 @@ export const usePredictionStore = create<PredictionState>()(
     (set, get) => ({
       predictions: {},
       drafts: {},
+      championPick: null,
 
       setDraft: (matchId, home, away) =>
         set((s) => ({ drafts: { ...s.drafts, [matchId]: { home, away } } })),
@@ -39,6 +42,7 @@ export const usePredictionStore = create<PredictionState>()(
 
       getPrediction: (matchId) => get().predictions[matchId],
       getDraft: (matchId) => get().drafts[matchId],
+      setChampionPick: (teamCode) => set({ championPick: teamCode }),
     }),
     { name: 'bolao-predictions' }
   )

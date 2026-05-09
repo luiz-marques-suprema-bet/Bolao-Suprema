@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Avatar } from '@/components/shared/Avatar'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
-import { MOCK_CHAT } from '@/data/mock'
+import { useChatStore } from '@/stores/chat.store'
 import type { ChatMessage, ChatPoll } from '@/types'
 
 // ─── Tenor GIF API ─────────────────────────────────────────────────────────────
@@ -420,15 +420,21 @@ function ChatInput({
 // ─── Screen ─────────────────────────────────────────────────────────────────────
 
 export function ResenhaScreen() {
-  const [messages, setMessages] = useState<ChatMessage[]>(MOCK_CHAT)
-  const [pinnedId, setPinnedId] = useState<string | null>('c4')
+  const { messages, pinnedId, addMessage, setPinned, voteOnPoll } = useChatStore()
   const [gifOpen, setGifOpen] = useState(false)
   const [pollOpen, setPollOpen] = useState(false)
-  const [userVotes, setUserVotes] = useState<Record<string, string>>({})
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const { user } = useAuthStore()
   const isAdmin = user?.isAdmin ?? false
+
+  // derive per-user voted options from stored poll data
+  const userVotes: Record<string, string> = {}
+  if (user?.id) {
+    messages.forEach(m => {
+      if (m.poll?.votes[user.id]) userVotes[m.id] = m.poll.votes[user.id]
+    })
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -456,36 +462,27 @@ export function ResenhaScreen() {
   )
 
   const sendText = useCallback((text: string) => {
-    setMessages(prev => [...prev, buildMsg({ text, type: 'text' })])
-  }, [buildMsg])
+    addMessage(buildMsg({ text, type: 'text' }))
+  }, [addMessage, buildMsg])
 
   const sendGif = useCallback((gifUrl: string) => {
     setGifOpen(false)
-    setMessages(prev => [...prev, buildMsg({ type: 'gif', gifUrl })])
-  }, [buildMsg])
+    addMessage(buildMsg({ type: 'gif', gifUrl }))
+  }, [addMessage, buildMsg])
 
   const sendPoll = useCallback((poll: ChatPoll) => {
     setPollOpen(false)
-    setMessages(prev => [
-      ...prev,
-      buildMsg({ text: poll.question, type: 'poll', poll, isYou: false }),
-    ])
-  }, [buildMsg])
+    addMessage(buildMsg({ text: poll.question, type: 'poll', poll, isYou: false }))
+  }, [addMessage, buildMsg])
 
   const togglePin = useCallback((id: string) => {
-    setPinnedId(prev => (prev === id ? null : id))
-  }, [])
+    setPinned(pinnedId === id ? null : id)
+  }, [setPinned, pinnedId])
 
   const vote = useCallback((pollMsgId: string, optionId: string) => {
     const userId = me?.id ?? 'me'
-    setUserVotes(prev => ({ ...prev, [pollMsgId]: optionId }))
-    setMessages(prev =>
-      prev.map(m => {
-        if (m.id !== pollMsgId || !m.poll) return m
-        return { ...m, poll: { ...m.poll, votes: { ...m.poll.votes, [userId]: optionId } } }
-      })
-    )
-  }, [me])
+    voteOnPoll(pollMsgId, userId, optionId)
+  }, [me, voteOnPoll])
 
   const pinnedMsg = pinnedId ? messages.find(m => m.id === pinnedId) : null
 
@@ -543,7 +540,7 @@ export function ResenhaScreen() {
               </p>
               {isAdmin && (
                 <button
-                  onClick={() => setPinnedId(null)}
+                  onClick={() => setPinned(null)}
                   className="font-mono text-[9px] text-ink-4 hover:text-ink flex-shrink-0 ml-2"
                 >
                   DESAFIXAR

@@ -1,4 +1,4 @@
-import type { RankingEntry, ChatMessage, BracketSlot, AppUser } from '@/types'
+import type { RankingEntry, ChatMessage, BracketSlot, AppUser, Boletim } from '@/types'
 import { TEAMS } from './teams'
 import { WC2026_LIVE, WC2026_OPEN, WC2026_PAST, WC2026_MATCHES } from './wc2026'
 
@@ -98,4 +98,40 @@ export const MOCK_CHAT: ChatMessage[] = [
   { id: 'c5', userId: 'u5',     channelId: 'geral', who: 'Ana Lima',       dept: 'Financeiro',       initials: 'AL', color: '#E63946', time: '18:14', text: 'Marrocos empatou!! 1-1 agora!! 😱😱', createdAt: new Date().toISOString() },
   { id: 'c6', userId: 'u6',     channelId: 'geral', who: 'Pedro Alves',    dept: 'Jurídico',         initials: 'PA', color: '#1D3557', time: '18:20', text: 'NÃO ACREDITO. Brasil vai virar ou tomamos gols?', reaction: '🔥', createdAt: new Date().toISOString() },
   { id: 'c7', userId: 'u2',     channelId: 'geral', who: 'Lucas Mendes',   dept: 'Eng. Plataforma', initials: 'LM', color: '#00A651', time: '18:31', text: '2-1 VINI JR DE NOVO! HEXA! HEXA! HEXA! 🇧🇷🏆🔥', createdAt: new Date().toISOString() },
+]
+
+// ─── Boletim / Canvas ─────────────────────────────────────────────────────────
+
+export const MOCK_BULLETINS: Boletim[] = [
+  {
+    id: 'b1',
+    label: 'REGRAS',
+    title: 'Como funciona o Bolão Suprema',
+    subtitle: 'Tudo que você precisa saber pra ganhar',
+    body: 'Acerte o placar exato e ganhe 5 pts. Acerte o vencedor e ganhe 3 pts. Nas fases eliminatórias os pontos são maiores. Quem acertar o campeão no início do torneio ganha 50 pts. O vencedor do bolão leva um prêmio surpresa da Suprema!',
+    authorId: 'user-1',
+    authorName: 'Felipe Souza',
+    createdAt: '2026-05-01T10:00:00Z',
+    isPinned: true,
+  },
+  {
+    id: 'b2',
+    label: 'AGENDA',
+    title: 'Copa começa dia 11 de junho!',
+    subtitle: 'México abre o torneio no Azteca',
+    body: 'A FIFA World Cup 2026 começa dia 11 de junho com México × África do Sul no Estádio Azteca. São 48 seleções, 12 grupos, 104 jogos ao longo de 5 semanas. A grande final é no MetLife Stadium em Nova York, dia 19 de julho.',
+    authorId: 'user-1',
+    authorName: 'Felipe Souza',
+    createdAt: '2026-05-08T14:30:00Z',
+  },
+  {
+    id: 'b3',
+    label: 'BRASIL',
+    title: 'Brasil no Grupo C com Marrocos',
+    subtitle: 'Hexa começa em Nova York, dia 13 de junho',
+    body: 'A Seleção caiu no Grupo C com Marrocos, Haiti e Escócia. A estreia é dia 13 de junho contra o Marrocos no MetLife Stadium. Segundo jogo contra o Haiti, e o terceiro contra a Escócia já definindo classificação. Vai ser Hexa?',
+    authorId: 'user-1',
+    authorName: 'Felipe Souza',
+    createdAt: '2026-05-09T09:00:00Z',
+  },
 ]

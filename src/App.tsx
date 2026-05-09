@@ -14,6 +14,7 @@ import { PredictionScreen } from '@/screens/Prediction'
 import { RankingScreen } from '@/screens/Ranking'
 import { ResenhaScreen } from '@/screens/Resenha'
 import { AdminScreen } from '@/screens/Admin'
+import { BoletimScreen } from '@/screens/Boletim'
 
 // ─── Auth Guard ───────────────────────────────────────────────────────────────
 
@@ -86,6 +87,7 @@ const router = createHashRouter([
         element: <AppLayout />,
         children: [
           { path: '/home', element: <HomeScreen /> },
+          { path: '/boletim', element: <BoletimScreen /> },
           { path: '/bracket', element: <BracketScreen /> },
           { path: '/prediction', element: <PredictionScreen /> },
           { path: '/prediction/:matchId', element: <PredictionScreen /> },

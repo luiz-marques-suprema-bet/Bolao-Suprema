@@ -5,11 +5,12 @@ import { useAuthStore } from '@/stores/auth.store'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { id: 'home', label: 'HOME', path: '/home' },
-  { id: 'bracket', label: 'CHAVE', path: '/bracket' },
-  { id: 'prediction', label: 'PALPITAR', path: '/prediction' },
-  { id: 'ranking', label: 'RANKING', path: '/ranking' },
-  { id: 'resenha', label: 'RESENHA', path: '/resenha' },
+  { id: 'home',       label: 'HOME',     path: '/home' },
+  { id: 'boletim',   label: 'BOLETIM',  path: '/boletim' },
+  { id: 'bracket',   label: 'CHAVE',    path: '/bracket' },
+  { id: 'prediction',label: 'PALPITAR', path: '/prediction' },
+  { id: 'ranking',   label: 'RANKING',  path: '/ranking' },
+  { id: 'resenha',   label: 'RESENHA',  path: '/resenha' },
 ]
 
 export function DesktopNav() {
