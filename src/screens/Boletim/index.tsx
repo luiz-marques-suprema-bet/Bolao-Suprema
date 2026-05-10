@@ -46,7 +46,7 @@ function BoletimCard({
             </span>
             {b.isPinned && (
               <span className="inline-block font-mono text-[9px] tracking-eyebrow px-2 py-0.5 mb-3 ml-2 bg-yellow text-ink">
-                📌 FIXADO
+                · FIXADO
               </span>
             )}
             <div className="font-display text-3xl md:text-5xl leading-tight text-paper">
@@ -101,7 +101,7 @@ function BoletimCard({
               <span className={`font-mono text-[8px] tracking-eyebrow px-1.5 py-0.5 ${labelColor(b.label)}`}>
                 {b.label}
               </span>
-              {b.isPinned && <span className="text-[10px]">📌</span>}
+              {b.isPinned && <span className="text-[10px] font-bold">·</span>}
             </div>
             <div className="font-display text-lg leading-tight">{b.title.toUpperCase()}</div>
             {b.subtitle && (
@@ -136,7 +136,7 @@ function BoletimCard({
                     onClick={() => onTogglePin(b.id)}
                     className="font-mono text-[9px] px-3 py-1.5 border border-hairline hover:border-ink transition-colors"
                   >
-                    {b.isPinned ? '📌 DESAFIXAR' : 'FIXAR'}
+                    {b.isPinned ? 'DESAFIXAR' : 'FIXAR'}
                   </button>
                   <button
                     onClick={() => onDelete(b.id)}

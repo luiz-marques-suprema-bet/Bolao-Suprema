@@ -124,20 +124,20 @@ export const useBracketStore = create<BracketState>()(
         }
 
         if (slotId === 'third_1') {
-          // sf_3 winner vs sf_4 winner
-          const sf3 = getSlot('sf_3')
+          // losers side: sf_2 (left-bottom) vs sf_4 (right-bottom)
+          const sf2 = getSlot('sf_2')
           const sf4 = getSlot('sf_4')
-          const home = (sf3?.winner || picks['sf_3']) ?? null
+          const home = (sf2?.winner || picks['sf_2']) ?? null
           const away = (sf4?.winner || picks['sf_4']) ?? null
           return { home: home as TeamCode | null, away: away as TeamCode | null }
         }
 
         if (slotId === 'final_1') {
-          // sf_1 winner vs sf_2 winner
+          // sf_1 (left-top) vs sf_3 (right-top) — one from each half of the bracket
           const sf1 = getSlot('sf_1')
-          const sf2 = getSlot('sf_2')
+          const sf3 = getSlot('sf_3')
           const home = (sf1?.winner || picks['sf_1']) ?? null
-          const away = (sf2?.winner || picks['sf_2']) ?? null
+          const away = (sf3?.winner || picks['sf_3']) ?? null
           return { home: home as TeamCode | null, away: away as TeamCode | null }
         }
 

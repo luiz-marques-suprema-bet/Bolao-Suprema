@@ -218,7 +218,7 @@ export const POINT_RULES: PointRule[] = [
   { id: 'ko_result',      label: 'Resultado (mata-mata)',      description: 'acertou o vencedor no regulamentar',      points:  5, icon: '○' },
   { id: 'ko_qualified',   label: 'Acerto do classificado',     description: 'incluindo prorrogação e pênaltis',        points:  2, icon: '→' },
   // Longo prazo
-  { id: 'champion',       label: 'Campeão',                    description: 'seleção campeã do mundo',                 points: 25, icon: '🏆' },
-  { id: 'vice',           label: 'Vice-campeão',               description: 'seleção vice-campeã',                     points: 15, icon: '🥈' },
-  { id: 'scorer',         label: 'Artilheiro',                 description: 'artilheiro da competição (+ desempate)',   points: 10, icon: '⚽' },
+  { id: 'champion',       label: 'Campeão',                    description: 'seleção campeã do mundo',                 points: 25, icon: '◆' },
+  { id: 'vice',           label: 'Vice-campeão',               description: 'seleção vice-campeã',                     points: 15, icon: '▽' },
+  { id: 'scorer',         label: 'Artilheiro',                 description: 'artilheiro da competição (+ desempate)',   points: 10, icon: '○' },
 ]

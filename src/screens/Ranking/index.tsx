@@ -101,7 +101,7 @@ function RankingRow({ r, large = false }: { r: RankingEntry; large?: boolean }) 
       <div className="hidden sm:flex items-center gap-4 font-mono text-[11px] text-ink-3">
         <span title="Acertos">{r.correct}</span>
         <span title="Exatos" className="text-green">{r.exact}</span>
-        <span title="Streak">{r.streak}🔥</span>
+        <span title="Streak">{r.streak}</span>
       </div>
       <span className={cn('font-display', large ? 'text-2xl' : 'text-xl')}>{fmtPts(r.pts)}</span>
     </div>
@@ -185,7 +185,7 @@ function RankingMobile() {
           </div>
           <div className="text-right">
             <div className="font-mono text-[10px] text-paper/50">{myEntry.correct} acertos</div>
-            <div className="font-mono text-[10px] text-yellow">{myEntry.streak}🔥 streak</div>
+            <div className="font-mono text-[10px] text-yellow">{myEntry.streak} streak</div>
           </div>
         </div>
       )}
@@ -301,7 +301,7 @@ function RankingDesktop() {
                 <span>#</span><span>JOGADOR</span><span>DEPT</span>
                 <span className="text-center">CERT</span>
                 <span className="text-center">EXAT</span>
-                <span className="text-center">🔥</span>
+                <span className="text-center">STK</span>
                 <span className="text-right">PTS</span>
               </div>
               {ranking.length > 0 ? ranking.map(r => (
@@ -350,7 +350,7 @@ function RankingDesktop() {
                     <div className="font-mono text-[9px] text-paper/40">EXATOS</div>
                   </div>
                   <div>
-                    <div className="font-display text-2xl">{me.streak}🔥</div>
+                    <div className="font-display text-2xl">{me.streak}</div>
                     <div className="font-mono text-[9px] text-paper/40">STREAK</div>
                   </div>
                 </div>

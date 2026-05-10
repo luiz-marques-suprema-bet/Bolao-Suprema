@@ -588,7 +588,7 @@ function ProfileDesktop() {
                     <div className="mt-1 flex items-center gap-1.5">
                       {f.favoritePlayerImg
                         ? <img src={f.favoritePlayerImg} alt="" className="w-5 h-5 object-contain object-bottom" />
-                        : <span className="text-[10px]">⚽</span>
+                        : <span className="text-[10px]">○</span>
                       }
                       <span className="font-mono text-[8px] text-ink-3 truncate">{f.favoritePlayer}</span>
                     </div>

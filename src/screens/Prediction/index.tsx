@@ -185,7 +185,7 @@ function MatchRow({ match, onScoreChange }: { match: Match; onScoreChange?: () =
           )}
           {(isLocked) && (
             <span className="font-mono text-[9px] text-ink-4 flex items-center gap-1">
-              <span>🔒</span>
+              <span>■</span>
               {hasPick ? (
                 <span className="text-green">{existing.homeScore}–{existing.awayScore}</span>
               ) : (
@@ -593,7 +593,7 @@ function ChampionTab() {
             ? 'border-red/40 bg-red/5 text-red'
             : 'border-yellow/40 bg-yellow/5 text-ink-3'
         )}>
-          {isDeadlinePassed ? '🔒 ENCERRADO' : '⏳ PRAZO:'} {deadlineStr}
+          {isDeadlinePassed ? '■ ENCERRADO' : 'PRAZO:'} {deadlineStr}
         </div>
       </div>
 
@@ -695,7 +695,7 @@ function ChampionTab() {
           )}
           {scorerPick && (
             <div className="flex items-center gap-3 p-3 border border-hairline">
-              <div className="w-8 h-8 flex items-center justify-center border-2 border-hairline font-display text-lg">⚽</div>
+              <div className="w-8 h-8 flex items-center justify-center border-2 border-hairline font-display text-lg">○</div>
               <div>
                 <p className="font-mono text-[8px] tracking-eyebrow text-ink-4">ARTILHEIRO</p>
                 <p className="font-display text-lg">{scorerPick.toUpperCase()}</p>

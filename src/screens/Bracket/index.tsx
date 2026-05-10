@@ -519,7 +519,7 @@ function BracketMobile() {
             <div className="font-serif-it text-xl text-yellow mt-0.5">USA · Canada · México</div>
           </div>
           <div className="flex flex-col items-end gap-0.5 pb-1">
-            <span className="font-display text-3xl text-paper/20">🏆</span>
+            <span className="font-display text-3xl text-paper/20">◆</span>
             <span className="font-mono text-[8px] text-paper/30 tracking-eyebrow">JUN–JUL 2026</span>
           </div>
         </div>
@@ -848,7 +848,7 @@ function BracketDesktop() {
                     </div>
                     <div className="font-display text-2xl text-yellow">{champion.name.toUpperCase()}</div>
                   </div>
-                  <span className="font-display text-4xl ml-auto">🏆</span>
+                  <span className="font-display text-4xl ml-auto">◆</span>
                 </motion.div>
               )}
 
@@ -949,7 +949,7 @@ function BracketDesktop() {
               { pts: '+2',  label: 'Classificado acertado',        icon: '→' },
               { pts: '+5',  label: 'Resultado certo (mata-mata)',  icon: '○' },
               { pts: '+12', label: 'Placar exato (mata-mata)',     icon: '★' },
-              { pts: '+25', label: 'Campeão correto',              icon: '🏆' },
+              { pts: '+25', label: 'Campeão correto',              icon: '◆' },
             ].map(rule => (
               <div key={rule.label} className="flex items-center gap-3 border border-hairline p-3">
                 <div className="font-display text-2xl text-green">{rule.pts}</div>

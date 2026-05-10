@@ -72,7 +72,7 @@ function GifPicker({ onSelect, onClose }: { onSelect: (url: string) => void; onC
       className="overflow-hidden border-t border-line bg-paper-deep flex-shrink-0"
     >
       <div className="flex items-center gap-2 px-3 py-2 border-b border-hairline bg-paper">
-        <span className="text-ink-3 text-sm leading-none">🔍</span>
+        <span className="text-ink-3 text-sm leading-none font-mono">SRC</span>
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -330,7 +330,7 @@ function PollBubble({ m, userVotes, onVote }: {
         </button>
         <div className="border-2 border-ink bg-paper p-4 shadow-card">
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-base leading-none">📊</span>
+            <span className="text-base leading-none font-mono">≡</span>
             <p className="font-display text-[14px] tracking-wide text-ink">{poll.question}</p>
           </div>
           <div className="space-y-2">
@@ -517,7 +517,7 @@ export function ResenhaScreen() {
 
   const pinnedPreview = pinnedMsg
     ? pinnedMsg.type === 'gif'
-      ? 'GIF 🎬'
+      ? 'GIF'
       : pinnedMsg.type === 'poll'
         ? pinnedMsg.poll?.question
         : pinnedMsg.text
@@ -569,7 +569,7 @@ export function ResenhaScreen() {
             className="overflow-hidden flex-shrink-0"
           >
             <div className="border-b border-yellow/50 bg-yellow/10 px-4 py-2 flex items-center gap-2">
-              <span className="text-xs flex-shrink-0">📌</span>
+              <span className="text-xs flex-shrink-0 font-mono font-bold">·</span>
               <p className="flex-1 font-sans text-[12px] text-ink-2 truncate min-w-0">
                 <span className="font-semibold text-ink">{pinnedMsg.who}: </span>
                 {pinnedPreview}
@@ -591,7 +591,7 @@ export function ResenhaScreen() {
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-3 min-h-0">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-16">
-            <span className="font-display text-6xl text-ink-4">⚽</span>
+            <span className="font-display text-6xl text-ink-4">○</span>
             <div>
               <div className="font-display text-2xl text-ink leading-tight">NINGUÉM<br/>FALOU NADA.</div>
               <p className="font-mono text-[11px] text-ink-3 mt-2 max-w-[220px] mx-auto leading-relaxed">
@@ -622,7 +622,7 @@ export function ResenhaScreen() {
                     : 'bg-paper border-line text-ink-3 hover:border-ink hover:text-ink'
                 )}
               >
-                {pinnedId === m.id ? '📌 FIXADA' : 'FIXAR'}
+                {pinnedId === m.id ? 'DESAFIXAR' : 'FIXAR'}
               </motion.button>
             )}
           </div>

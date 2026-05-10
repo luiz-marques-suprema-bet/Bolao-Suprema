@@ -4,8 +4,8 @@ import { Avatar } from '@/components/shared/Avatar'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { id: 'home',       label: 'HOME',    icon: '⚽', path: '/home' },
-  { id: 'boletim',   label: 'BOLETIM', icon: '📋', path: '/boletim' },
+  { id: 'home',       label: 'HOME',    icon: '○',  path: '/home' },
+  { id: 'boletim',   label: 'BOLETIM', icon: '≡',  path: '/boletim' },
   { id: 'prediction',label: 'PALPITAR',icon: '✦',  path: '/prediction' },
   { id: 'bracket',   label: 'CHAVE',   icon: '◉',  path: '/bracket' },
   { id: 'ranking',   label: 'RANKING', icon: '▲',  path: '/ranking' },

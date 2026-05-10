@@ -154,7 +154,7 @@ export function UserProfileScreen() {
                   className="w-14 h-14 object-contain object-bottom"
                 />
               )}
-              {!profile.favoritePlayerImg && <span className="text-xl">⚽</span>}
+              {!profile.favoritePlayerImg && <span className="text-xl">○</span>}
               <div className="font-mono text-[9px] text-ink-4 tracking-eyebrow">FAVORITO</div>
               <div className="font-mono text-[9px] font-bold leading-tight">{profile.favoritePlayer}</div>
             </div>

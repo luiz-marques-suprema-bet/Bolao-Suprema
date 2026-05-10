@@ -943,7 +943,7 @@ function ResenhaCard() {
       </div>
       {recent.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-3">
-          <span className="font-display text-4xl text-ink-4">💬</span>
+          <span className="font-display text-4xl text-ink-4">○</span>
           <p className="font-mono text-[11px] text-ink-3 leading-relaxed">
             Nenhuma mensagem ainda. Seja o primeiro a entrar na resenha.
           </p>

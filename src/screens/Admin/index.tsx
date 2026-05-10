@@ -26,7 +26,7 @@ export function AdminScreen() {
   if (!user?.isAdmin) {
     return (
       <div className="flex h-dvh items-center justify-center bg-paper flex-col gap-4">
-        <span className="font-display text-4xl">🚫</span>
+        <span className="font-display text-4xl">✗</span>
         <p className="font-mono text-[12px] tracking-eyebrow text-ink-3">ACESSO RESTRITO · SOMENTE ADMIN</p>
       </div>
     )
@@ -122,7 +122,7 @@ function AdminDesktop() {
       initials: user.initials,
       color: user.color,
       time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      text: `📢 AVISO ADMIN: ${broadcast.trim()}`,
+      text: `AVISO ADMIN: ${broadcast.trim()}`,
       type: 'text',
       isYou: false,
       createdAt: new Date().toISOString(),
@@ -133,7 +133,7 @@ function AdminDesktop() {
   }
 
   const handleExportCSV = () => {
-    showToast('📊 Exportação disponível após integração com Supabase')
+    showToast('Exportação disponível após integração com Supabase')
   }
 
   const handleMatchAction = (action: string) => {
