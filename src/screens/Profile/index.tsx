@@ -166,7 +166,7 @@ function ProfileMobile() {
   return (
     <div className="min-h-dvh bg-paper pb-28">
       <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-hairline">
-        <Logo height={28} />
+        <Logo height={44} />
         <span className="font-mono text-[10px] tracking-eyebrow text-ink-3">MEU PERFIL</span>
       </div>
 
@@ -287,7 +287,7 @@ function ProfileDesktop() {
       <div className="max-w-screen-lg mx-auto px-8 py-10">
 
         <div className="flex items-center justify-between mb-10">
-          <Logo height={36} />
+          <Logo height={56} />
           <div className="flex items-center gap-4">
             <span className="font-mono text-[11px] tracking-eyebrow text-ink-3">MEU PERFIL</span>
             <button

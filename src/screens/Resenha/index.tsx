@@ -4,6 +4,7 @@ import { Avatar } from '@/components/shared/Avatar'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
 import { useChatStore } from '@/stores/chat.store'
+import { useIsDesktop } from '@/hooks/useBreakpoint'
 import type { ChatMessage, ChatPoll } from '@/types'
 
 // ─── Tenor GIF API ─────────────────────────────────────────────────────────────
@@ -427,6 +428,7 @@ export function ResenhaScreen() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const { user } = useAuthStore()
   const isAdmin = user?.isAdmin ?? false
+  const isDesktop = useIsDesktop()
 
   // derive per-user voted options from stored poll data
   const userVotes: Record<string, string> = {}
@@ -495,7 +497,14 @@ export function ResenhaScreen() {
     : null
 
   return (
-    <div className="h-[calc(100dvh-80px)] md:h-[calc(100dvh-56px)] flex flex-col bg-paper overflow-hidden">
+    <div
+      className="flex flex-col bg-paper overflow-hidden"
+      style={{
+        height: isDesktop
+          ? 'calc(100dvh - 5.75rem)'
+          : 'calc(100dvh - 5.5rem - env(safe-area-inset-bottom, 0px))',
+      }}
+    >
 
       {/* ── Header ── */}
       <div className="bg-paper border-b border-line px-4 py-3 flex items-center justify-between flex-shrink-0">

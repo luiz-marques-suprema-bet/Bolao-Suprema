@@ -68,7 +68,7 @@ function OnboardingMobile() {
           <Stamp color="#FFCB05" rotation={-2}>{slide.stamp}</Stamp>
         </div>
         <div className="absolute top-4 right-4">
-          <Logo height={28} />
+          <Logo height={44} />
         </div>
       </div>
 
@@ -145,7 +145,7 @@ function OnboardingDesktop() {
       <div className="flex flex-1">
         <div className="flex flex-col justify-between p-12 flex-1 max-w-[52%]">
           <div>
-            <Logo height={48} />
+            <Logo height={72} />
             <div className="mt-16">
               <TourneyMark size="sm" className="mb-4 block" />
               <p className="font-serif-it text-green-deep text-2xl mb-4">

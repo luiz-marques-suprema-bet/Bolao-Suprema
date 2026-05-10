@@ -46,7 +46,7 @@ function LoginMobile() {
       </div>
 
       <div className="relative flex-1 flex flex-col justify-end p-5 pb-10">
-        <Logo height={36} className="mb-8 brightness-0 invert" />
+        <Logo height={64} className="mb-8 brightness-0 invert" />
 
         <h1 className="font-display text-5xl text-paper leading-none mb-2">
           ACESSO<br />RESTRITO
@@ -111,7 +111,7 @@ function LoginDesktop() {
 
       {/* Right — Form */}
       <div className="w-full lg:w-[480px] flex flex-col justify-center px-10 py-12 bg-paper">
-        <Logo height={40} className="mb-10" />
+        <Logo height={80} className="mb-8" />
 
         <TourneyMark size="sm" className="mb-6 block" />
 

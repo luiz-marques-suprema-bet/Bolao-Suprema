@@ -43,7 +43,7 @@ export function DesktopNav() {
       <div className="mx-auto flex max-w-screen-xl items-center gap-8 px-6 h-14">
 
         <button onClick={() => navigate('/home')} className="flex-shrink-0">
-          <Logo height={32} />
+          <Logo height={48} />
         </button>
 
         <nav className="flex items-center gap-1 flex-1">

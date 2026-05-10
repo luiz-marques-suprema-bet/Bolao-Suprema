@@ -78,7 +78,7 @@ function RankingMobile() {
   const top3 = fullRanking.slice(0, 3)
 
   return (
-    <div className="min-h-dvh bg-paper pb-20">
+    <div className="min-h-dvh bg-paper pb-24">
       <div className="bg-paper-deep px-4 pt-6 pb-4">
         <Eyebrow className="mb-4">RANKING · BOLÃO DA SUPREMA</Eyebrow>
 

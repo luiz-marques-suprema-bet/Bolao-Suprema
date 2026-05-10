@@ -1,27 +1,15 @@
 import { useNavigate } from 'react-router-dom'
 import { Flag } from '@/components/shared/Flag'
 import { Avatar } from '@/components/shared/Avatar'
-import { Marquee } from '@/components/shared/Marquee'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/stores/auth.store'
 import { usePredictionStore } from '@/stores/prediction.store'
+import { useChatStore } from '@/stores/chat.store'
 import { MOCK_UPCOMING, MOCK_RANKING } from '@/data/mock'
 import { WC2026_MATCHES } from '@/data/wc2026'
 import { fmtPts, asset, cn } from '@/lib/utils'
 
 const TOURNAMENT_START = new Date('2026-06-11T19:00:00Z') // 16:00 BRT = 19:00 UTC
-
-const MARQUEE_ITEMS = [
-  'COPA DO MUNDO 2026',
-  'USA · CAN · MEX',
-  '48 SELEÇÕES · 102 PARTIDAS',
-  'FASE DE GRUPOS · 11 JUN',
-  'OITAVAS · 27 JUN',
-  'QUARTAS · 4 JUL',
-  'SEMIFINAIS · 14 JUL',
-  'FINAL · 19 JUL',
-  'FAÇA JÁ SEU PALPITE →',
-]
 
 function daysUntil(target: Date): number {
   const now = new Date()
@@ -208,10 +196,6 @@ function HomeMobile() {
         </div>
       </div>
 
-      {/* ── Marquee ── */}
-      <div className="mt-6 border-t border-line bg-ink">
-        <Marquee items={MARQUEE_ITEMS} color="#FFCB05" bg="#0D0D0D" speed={35} />
-      </div>
     </div>
   )
 }
@@ -236,7 +220,7 @@ function HomeDesktop() {
       <div className="max-w-screen-xl mx-auto px-6 py-8 space-y-5">
 
         {/* ── Hero row — 3 columns ── */}
-        <div className="grid grid-cols-[1.5fr_1fr_0.9fr] gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1.5fr_1fr_0.9fr] gap-5">
 
           {/* Countdown card */}
           <div className="relative overflow-hidden min-h-[340px] border-2 border-ink">
@@ -351,7 +335,7 @@ function HomeDesktop() {
         </div>
 
         {/* ── Secondary row ── */}
-        <div className="grid grid-cols-[1.6fr_1fr_1fr] gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1.6fr_1fr_1fr] gap-5">
 
           {/* Upcoming matches */}
           <div className="border-2 border-ink">
@@ -423,33 +407,59 @@ function HomeDesktop() {
           </div>
 
           {/* Resenha CTA */}
-          <div className="border-2 border-ink flex flex-col overflow-hidden">
-            <div className="px-4 py-3 border-b border-hairline flex items-baseline justify-between">
-              <div className="flex items-baseline gap-1.5">
-                <span className="font-display text-lg">#RESENHA</span>
-                <span className="font-serif-it text-sm text-ink-3">ao vivo</span>
-              </div>
-              <button onClick={() => navigate('/resenha')} className="font-mono text-[10px] text-ink-4 hover:text-ink">
-                ENTRAR →
-              </button>
-            </div>
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-3">
-              <span className="font-display text-4xl text-ink-4">💬</span>
-              <p className="font-mono text-[11px] text-ink-3 leading-relaxed">
-                Nenhuma mensagem ainda. Seja o primeiro a entrar na resenha.
-              </p>
-              <button onClick={() => navigate('/resenha')} className="btn-ghost text-[10px]">
-                ENTRAR NA RESENHA →
-              </button>
-            </div>
-          </div>
+          <ResenhaCard />
         </div>
       </div>
 
-      {/* ── Marquee ── */}
-      <div className="border-t border-line bg-ink mt-4">
-        <Marquee items={MARQUEE_ITEMS} color="#FFCB05" bg="#0D0D0D" speed={35} />
+    </div>
+  )
+}
+
+function ResenhaCard() {
+  const navigate = useNavigate()
+  const messages = useChatStore(s => s.messages)
+  const recent = messages.slice(-3)
+
+  return (
+    <div className="border-2 border-ink flex flex-col overflow-hidden">
+      <div className="px-4 py-3 border-b border-hairline flex items-baseline justify-between">
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-display text-lg">#RESENHA</span>
+          <span className="font-serif-it text-sm text-ink-3">ao vivo</span>
+        </div>
+        <button onClick={() => navigate('/resenha')} className="font-mono text-[10px] text-ink-4 hover:text-ink">
+          ENTRAR →
+        </button>
       </div>
+      {recent.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-3">
+          <span className="font-display text-4xl text-ink-4">💬</span>
+          <p className="font-mono text-[11px] text-ink-3 leading-relaxed">
+            Nenhuma mensagem ainda. Seja o primeiro a entrar na resenha.
+          </p>
+          <button onClick={() => navigate('/resenha')} className="btn-ghost text-[10px]">
+            ENTRAR NA RESENHA →
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col divide-y divide-hairline">
+          {recent.map(msg => (
+            <div key={msg.id} className="px-4 py-2.5 flex gap-2.5 items-start">
+              <Avatar initials={msg.initials} color={msg.color} size={24} />
+              <div className="flex-1 min-w-0">
+                <span className="font-mono text-[10px] font-bold text-ink">{msg.who}</span>
+                <p className="font-sans text-[12px] text-ink-2 leading-snug truncate">{msg.text}</p>
+              </div>
+            </div>
+          ))}
+          <button
+            onClick={() => navigate('/resenha')}
+            className="px-4 py-2.5 font-mono text-[10px] text-ink-4 hover:text-ink hover:bg-hairline text-left transition-colors"
+          >
+            VER TUDO →
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { MobileNav } from '@/components/navigation/MobileNav'
 import { DesktopNav } from '@/components/navigation/DesktopNav'
+import { Marquee } from '@/components/shared/Marquee'
 import { OnboardingScreen } from '@/screens/Onboarding'
 import { LoginScreen } from '@/screens/Login'
 import { ProfileScreen } from '@/screens/Profile'
@@ -57,6 +58,20 @@ function RequireAuth() {
   return <Outlet />
 }
 
+// ─── Marquee content ─────────────────────────────────────────────────────────
+
+const MARQUEE_ITEMS = [
+  'FAÇA JÁ SEU PALPITE →',
+  'COPA DO MUNDO 2026',
+  'USA · CAN · MEX',
+  '48 SELEÇÕES · 102 PARTIDAS',
+  'FASE DE GRUPOS · 11 JUN',
+  'OITAVAS · 27 JUN',
+  'QUARTAS · 4 JUL',
+  'SEMIFINAIS · 14 JUL',
+  'FINAL · 19 JUL',
+]
+
 // ─── App Layout (with nav) ────────────────────────────────────────────────────
 
 function AppLayout() {
@@ -65,9 +80,25 @@ function AppLayout() {
   return (
     <div className="min-h-dvh flex flex-col">
       {isDesktop && <DesktopNav />}
-      <main className={`flex-1 ${!isDesktop ? 'pb-20' : ''}`}>
+      <main
+        className="flex-1"
+        style={isDesktop ? { paddingBottom: '2.5rem' } : undefined}
+      >
         <AnimatedOutlet />
       </main>
+
+      {/* Fixed ticker — always visible above mobile nav or at viewport bottom on desktop */}
+      <div
+        className="fixed left-0 right-0 z-40 border-t border-line bg-ink"
+        style={
+          isDesktop
+            ? { bottom: 0 }
+            : { bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }
+        }
+      >
+        <Marquee items={MARQUEE_ITEMS} color="#FFCB05" bg="#0D0D0D" speed={35} />
+      </div>
+
       {!isDesktop && <MobileNav />}
     </div>
   )
