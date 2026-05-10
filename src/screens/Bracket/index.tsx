@@ -180,6 +180,9 @@ function MySlotCard({
   const myPickCorrect = realWinner && myPick && myPick === realWinner
   const myPickWrong   = realWinner && myPick && myPick !== realWinner
 
+  // Show big VS card when both teams known and not yet resolved, not compact
+  const showVsCard = !compact && !isTBD && !isResolved && homeTeam && awayTeam
+
   return (
     <div className={cn(
       'border-2 bg-paper transition-all duration-150',
@@ -189,19 +192,48 @@ function MySlotCard({
       {/* Status bar */}
       <div className={cn(
         'px-2 py-1 flex items-center justify-between border-b border-hairline',
-        isTBD ? 'bg-paper-deep' : fromGroups ? 'bg-paper-deep' : ''
+        isTBD ? 'bg-paper-deep' : fromGroups ? 'bg-paper-deep' : 'bg-ink'
       )}>
-        <span className="font-mono text-[8px] text-ink-4">{label}</span>
-        {isResolved && (
-          <span className="font-mono text-[8px] text-green font-bold">✓ DEF.</span>
-        )}
-        {!isResolved && isTBD && (
-          <span className="font-mono text-[8px] text-ink-4">TBD</span>
-        )}
-        {!isResolved && !isTBD && fromGroups && (
-          <span className="font-mono text-[7px] text-ink-4">MEU PALPITE</span>
-        )}
+        <span className={cn('font-mono text-[8px]', !isTBD && !fromGroups && !isResolved ? 'text-paper/50' : 'text-ink-4')}>{label}</span>
+        {isResolved && <span className="font-mono text-[8px] text-green font-bold">✓ DEF.</span>}
+        {!isResolved && isTBD && <span className="font-mono text-[8px] text-ink-4">TBD</span>}
+        {!isResolved && !isTBD && !fromGroups && <span className="font-mono text-[8px] text-yellow font-bold tracking-eyebrow">QUEM VENCE?</span>}
+        {!isResolved && !isTBD && fromGroups && <span className="font-mono text-[7px] text-ink-4">MEU PALPITE</span>}
       </div>
+
+      {/* VS display — big flags when both teams known and awaiting pick */}
+      {showVsCard && (
+        <div className="flex items-stretch border-b border-hairline">
+          {/* Home */}
+          <button
+            onClick={() => pickTeam(home!)}
+            className={cn(
+              'flex-1 flex flex-col items-center justify-center gap-1.5 py-3 transition-all duration-100',
+              myPick === home ? 'bg-yellow' : 'hover:bg-yellow/20'
+            )}
+          >
+            <Flag team={homeTeam} size={32} className="rounded-sm" />
+            <span className="font-mono text-[9px] font-bold">{home}</span>
+            {myPick === home && <span className="font-mono text-[7px] text-ink">★ MINHA PICK</span>}
+          </button>
+          {/* VS divider */}
+          <div className="flex items-center justify-center px-2 border-x border-hairline">
+            <span className="font-display text-sm text-ink-3">VS</span>
+          </div>
+          {/* Away */}
+          <button
+            onClick={() => pickTeam(away!)}
+            className={cn(
+              'flex-1 flex flex-col items-center justify-center gap-1.5 py-3 transition-all duration-100',
+              myPick === away ? 'bg-yellow' : 'hover:bg-yellow/20'
+            )}
+          >
+            <Flag team={awayTeam} size={32} className="rounded-sm" />
+            <span className="font-mono text-[9px] font-bold">{away}</span>
+            {myPick === away && <span className="font-mono text-[7px] text-ink">★ MINHA PICK</span>}
+          </button>
+        </div>
+      )}
 
       {/* Teams */}
       {[
@@ -471,10 +503,26 @@ function BracketMobile() {
 
   return (
     <div className="min-h-dvh bg-paper">
-      {/* ── Header ── */}
-      <div className="border-b border-hairline px-4 pt-6 pb-5">
-        <div className="font-display text-5xl leading-none text-ink">CHAVE</div>
-        <div className="font-serif-it text-2xl text-green-deep leading-none mt-0.5">Copa 2026</div>
+      {/* ── Header Copa 2026 ── */}
+      <div className="relative overflow-hidden border-b-2 border-ink px-4 pt-5 pb-4">
+        <div className="absolute inset-0 bg-gradient-to-br from-ink via-ink/95 to-ink/80" />
+        {/* USA / CAN / MEX host colors stripe */}
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 flex">
+          <div className="flex-1 bg-[#BF0A30]" />
+          <div className="flex-1 bg-[#FF0000]" />
+          <div className="flex-1 bg-[#009A44]" />
+        </div>
+        <div className="relative flex items-end justify-between">
+          <div>
+            <div className="font-mono text-[9px] tracking-eyebrow text-paper/40 mb-1">FIFA WORLD CUP · 2026</div>
+            <div className="font-display text-5xl leading-none text-paper">CHAVE</div>
+            <div className="font-serif-it text-xl text-yellow mt-0.5">USA · Canada · México</div>
+          </div>
+          <div className="flex flex-col items-end gap-0.5 pb-1">
+            <span className="font-display text-3xl text-paper/20">🏆</span>
+            <span className="font-mono text-[8px] text-paper/30 tracking-eyebrow">JUN–JUL 2026</span>
+          </div>
+        </div>
       </div>
 
       {/* ── View switcher ── */}

@@ -5,9 +5,28 @@ interface AvatarProps {
   color?: string
   size?: number
   className?: string
+  src?: string
 }
 
-export function Avatar({ initials, color = '#0D0D0D', size = 36, className }: AvatarProps) {
+export function Avatar({ initials, color = '#0D0D0D', size = 36, className, src }: AvatarProps) {
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={initials}
+        className={cn('rounded-full object-cover flex-shrink-0 select-none', className)}
+        style={{ width: size, height: size }}
+        onError={e => {
+          // fallback to initials on broken image
+          const el = e.currentTarget
+          el.style.display = 'none'
+          const parent = el.parentElement
+          if (parent) parent.dataset.fallback = 'true'
+        }}
+      />
+    )
+  }
+
   return (
     <div
       className={cn(

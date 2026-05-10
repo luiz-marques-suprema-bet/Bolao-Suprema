@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Flag } from '@/components/shared/Flag'
 import { Avatar } from '@/components/shared/Avatar'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
@@ -7,7 +9,92 @@ import { usePredictionStore } from '@/stores/prediction.store'
 import { useChatStore } from '@/stores/chat.store'
 import { MOCK_UPCOMING, MOCK_RANKING } from '@/data/mock'
 import { WC2026_MATCHES } from '@/data/wc2026'
+import { TEAMS } from '@/data/teams'
 import { fmtPts, asset, cn } from '@/lib/utils'
+
+// ─── Rotating hero background ─────────────────────────────────────────────────
+
+const HERO_THEMES = [
+  { code: 'BRA', label: 'BRASIL',     c1: '#009C3B', c2: '#002776' },
+  { code: 'ARG', label: 'ARGENTINA',  c1: '#74ACDF', c2: '#FFFFFF' },
+  { code: 'FRA', label: 'FRANCE',     c1: '#003087', c2: '#EF4135' },
+  { code: 'GER', label: 'ALEMANHA',   c1: '#1a1a1a', c2: '#FFCC00' },
+  { code: 'ESP', label: 'ESPANHA',    c1: '#AA151B', c2: '#F1BF00' },
+  { code: 'POR', label: 'PORTUGAL',   c1: '#006600', c2: '#FF0000' },
+  { code: 'USA', label: 'USA',        c1: '#002868', c2: '#BF0A30' },
+  { code: 'ENG', label: 'ENGLAND',    c1: '#003087', c2: '#CF081F' },
+  { code: 'NED', label: 'HOLANDA',    c1: '#FF4F00', c2: '#1D2671' },
+  { code: 'MEX', label: 'MÉXICO',     c1: '#006847', c2: '#CE1126' },
+]
+
+function RotatingHero({ days, children }: { days: number; children?: React.ReactNode }) {
+  const [idx, setIdx] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => setIdx(i => (i + 1) % HERO_THEMES.length), 4500)
+    return () => clearInterval(id)
+  }, [])
+
+  const theme = HERO_THEMES[idx]
+  const team = TEAMS[theme.code]
+
+  return (
+    <section className="relative overflow-hidden" style={{ height: 280 }}>
+      {/* Static photo base */}
+      <img
+        src={asset('assets/hero-jogadores.webp')}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover object-top"
+      />
+
+      {/* Animated color overlay */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={idx}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1.2 }}
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(135deg, ${theme.c1}CC 0%, ${theme.c2}99 100%)`,
+          }}
+        />
+      </AnimatePresence>
+
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-ink/80" />
+
+      {/* Team badge pill */}
+      <AnimatePresence mode="wait">
+        {team && (
+          <motion.div
+            key={`badge-${idx}`}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.5 }}
+            className="absolute top-4 right-4 flex items-center gap-2 bg-ink/50 backdrop-blur-sm px-3 py-1.5"
+          >
+            <Flag team={team} size={18} className="rounded-none" />
+            <span className="font-mono text-[10px] text-paper tracking-eyebrow font-bold">{theme.label}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Countdown */}
+      <div className="absolute inset-0 flex flex-col items-center justify-end pb-6 px-4 text-center">
+        <div className="font-mono text-[10px] tracking-eyebrow text-paper/60 mb-1">
+          COPA DO MUNDO 2026 · FASE DE GRUPOS
+        </div>
+        <div className="font-display text-[80px] leading-none text-paper">{days}</div>
+        <div className="font-display text-2xl text-paper/70 -mt-1">DIAS</div>
+        <div className="font-serif-it text-sm text-yellow mt-1">para a bola rolar · 11 Jun · 16:00</div>
+      </div>
+
+      {children}
+    </section>
+  )
+}
 
 const TOURNAMENT_START = new Date('2026-06-11T19:00:00Z') // 16:00 BRT = 19:00 UTC
 
@@ -19,6 +106,70 @@ function daysUntil(target: Date): number {
 export function HomeScreen() {
   const isDesktop = useIsDesktop()
   return isDesktop ? <HomeDesktop /> : <HomeMobile />
+}
+
+// ─── Desktop rotating hero card ──────────────────────────────────────────────
+
+function RotatingHeroDesktop({ days, onCta }: { days: number; onCta: () => void }) {
+  const [idx, setIdx] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setIdx(i => (i + 1) % HERO_THEMES.length), 4500)
+    return () => clearInterval(id)
+  }, [])
+  const theme = HERO_THEMES[idx]
+  const team = TEAMS[theme.code]
+
+  return (
+    <div className="relative overflow-hidden min-h-[340px] border-2 border-ink">
+      <img src={asset('assets/hero-jogadores.webp')} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={idx}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1.2 }}
+          className="absolute inset-0"
+          style={{ background: `linear-gradient(135deg, ${theme.c1}CC 0%, ${theme.c2}88 100%)` }}
+        />
+      </AnimatePresence>
+      <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/20 to-transparent" />
+
+      {/* Team pill top-right */}
+      <AnimatePresence mode="wait">
+        {team && (
+          <motion.div
+            key={`d-badge-${idx}`}
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -16 }}
+            transition={{ duration: 0.4 }}
+            className="absolute top-4 right-4 flex items-center gap-2 bg-ink/60 backdrop-blur-sm px-3 py-1.5"
+          >
+            <Flag team={team} size={20} className="rounded-none" />
+            <span className="font-mono text-[10px] text-paper tracking-eyebrow font-bold">{theme.label}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="relative h-full flex flex-col justify-end p-6">
+        <div className="font-mono text-[10px] font-bold tracking-eyebrow text-paper/60 mb-2">
+          COPA DO MUNDO 2026 · USA / CAN / MEX
+        </div>
+        <div className="flex items-end gap-4 mb-3">
+          <div>
+            <div className="font-display text-[110px] leading-none text-paper">{days}</div>
+            <div className="font-display text-3xl text-paper/60 -mt-2">DIAS</div>
+          </div>
+          <div className="pb-2">
+            <div className="font-serif-it text-xl text-yellow">para a bola rolar</div>
+            <div className="font-mono text-[11px] text-paper/50 mt-1">Fase de grupos · 11 Jun · 16:00</div>
+          </div>
+        </div>
+        <button onClick={onCta} className="btn-yellow w-fit">FAZER PALPITES AGORA →</button>
+      </div>
+    </div>
+  )
 }
 
 // ─── Prediction progress bar ──────────────────────────────────────────────────
@@ -57,22 +208,7 @@ function HomeMobile() {
     <div className="min-h-dvh bg-paper pb-24">
 
       {/* ── Hero — countdown ── */}
-      <section className="relative overflow-hidden" style={{ height: 280 }}>
-        <img
-          src={asset('assets/hero-jogadores.webp')}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover object-top"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/40 via-ink/10 to-ink/90" />
-        <div className="absolute inset-0 flex flex-col items-center justify-end pb-6 px-4 text-center">
-          <div className="font-mono text-[10px] tracking-eyebrow text-paper/60 mb-1">
-            COPA DO MUNDO 2026 · FASE DE GRUPOS
-          </div>
-          <div className="font-display text-[80px] leading-none text-paper">{days}</div>
-          <div className="font-display text-2xl text-paper/70 -mt-1">DIAS</div>
-          <div className="font-serif-it text-sm text-yellow mt-1">para a bola rolar · 11 Jun · 16:00</div>
-        </div>
-      </section>
+      <RotatingHero days={days} />
 
       <div className="px-4 space-y-3 pt-4">
 
@@ -222,33 +358,8 @@ function HomeDesktop() {
         {/* ── Hero row — 3 columns ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1.5fr_1fr_0.9fr] gap-5">
 
-          {/* Countdown card */}
-          <div className="relative overflow-hidden min-h-[340px] border-2 border-ink">
-            <img
-              src={asset('assets/hero-jogadores.webp')}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover object-top"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/20 to-transparent" />
-            <div className="relative h-full flex flex-col justify-end p-6">
-              <div className="font-mono text-[10px] font-bold tracking-eyebrow text-paper/60 mb-2">
-                COPA DO MUNDO 2026 · USA / CAN / MEX
-              </div>
-              <div className="flex items-end gap-4 mb-3">
-                <div>
-                  <div className="font-display text-[110px] leading-none text-paper">{days}</div>
-                  <div className="font-display text-3xl text-paper/60 -mt-2">DIAS</div>
-                </div>
-                <div className="pb-2">
-                  <div className="font-serif-it text-xl text-yellow">para a bola rolar</div>
-                  <div className="font-mono text-[11px] text-paper/50 mt-1">Fase de grupos · 11 Jun · 16:00</div>
-                </div>
-              </div>
-              <button onClick={() => navigate('/prediction')} className="btn-yellow w-fit">
-                FAZER PALPITES AGORA →
-              </button>
-            </div>
-          </div>
+          {/* Countdown card — rotating hero */}
+          <RotatingHeroDesktop days={days} onCta={() => navigate('/prediction')} />
 
           {/* Progresso */}
           <div className="border-2 border-ink bg-ink text-paper flex flex-col p-6 gap-4">

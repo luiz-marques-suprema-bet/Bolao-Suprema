@@ -230,7 +230,7 @@ function UserAvatar({ m }: { m: ChatMessage }) {
       className={cn('flex-shrink-0 mt-1 rounded-full', !m.isYou && 'hover:opacity-80 transition-opacity cursor-pointer')}
       disabled={m.isYou}
     >
-      <Avatar initials={m.initials} color={m.color} size={30} />
+      <Avatar initials={m.initials} color={m.color} src={m.avatarUrl} size={30} />
     </button>
   )
 }
@@ -479,6 +479,7 @@ export function ResenhaScreen() {
       dept: me?.dept ?? '',
       initials: me?.initials ?? 'EU',
       color: me?.color ?? '#00A651',
+      avatarUrl: me?.avatarUrl,
       time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       text: '',
       type: 'text',

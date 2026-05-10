@@ -6,7 +6,8 @@ import { supabase, isMockMode } from '@/lib/supabase'
 
 interface UserSnap {
   firstName: string; lastName: string
-  dept: string; initials: string; color: string; avatarUrl?: string
+  dept: string; initials: string; color: string
+  avatarUrl?: string
 }
 
 const _cache = new Map<string, UserSnap>()
@@ -18,7 +19,7 @@ function cacheFrom(row: Record<string, string | null>) {
     dept:      row.dept       ?? '',
     initials:  row.initials   ?? '?',
     color:     row.color      ?? '#777',
-    avatarUrl: row.avatar_url ?? undefined,
+    avatarUrl: row.avatar_url  ?? undefined,
   })
 }
 
@@ -43,8 +44,9 @@ function mapRow(row: any, myUserId?: string): ChatMessage {
     channelId: row.channel_id ?? 'geral',
     who:       u ? `${u.firstName} ${u.lastName}`.trim() : '?',
     dept:      u?.dept      ?? '',
-    initials:  u?.initials  ?? '?',
-    color:     u?.color     ?? '#777',
+    initials:  u?.initials   ?? '?',
+    color:     u?.color      ?? '#777',
+    avatarUrl: u?.avatarUrl  ?? undefined,
     time:      new Date(row.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
     text:      row.text      ?? '',
     type:      row.type      ?? 'text',
@@ -161,6 +163,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         dept:      msg.dept,
         initials:  msg.initials,
         color:     msg.color,
+        avatarUrl: msg.avatarUrl,
       })
     }
 

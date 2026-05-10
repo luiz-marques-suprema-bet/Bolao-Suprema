@@ -149,6 +149,7 @@ export interface ChatMessage {
   dept: string
   initials: string
   color: string
+  avatarUrl?: string
   time: string
   text: string
   type?: 'text' | 'gif' | 'poll'
