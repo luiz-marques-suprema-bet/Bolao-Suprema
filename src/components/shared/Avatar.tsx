@@ -8,16 +8,30 @@ interface AvatarProps {
   src?: string
 }
 
+function optimizeUrl(src: string, px: number): string {
+  try {
+    const url = new URL(src)
+    // Only transform Supabase storage URLs
+    if (!url.pathname.includes('/storage/v1/object/public/')) return src
+    const renderSize = Math.ceil(px * (window.devicePixelRatio || 2))
+    url.searchParams.set('width', String(renderSize))
+    url.searchParams.set('height', String(renderSize))
+    url.searchParams.set('resize', 'cover')
+    return url.toString()
+  } catch {
+    return src
+  }
+}
+
 export function Avatar({ initials, color = '#0D0D0D', size = 36, className, src }: AvatarProps) {
   if (src) {
     return (
       <img
-        src={src}
+        src={optimizeUrl(src, size)}
         alt={initials}
         className={cn('rounded-full object-cover flex-shrink-0 select-none', className)}
         style={{ width: size, height: size }}
         onError={e => {
-          // fallback to initials on broken image
           const el = e.currentTarget
           el.style.display = 'none'
           const parent = el.parentElement

@@ -83,7 +83,7 @@ export function DesktopNav() {
                 onClick={() => setMenuOpen(v => !v)}
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
               >
-                <Avatar initials={user.initials} color={user.color} size={32} />
+                <Avatar initials={user.initials} color={user.color} src={user.avatarUrl} size={32} />
                 <span className="font-mono text-[10px] text-ink-3 tracking-eyebrow">
                   {user.firstName || 'PERFIL'}
                 </span>

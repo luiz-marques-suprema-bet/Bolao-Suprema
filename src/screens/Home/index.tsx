@@ -556,7 +556,7 @@ function ResenhaCard() {
         <div className="flex flex-col divide-y divide-hairline">
           {recent.map(msg => (
             <div key={msg.id} className="px-4 py-2.5 flex gap-2.5 items-start">
-              <Avatar initials={msg.initials} color={msg.color} size={24} />
+              <Avatar initials={msg.initials} color={msg.color} src={msg.avatarUrl} size={24} />
               <div className="flex-1 min-w-0">
                 <span className="font-mono text-[10px] font-bold text-ink">{msg.who}</span>
                 <p className="font-sans text-[12px] text-ink-2 leading-snug truncate">{msg.text}</p>

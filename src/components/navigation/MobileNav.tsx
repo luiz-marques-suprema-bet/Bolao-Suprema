@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth.store'
+import { Avatar } from '@/components/shared/Avatar'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
@@ -37,12 +38,12 @@ export function MobileNav() {
               )}
             >
               {isProfile && user ? (
-                <span
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-paper font-mono text-[8px] font-bold flex-shrink-0"
-                  style={{ background: user.color }}
-                >
-                  {user.initials.charAt(0)}
-                </span>
+                <Avatar
+                  initials={user.initials}
+                  color={user.color}
+                  src={user.avatarUrl}
+                  size={20}
+                />
               ) : (
                 <span className="text-base leading-none">{item.icon}</span>
               )}
