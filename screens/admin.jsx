@@ -1,11 +1,29 @@
-/* global React, Flag, Avatar, Stamp, T, RANKING, UPCOMING, Eyebrow */
+/* global React, Flag, Avatar, Stamp, T, RANKING, UPCOMING, Eyebrow, MobileNav */
 
 /* =========================================================
    ADMIN — Desktop dashboard (premium sports-oriented)
    ========================================================= */
-function AdminDesktop(){
+function AdminDesktop({ onNav }){
   return (
     <div style={{ background:'var(--paper)', minHeight:'100%' }} className="paper-grain">
+      {/* admin-only nav bar — different from player nav */}
+      <div style={{
+        display:'flex', alignItems:'center', gap:16, padding:'14px 32px',
+        borderBottom:'1.5px solid var(--ink)', background:'var(--ink)', color:'var(--paper-white)'
+      }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <span style={{ fontSize:20 }}>⚙️</span>
+          <span className="mono" style={{ fontSize:11, letterSpacing:'.18em', color:'var(--yellow)' }}>PAINEL ADMIN</span>
+          <span className="mono" style={{ fontSize:11, letterSpacing:'.14em', opacity:.5 }}>· RESTRITO RH</span>
+        </div>
+        <div style={{ flex:1 }}/>
+        <button onClick={()=>onNav('home')} className="mono" style={{
+          fontSize:11, letterSpacing:'.14em', padding:'8px 14px',
+          border:'1px solid rgba(255,252,245,.3)', borderRadius:999,
+          color:'var(--paper-white)'
+        }}>← VOLTAR AO BOLÃO</button>
+      </div>
+
       <div style={{ padding:'18px 32px', borderBottom:'1.5px solid var(--ink)', display:'flex', alignItems:'flex-end', justifyContent:'space-between' }}>
         <div>
           <span className="eyebrow" style={{ opacity:.6 }}>SEÇÃO 06 · CONTROLE DA FIRMA</span>
@@ -86,7 +104,7 @@ function AdminDesktop(){
                     {status === 'ABERTO' ? (
                       <button className="btn-ghost" style={{ padding:'6px 10px', fontSize:10 }}>FECHAR</button>
                     ) : status === 'AO VIVO' ? (
-                      <button style={{ ...pillStyle, background:'var(--red)', color:'#fff', border:'1px solid var(--red)' }}>ENCERRAR</button>
+                      <button style={{ ...adminPillStyle, background:'var(--red)', color:'#fff', border:'1px solid var(--red)' }}>ENCERRAR</button>
                     ) : (
                       <button className="mono" style={{ fontSize:10, letterSpacing:'.14em', opacity:.6 }}>VER PALPITES →</button>
                     )}
@@ -136,7 +154,7 @@ function AdminDesktop(){
           <Eyebrow num="05">AVISOS DA FIRMA</Eyebrow>
           <div style={{ background:'var(--ink)', color:'var(--paper-white)', borderRadius:12, padding:18 }}>
             <div className="mono" style={{ fontSize:10, letterSpacing:'.18em', opacity:.7 }}>BROADCAST · ATINGE 87 PESSOAS</div>
-            <textarea defaultValue="Lembrete: prazo dos palpites das oitavas fecha 30min antes do 1º jogo. ninguém pode esquecer (de novo)." style={{
+            <textarea defaultValue="Lembrete: prazo dos palpites das oitavas fecha 30min antes do 1º jogo. Ninguém pode esquecer." style={{
               width:'100%', minHeight:80, marginTop:10,
               background:'rgba(255,252,245,.06)', border:'1px solid rgba(255,252,245,.18)',
               color:'var(--paper-white)', fontFamily:'var(--sans)', fontSize:13, padding:10, borderRadius:8, resize:'none'
@@ -151,7 +169,11 @@ function AdminDesktop(){
     </div>
   );
 }
-const pillStyle = { padding:'6px 12px', borderRadius:999, fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.14em', textTransform:'uppercase', fontWeight:700, border:'1px solid var(--ink)' };
+
+const adminPillStyle = {
+  padding:'6px 12px', borderRadius:999, fontFamily:'var(--mono)',
+  fontSize:10, letterSpacing:'.14em', textTransform:'uppercase', fontWeight:700, border:'1px solid var(--ink)'
+};
 
 function ChartBars(){
   const data = [22, 35, 41, 28, 64, 81, 47, 31, 24, 38, 52, 29];
@@ -161,7 +183,7 @@ function ChartBars(){
       <div className="mono" style={{ fontSize:10, letterSpacing:'.14em', opacity:.6, marginBottom:10 }}>PALPITES POR HORA · ÚLT. 12H</div>
       <div style={{ display:'flex', alignItems:'flex-end', gap:6, height:120 }}>
         {data.map((v,i) => (
-          <div key={i} style={{ flex:1, height: `${(v/max)*100}%`, background: i === 5 || i === 6 ? 'var(--yellow)' : 'var(--ink)', borderRadius:'4px 4px 0 0', position:'relative' }}/>
+          <div key={i} style={{ flex:1, height: `${(v/max)*100}%`, background: i === 5 || i === 6 ? 'var(--yellow)' : 'var(--ink)', borderRadius:'4px 4px 0 0' }}/>
         ))}
       </div>
       <div style={{ display:'flex', justifyContent:'space-between', marginTop:6 }} className="mono">
@@ -175,47 +197,75 @@ function ChartBars(){
 /* =========================================================
    ADMIN — Mobile (compact panel)
    ========================================================= */
-function AdminMobile(){
+function AdminMobile({ onNav }){
   return (
-    <div style={{ background:'var(--paper)', minHeight:'100%' }} className="paper-grain">
-      <div style={{ padding:'14px 18px' }}>
-        <div className="eyebrow" style={{ opacity:.6 }}>SEÇÃO 06 · ADMIN</div>
-        <h1 className="display" style={{ fontSize:46, lineHeight:.85, margin:'4px 0 0' }}>
-          CONTROLE.<br/><span className="serif-it" style={{ color:'var(--green-deep)', fontSize:26 }}>só pra galera do RH.</span>
-        </h1>
+    <div style={{ height:'100%', display:'flex', flexDirection:'column', background:'var(--paper)' }}>
+      {/* admin-only header */}
+      <div style={{
+        padding:'12px 18px', background:'var(--ink)', color:'var(--paper-white)',
+        display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0
+      }}>
+        <div>
+          <div className="mono" style={{ fontSize:9, letterSpacing:'.18em', color:'var(--yellow)' }}>⚙️ PAINEL ADMIN · RESTRITO RH</div>
+          <div className="display" style={{ fontSize:22 }}>CONTROLE.</div>
+        </div>
+        <button onClick={()=>onNav('home')} className="mono" style={{
+          fontSize:10, letterSpacing:'.14em', padding:'8px 12px',
+          border:'1px solid rgba(255,252,245,.3)', borderRadius:999, color:'var(--paper-white)'
+        }}>← BOLÃO</button>
       </div>
 
-      <div style={{ padding:'8px 14px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-        {[['87','jogadores'],['412','palpites'],['8/8','jogos'],['1.284','líder']].map(([n,l],i)=>(
-          <div key={i} style={{ background:'var(--paper-white)', border:'1.5px solid var(--ink)', borderRadius:10, padding:'12px 14px' }}>
-            <div className="mono" style={{ fontSize:10, letterSpacing:'.18em', opacity:.6 }}>{l.toUpperCase()}</div>
-            <div className="display" style={{ fontSize:32, lineHeight:.9, marginTop:4 }}>{n}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ padding:'14px' }}>
-        <div className="mono" style={{ fontSize:10, letterSpacing:'.18em', marginBottom:8, opacity:.6 }}>JOGOS · STATUS</div>
-        <div style={{ background:'var(--paper-white)', border:'1.5px solid var(--ink)', borderRadius:12, overflow:'hidden' }}>
-          {[
-            [T.POR, T.URU, '1–1', 'AO VIVO', 'red'],
-            [T.GER, T.MEX, '—', 'ABERTO', 'yellow'],
-            [T.NED, T.CAN, '—', 'ABERTO', 'yellow'],
-          ].map((r,i) => (
-            <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', borderTop: i? '1px dashed rgba(13,13,13,.12)':'none' }}>
-              <Flag team={r[0]} size={22}/>
-              <span className="display" style={{ fontSize:14, flex:1 }}>{r[0].code} × {r[1].code}</span>
-              <span className="display" style={{ fontSize:18 }}>{r[2]}</span>
-              <span className="mono" style={{ fontSize:9, letterSpacing:'.14em', color: r[4]==='red'? 'var(--red)':'var(--yellow-deep)' }}>{r[3]}</span>
+      <div style={{ flex:1, overflow:'auto' }} className="paper-grain">
+        <div style={{ padding:'14px 14px 8px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+          {[['87','jogadores'],['412','palpites'],['8/8','jogos'],['1.284','líder']].map(([n,l],i)=>(
+            <div key={i} style={{ background:'var(--paper-white)', border:'1.5px solid var(--ink)', borderRadius:10, padding:'12px 14px' }}>
+              <div className="mono" style={{ fontSize:10, letterSpacing:'.18em', opacity:.6 }}>{l.toUpperCase()}</div>
+              <div className="display" style={{ fontSize:32, lineHeight:.9, marginTop:4 }}>{n}</div>
             </div>
           ))}
         </div>
 
-        <div style={{ height:14 }}/>
-        <button className="btn-yellow" style={{ width:'100%', justifyContent:'center' }}>ABRIR PRÓX. RODADA</button>
-        <div style={{ height:8 }}/>
-        <button className="btn-ghost" style={{ width:'100%', justifyContent:'center' }}>CUTUCAR 23 ATRASADOS</button>
+        <div style={{ padding:'8px 14px' }}>
+          <div className="mono" style={{ fontSize:10, letterSpacing:'.18em', marginBottom:8, opacity:.6 }}>JOGOS · STATUS</div>
+          <div style={{ background:'var(--paper-white)', border:'1.5px solid var(--ink)', borderRadius:12, overflow:'hidden' }}>
+            {[
+              [T.POR, T.URU, '1–1', 'AO VIVO', 'red'],
+              [T.GER, T.MEX, '—', 'ABERTO', 'yellow'],
+              [T.NED, T.CAN, '—', 'ABERTO', 'yellow'],
+            ].map((r,i) => (
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', borderTop: i? '1px dashed rgba(13,13,13,.12)':'none' }}>
+                <Flag team={r[0]} size={22}/>
+                <span className="display" style={{ fontSize:14, flex:1 }}>{r[0].code} × {r[1].code}</span>
+                <span className="display" style={{ fontSize:18 }}>{r[2]}</span>
+                <span className="mono" style={{ fontSize:9, letterSpacing:'.14em', color: r[4]==='red'? 'var(--red)':'var(--yellow-deep)' }}>{r[3]}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ height:14 }}/>
+          <button className="btn-yellow" style={{ width:'100%', justifyContent:'center' }}>ABRIR PRÓX. RODADA</button>
+          <div style={{ height:8 }}/>
+          <button className="btn-ghost" style={{ width:'100%', justifyContent:'center' }}>CUTUCAR 23 ATRASADOS</button>
+
+          <div style={{ height:18 }}/>
+          <div className="mono" style={{ fontSize:10, letterSpacing:'.14em', marginBottom:8, opacity:.6 }}>JOGADORES SEM PALPITE</div>
+          <div style={{ background:'var(--paper-white)', border:'1.5px solid var(--ink)', borderRadius:12 }}>
+            {RANKING.slice(8,12).map((p, i) => (
+              <div key={p.rank} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderTop: i? '1px dashed rgba(13,13,13,.12)':'none' }}>
+                <Avatar p={p} size={28}/>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:12, fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</div>
+                  <div className="mono" style={{ fontSize:9, opacity:.55 }}>{p.dept}</div>
+                </div>
+                <button className="mono" style={{ fontSize:10, letterSpacing:'.12em', padding:'6px 10px', border:'1px solid var(--ink)', borderRadius:999 }}>CUTUCAR</button>
+              </div>
+            ))}
+          </div>
+          <div style={{ height:18 }}/>
+        </div>
       </div>
+
+      <MobileNav current="admin" onNav={onNav}/>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-/* global React, Flag, T, BRACKET, Stamp, Eyebrow, Marquee, TourneyMark */
+/* global React, Flag, T, BRACKET, Stamp, Eyebrow, Marquee, TourneyMark, MobileNav, DesktopNav */
 
 /* =========================================================
    BRACKET — the heart of the app
@@ -12,13 +12,12 @@ const ROUNDS = [
   { id:"f",    label:"FINAL",   count:1 },
 ];
 
-/* Bracket data: 8 oitavas → quartas (auto from results) → semis (mostly TBD) → final */
 const BR16 = BRACKET ? BRACKET.r16 : [];
 function winnerOf(m){ return m && m.winner ? T[m.winner] : null; }
 
 const BR_QF = [
-  { home:winnerOf(BR16[0]), away:winnerOf(BR16[1]), hs:null, as:null, status:"NEXT", date:"09 JUL · 16:00", venue:"NRG · HOUSTON" }, // BRA-ARG
-  { home:winnerOf(BR16[2]), away:winnerOf(BR16[3]), hs:null, as:null, status:"NEXT", date:"09 JUL · 20:00", venue:"AT&T · DALLAS" }, // FRA-ESP
+  { home:winnerOf(BR16[0]), away:winnerOf(BR16[1]), hs:null, as:null, status:"NEXT", date:"09 JUL · 16:00", venue:"NRG · HOUSTON" },
+  { home:winnerOf(BR16[2]), away:winnerOf(BR16[3]), hs:null, as:null, status:"NEXT", date:"09 JUL · 20:00", venue:"AT&T · DALLAS" },
   { home:null, away:winnerOf(BR16[5]), hs:null, as:null, status:"WAIT", date:"10 JUL · 16:00", venue:"AZTECA · CDMX" },
   { home:winnerOf(BR16[6]), away:winnerOf(BR16[7]), hs:null, as:null, status:"NEXT", date:"10 JUL · 20:00", venue:"METLIFE · NY" },
 ];
@@ -30,10 +29,12 @@ const BR_F  = { home:null, away:null, status:"WAIT", date:"19 JUL · 16:00", ven
 
 
 function BracketDesktop({ onNav }){
-  const [focus, setFocus] = React.useState(null); // match id
+  const [focus, setFocus] = React.useState(null);
 
   return (
     <div style={{ background:'var(--paper)', minHeight:'100%', display:'flex', flexDirection:'column' }} className="paper-grain">
+      <DesktopNav current="bracket" onNav={onNav}/>
+
       {/* mast */}
       <div style={{ padding:'18px 32px', borderBottom:'1.5px solid var(--ink)' }}>
         <div style={{ display:'flex', alignItems:'baseline', gap:24, justifyContent:'space-between' }}>
@@ -76,25 +77,25 @@ function BracketDesktop({ onNav }){
       <div className="bracket-scroll" style={{ flex:1, overflow:'auto', padding:'24px 32px', background:'var(--paper-deep)' }}>
         <div style={{ display:'grid', gridTemplateColumns:'1.1fr 1fr 1fr 1.1fr', gap:24, minWidth: 1100 }}>
           {/* COL 1 — OITAVAS */}
-          <Column label="OITAVAS · 03–05 JUL">
+          <BColumn label="OITAVAS · 03–05 JUL">
             {BR16.map((m,i) => (
               <BMatch key={i} m={m} onClick={()=>setFocus({col:0, idx:i, m})} />
             ))}
-          </Column>
+          </BColumn>
 
           {/* COL 2 — QUARTAS */}
-          <Column label="QUARTAS · 09–10 JUL" pad={42}>
+          <BColumn label="QUARTAS · 09–10 JUL" pad={42}>
             {BR_QF.map((m, i) => (
               <BMatch key={i} m={m} onClick={()=>setFocus({col:1, idx:i, m})}/>
             ))}
-          </Column>
+          </BColumn>
 
           {/* COL 3 — SEMIS */}
-          <Column label="SEMIFINAL · 14–15 JUL" pad={130}>
+          <BColumn label="SEMIFINAL · 14–15 JUL" pad={130}>
             {BR_SF.map((m,i)=>(
               <BMatch key={i} m={m} onClick={()=>setFocus({col:2, idx:i, m})}/>
             ))}
-          </Column>
+          </BColumn>
 
           {/* COL 4 — FINAL + FOTO HERO */}
           <div style={{ paddingTop: 280, display:'flex', flexDirection:'column', gap:18 }}>
@@ -117,9 +118,6 @@ function BracketDesktop({ onNav }){
             </div>
           </div>
         </div>
-
-        {/* connectors */}
-        <BracketLines />
       </div>
 
       <Marquee items={["A CHAVE TÁ ABERTA","SEU PALPITE NA SEMI: BRA","FAVORITO DA RESENHA: ARG","PRÓXIMO JOGO: 16:00 BRA × MAR"]} bg="var(--ink)" color="var(--paper-white)"/>
@@ -128,7 +126,7 @@ function BracketDesktop({ onNav }){
   );
 }
 
-function Column({ label, children, pad=0 }){
+function BColumn({ label, children, pad=0 }){
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:10, paddingTop: pad }}>
       <div className="mono" style={{ fontSize:11, letterSpacing:'.18em', color:'var(--ink-3)' }}>{label}</div>
@@ -158,12 +156,12 @@ function BMatch({ m, onClick }){
         {isWait && <span style={{ opacity:.4 }}>○ TBD</span>}
         {isNext && <span>○ A SAIR</span>}
       </div>
-      <Row team={m.home} score={m.hs} winner={m.winner === (m.home && m.home.code)} />
-      <Row team={m.away} score={m.as} winner={m.winner === (m.away && m.away.code)} />
+      <BRow team={m.home} score={m.hs} winner={m.winner === (m.home && m.home.code)} />
+      <BRow team={m.away} score={m.as} winner={m.winner === (m.away && m.away.code)} />
     </button>
   );
 }
-function Row({ team, score, winner }){
+function BRow({ team, score, winner }){
   if(!team) return (
     <div style={{ display:'flex', alignItems:'center', gap:10, padding:'4px 0', opacity:.6 }}>
       <div style={{ width:24, height:24, border:'1px dashed var(--ink-3)', borderRadius:'50%' }}/>
@@ -200,24 +198,19 @@ function BFinal({ m, onClick }){
   );
 }
 
-function BracketLines(){
-  // decorative connectors — keep light
-  return null;
-}
-
 function FocusOverlay({ focus, onClose }){
   const m = focus.m;
   return (
     <div onClick={onClose} style={{
-      position:'absolute', inset:0, background:'rgba(13,13,13,.72)',
-      display:'flex', alignItems:'center', justifyContent:'center', padding:32, zIndex:10
+      position:'fixed', inset:0, background:'rgba(13,13,13,.72)',
+      display:'flex', alignItems:'center', justifyContent:'center', padding:32, zIndex:100
     }}>
       <div onClick={e=>e.stopPropagation()} style={{
         background:'var(--paper)', border:'1.5px solid var(--ink)', borderRadius:14,
         width:'min(720px, 100%)', overflow:'hidden'
       }}>
         <div style={{ padding:'16px 20px', borderBottom:'1.5px solid var(--ink)', display:'flex', justifyContent:'space-between' }}>
-          <span className="mono" style={{ fontSize:11, letterSpacing:'.18em' }}>JOGO · OITAVAS Nº {focus.idx+1}</span>
+          <span className="mono" style={{ fontSize:11, letterSpacing:'.18em' }}>JOGO · {focus.col === 0 ? 'OITAVAS' : focus.col === 1 ? 'QUARTAS' : focus.col === 2 ? 'SEMI' : 'FINAL'} Nº {focus.idx+1}</span>
           <button onClick={onClose} className="mono" style={{ fontSize:11, letterSpacing:'.14em' }}>FECHAR ✕</button>
         </div>
         <div style={{ padding:'24px' }}>
@@ -232,16 +225,16 @@ function FocusOverlay({ focus, onClose }){
             {m.away && <Flag team={m.away} size={96} ring/>}
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
-            <Box label="SEU PALPITE" v="2 — 1" accent="var(--yellow)"/>
-            <Box label="MAIS POPULAR NO POOL" v="VITÓRIA HOME · 64%"/>
-            <Box label="ACERTOS EXATOS" v="22 / 87"/>
+            <BBox label="SEU PALPITE" v="2 — 1" accent="var(--yellow)"/>
+            <BBox label="MAIS POPULAR NO POOL" v="VITÓRIA HOME · 64%"/>
+            <BBox label="ACERTOS EXATOS" v="22 / 87"/>
           </div>
         </div>
       </div>
     </div>
   );
 }
-function Box({ label, v, accent }){
+function BBox({ label, v, accent }){
   return (
     <div style={{ background: accent || 'var(--paper-white)', border:'1.5px solid var(--ink)', borderRadius:8, padding:'10px 12px' }}>
       <div className="mono" style={{ fontSize:9, letterSpacing:'.14em', opacity:.6 }}>{label}</div>
@@ -257,26 +250,29 @@ function Box({ label, v, accent }){
 function BracketMobile({ onNav }){
   const [round, setRound] = React.useState(0);
   const data = [BR16, BR_QF, BR_SF, [BR_F]];
+
   return (
-    <div style={{ background:'var(--paper)', minHeight:'100%', display:'flex', flexDirection:'column' }} className="paper-grain">
-      <div style={{ padding:'14px 18px 8px' }}>
-        <div className="eyebrow" style={{ opacity:.6 }}>SEÇÃO 02</div>
-        <h1 className="display" style={{ fontSize:46, lineHeight:.85, margin:'4px 0 0' }}>
-          A CHAVE.<br/><span className="serif-it" style={{ color:'var(--green-deep)', fontSize:30 }}>até a taça.</span>
-        </h1>
-      </div>
-      <div style={{ display:'flex', gap:6, padding:'8px 18px 0', overflow:'auto' }} className="no-scrollbar">
-        {ROUNDS.map((r,i)=>(
-          <button key={r.id} onClick={()=>setRound(i)} style={{
-            padding:'8px 14px', borderRadius:999, flexShrink:0,
-            border:'1.5px solid var(--ink)',
-            background: round === i ? 'var(--yellow)' : 'var(--paper-white)',
-            fontFamily:'var(--display)', fontSize:14, letterSpacing:'.04em'
-          }}>{r.label}</button>
-        ))}
+    <div style={{ height:'100%', display:'flex', flexDirection:'column', background:'var(--paper)' }}>
+      <div style={{ flexShrink:0 }} className="paper-grain">
+        <div style={{ padding:'14px 18px 8px' }}>
+          <div className="eyebrow" style={{ opacity:.6 }}>SEÇÃO 02</div>
+          <h1 className="display" style={{ fontSize:46, lineHeight:.85, margin:'4px 0 0' }}>
+            A CHAVE.<br/><span className="serif-it" style={{ color:'var(--green-deep)', fontSize:30 }}>até a taça.</span>
+          </h1>
+        </div>
+        <div style={{ display:'flex', gap:6, padding:'8px 18px 12px', overflow:'auto' }} className="no-scrollbar">
+          {ROUNDS.map((r,i)=>(
+            <button key={r.id} onClick={()=>setRound(i)} style={{
+              padding:'8px 14px', borderRadius:999, flexShrink:0,
+              border:'1.5px solid var(--ink)',
+              background: round === i ? 'var(--yellow)' : 'var(--paper-white)',
+              fontFamily:'var(--display)', fontSize:14, letterSpacing:'.04em'
+            }}>{r.label}</button>
+          ))}
+        </div>
       </div>
 
-      <div style={{ flex:1, overflow:'auto', padding:'14px 18px 80px' }}>
+      <div style={{ flex:1, overflow:'auto', padding:'0 18px 14px' }} className="paper-grain">
         {round === 3 ? (
           <BFinal m={BR_F} onClick={()=>{}}/>
         ) : (
@@ -284,7 +280,7 @@ function BracketMobile({ onNav }){
             {data[round].map((m,i)=> <BMatch key={i} m={m} onClick={()=>{}}/> )}
           </div>
         )}
-        <div style={{ height:18 }}/>
+        <div style={{ height:14 }}/>
         <div style={{ background:'var(--ink)', color:'var(--paper-white)', borderRadius:14, padding:14, position:'relative', overflow:'hidden' }}>
           <img src="assets/hero-jogadores.webp" alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:.35 }}/>
           <div style={{ position:'relative' }}>
@@ -294,6 +290,8 @@ function BracketMobile({ onNav }){
           </div>
         </div>
       </div>
+
+      <MobileNav current="bracket" onNav={onNav}/>
     </div>
   );
 }

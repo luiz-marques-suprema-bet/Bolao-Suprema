@@ -1,165 +1,177 @@
-/* global React, Logo, Flag, Stamp, T, ME, LIVE, UPCOMING, RANKING, PAST, Marquee, Eyebrow, Avatar */
+/* global React, Logo, Flag, Stamp, T, ME, LIVE, UPCOMING, RANKING, PAST, Marquee, Eyebrow, Avatar, MobileNav, DesktopNav */
 
 /* =========================================================
    HOME — Mobile (cinematic feed)
    ========================================================= */
 function HomeMobile({ onNav }){
   return (
-    <div style={{ background:'var(--paper)', minHeight:'100%', paddingBottom:8 }} className="paper-grain">
-      {/* top bar */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 18px' }}>
-        <Logo height={26}/>
-        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-          <span className="badge" style={{ background:'var(--ink)', color:'var(--paper-white)' }}><span className="dot-live"/> AO VIVO</span>
-          <span className="avatar" style={{ width:30, height:30, fontSize:11, background:'var(--yellow)' }}>FS</span>
-        </div>
-      </div>
-
-      {/* live hero */}
-      <div style={{ margin:'6px 14px 0', borderRadius:14, overflow:'hidden', position:'relative', height:280, border:'1.5px solid var(--ink)' }}>
-        <div className="pitch-turf" style={{ position:'absolute', inset:0 }}/>
-        <img src="assets/hero-portrait.webp" alt="" style={{
-          position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 25%', opacity:.55, mixBlendMode:'screen'
-        }}/>
-        <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(0,0,0,.1), rgba(0,0,0,.6))' }}/>
-
-        <div style={{ position:'absolute', inset:0, padding:14, display:'flex', flexDirection:'column', color:'var(--paper-white)' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <span className="badge" style={{ background:'var(--red)', color:'var(--paper-white)' }}><span className="dot-live" style={{ background:'var(--paper-white)' }}/> AO VIVO · {LIVE.minute}</span>
-            <span className="mono" style={{ fontSize:10, letterSpacing:'.16em', opacity:.85 }}>OITAVAS · GRUPO F vs G</span>
-          </div>
-
-          <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:14 }}>
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
-              <Flag team={LIVE.home} size={56} ring/>
-              <span className="mono" style={{ fontSize:11, letterSpacing:'.14em' }}>{LIVE.home.code}</span>
-            </div>
-            <div className="display" style={{ fontSize:88, lineHeight:.85 }}>{LIVE.homeScore}<span style={{ opacity:.5 }}>:</span>{LIVE.awayScore}</div>
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
-              <Flag team={LIVE.away} size={56} ring/>
-              <span className="mono" style={{ fontSize:11, letterSpacing:'.14em' }}>{LIVE.away.code}</span>
-            </div>
-          </div>
-
-          <div style={{
-            background:'rgba(255,252,245,.12)', backdropFilter:'blur(10px)',
-            border:'1px solid rgba(255,252,245,.18)', borderRadius:10, padding:'8px 12px',
-            display:'flex', justifyContent:'space-between', alignItems:'center'
-          }}>
-            <div>
-              <div className="mono" style={{ fontSize:9, letterSpacing:'.18em', opacity:.8 }}>SEU PALPITE</div>
-              <div className="display" style={{ fontSize:18 }}>{LIVE.yourPick.home}–{LIVE.yourPick.away}</div>
-            </div>
-            <div style={{ textAlign:'right' }}>
-              <div className="mono" style={{ fontSize:9, letterSpacing:'.18em', opacity:.8 }}>SE FICAR ASSIM</div>
-              <div className="display" style={{ fontSize:18, color:'var(--yellow)' }}>+3 PTS</div>
-            </div>
+    <div style={{ height:'100%', display:'flex', flexDirection:'column', background:'var(--paper)' }}>
+      <div style={{ flex:1, overflow:'auto' }} className="paper-grain">
+        {/* top bar */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 18px' }}>
+          <Logo height={26}/>
+          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+            <span className="badge" style={{ background:'var(--ink)', color:'var(--paper-white)' }}><span className="dot-live"/> AO VIVO</span>
+            <span className="avatar" style={{ width:30, height:30, fontSize:11, background:'var(--yellow)' }}>FS</span>
           </div>
         </div>
-      </div>
 
-      {/* you-card */}
-      <div style={{ margin:'14px 14px 0', padding:'14px', background:'var(--ink)', color:'var(--paper-white)', borderRadius:14, display:'flex', alignItems:'center', gap:12 }}>
-        <span className="avatar" style={{ width:48, height:48, background:'var(--yellow)', color:'var(--ink)' }}>FS</span>
-        <div style={{ flex:1 }}>
-          <div className="mono" style={{ fontSize:9, letterSpacing:'.18em', opacity:.7 }}>VOCÊ · 6º LUGAR · +3 ESSA SEMANA</div>
-          <div className="display" style={{ fontSize:24, lineHeight:.96 }}>1.204 PTS</div>
-        </div>
-        <button onClick={()=>onNav('ranking')} className="mono" style={{ fontSize:10, letterSpacing:'.16em', padding:'8px 12px', border:'1px solid rgba(255,252,245,.3)', borderRadius:999 }}>RANKING →</button>
-      </div>
+        {/* live hero */}
+        <div style={{ margin:'6px 14px 0', borderRadius:14, overflow:'hidden', position:'relative', height:280, border:'1.5px solid var(--ink)' }}>
+          <div className="pitch-turf" style={{ position:'absolute', inset:0 }}/>
+          <img src="assets/hero-portrait.webp" alt="" style={{
+            position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 25%', opacity:.55, mixBlendMode:'screen'
+          }}/>
+          <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(0,0,0,.1), rgba(0,0,0,.6))' }}/>
 
-      {/* CTA palpite */}
-      <div style={{ margin:'14px 14px 0', padding:14, background:'var(--yellow)', borderRadius:14, border:'1.5px solid var(--ink)', display:'flex', alignItems:'center', gap:12 }}>
-        <div style={{ flex:1 }}>
-          <div className="mono" style={{ fontSize:9, letterSpacing:'.18em' }}>PRAZO · FECHA EM 2H 14MIN</div>
-          <div className="display" style={{ fontSize:22, lineHeight:.95 }}>2 jogos<br/>esperando<br/>seu palpite.</div>
-        </div>
-        <button onClick={()=>onNav('prediction')} className="btn-ink">PALPITAR →</button>
-      </div>
+          <div style={{ position:'absolute', inset:0, padding:14, display:'flex', flexDirection:'column', color:'var(--paper-white)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span className="badge" style={{ background:'var(--red)', color:'var(--paper-white)' }}><span className="dot-live" style={{ background:'var(--paper-white)' }}/> AO VIVO · {LIVE.minute}</span>
+              <span className="mono" style={{ fontSize:10, letterSpacing:'.16em', opacity:.85 }}>OITAVAS · GRUPO F vs G</span>
+            </div>
 
-      {/* bracket peek */}
-      <div style={{ margin:'18px 14px 0' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
-          <span className="display" style={{ fontSize:30 }}>A CHAVE.</span>
-          <button onClick={()=>onNav('bracket')} className="mono" style={{ fontSize:10, letterSpacing:'.16em' }}>VER COMPLETA →</button>
+            <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:14 }}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+                <Flag team={LIVE.home} size={56} ring/>
+                <span className="mono" style={{ fontSize:11, letterSpacing:'.14em' }}>{LIVE.home.code}</span>
+              </div>
+              <div className="display" style={{ fontSize:88, lineHeight:.85 }}>{LIVE.homeScore}<span style={{ opacity:.5 }}>:</span>{LIVE.awayScore}</div>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+                <Flag team={LIVE.away} size={56} ring/>
+                <span className="mono" style={{ fontSize:11, letterSpacing:'.14em' }}>{LIVE.away.code}</span>
+              </div>
+            </div>
+
+            <div style={{
+              background:'rgba(255,252,245,.12)', backdropFilter:'blur(10px)',
+              border:'1px solid rgba(255,252,245,.18)', borderRadius:10, padding:'8px 12px',
+              display:'flex', justifyContent:'space-between', alignItems:'center'
+            }}>
+              <div>
+                <div className="mono" style={{ fontSize:9, letterSpacing:'.18em', opacity:.8 }}>SEU PALPITE</div>
+                <div className="display" style={{ fontSize:18 }}>{LIVE.yourPick.home}–{LIVE.yourPick.away}</div>
+              </div>
+              <div style={{ textAlign:'right' }}>
+                <div className="mono" style={{ fontSize:9, letterSpacing:'.18em', opacity:.8 }}>SE FICAR ASSIM</div>
+                <div className="display" style={{ fontSize:18, color:'var(--yellow)' }}>+3 PTS</div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div style={{ background:'var(--paper-white)', border:'1.5px solid var(--ink)', borderRadius:14, padding:12 }}>
-          <div className="mono" style={{ fontSize:10, letterSpacing:'.14em', opacity:.6, marginBottom:8 }}>OITAVAS · 8 JOGOS · 5 CONFIRMADOS</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:8 }}>
+
+        {/* you-card */}
+        <div style={{ margin:'14px 14px 0', padding:'14px', background:'var(--ink)', color:'var(--paper-white)', borderRadius:14, display:'flex', alignItems:'center', gap:12 }}>
+          <span className="avatar" style={{ width:48, height:48, background:'var(--yellow)', color:'var(--ink)' }}>FS</span>
+          <div style={{ flex:1 }}>
+            <div className="mono" style={{ fontSize:9, letterSpacing:'.18em', opacity:.7 }}>VOCÊ · 6º LUGAR · +3 ESSA SEMANA</div>
+            <div className="display" style={{ fontSize:24, lineHeight:.96 }}>1.204 PTS</div>
+          </div>
+          <button onClick={()=>onNav('ranking')} className="mono" style={{ fontSize:10, letterSpacing:'.16em', padding:'8px 12px', border:'1px solid rgba(255,252,245,.3)', borderRadius:999 }}>RANKING →</button>
+        </div>
+
+        {/* CTA palpite */}
+        <div style={{ margin:'14px 14px 0', padding:14, background:'var(--yellow)', borderRadius:14, border:'1.5px solid var(--ink)', display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ flex:1 }}>
+            <div className="mono" style={{ fontSize:9, letterSpacing:'.18em' }}>PRAZO · FECHA EM 2H 14MIN</div>
+            <div className="display" style={{ fontSize:22, lineHeight:.95 }}>2 jogos<br/>esperando<br/>seu palpite.</div>
+          </div>
+          <button onClick={()=>onNav('prediction')} className="btn-ink">PALPITAR →</button>
+        </div>
+
+        {/* bracket peek */}
+        <div style={{ margin:'18px 14px 0' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
+            <span className="display" style={{ fontSize:30 }}>A CHAVE.</span>
+            <button onClick={()=>onNav('bracket')} className="mono" style={{ fontSize:10, letterSpacing:'.16em' }}>VER COMPLETA →</button>
+          </div>
+          <div style={{ background:'var(--paper-white)', border:'1.5px solid var(--ink)', borderRadius:14, padding:12 }}>
+            <div className="mono" style={{ fontSize:10, letterSpacing:'.14em', opacity:.6, marginBottom:8 }}>OITAVAS · 8 JOGOS · 5 CONFIRMADOS</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:8 }}>
+              {[
+                [T.BRA, T.MAR, '2','1','✓ 5pt'],
+                [T.ARG, T.AUS, '3','0','✓ 0pt'],
+                [T.FRA, T.SEN, '1','0','✓ 10pt'],
+                [T.POR, T.URU, '1','1','LIVE'],
+              ].map(([h,a,hs,as_,note], i)=>(
+                <div key={i} style={{ border:'1px solid var(--hairline)', borderRadius:8, padding:8 }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6 }}>
+                    <Flag team={h} size={20}/>
+                    <span className="mono" style={{ fontSize:11 }}>{h.code}</span>
+                    <span className="display" style={{ fontSize:18, marginLeft:'auto' }}>{hs}</span>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6, marginTop:4 }}>
+                    <Flag team={a} size={20}/>
+                    <span className="mono" style={{ fontSize:11 }}>{a.code}</span>
+                    <span className="display" style={{ fontSize:18, marginLeft:'auto' }}>{as_}</span>
+                  </div>
+                  <div className="mono" style={{ fontSize:9, letterSpacing:'.14em', marginTop:6,
+                    color: note === 'LIVE' ? 'var(--red)' : note.includes('10') ? 'var(--green-deep)' : note.includes('0pt') ? 'var(--ink-3)' : 'var(--ink)'}}>
+                    {note === 'LIVE' ? <><span className="dot-live" style={{ marginRight:4 }}/> AO VIVO</> : note}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* resenha peek — empty state */}
+        <div style={{ margin:'18px 14px 0' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
+            <span className="display" style={{ fontSize:30 }}>RESENHA.</span>
+            <button onClick={()=>onNav('resenha')} className="mono" style={{ fontSize:10, letterSpacing:'.16em' }}>ENTRAR →</button>
+          </div>
+          <div style={{ background:'var(--paper-white)', border:'1.5px solid var(--ink)', borderRadius:14, padding:18 }}>
+            <div style={{ textAlign:'center', padding:'8px 0 14px' }}>
+              <div style={{ fontSize:36 }}>⚽</div>
+              <div className="display" style={{ fontSize:22, lineHeight:.95, marginTop:8 }}>NINGUÉM<br/>FALOU NADA.</div>
+              <div className="serif-it" style={{ fontSize:14, color:'var(--ink-3)', marginTop:6, lineHeight:1.4 }}>
+                87 colegas inscritos.<br/>Silêncio total. Isso é histórico.
+              </div>
+            </div>
+            <button onClick={()=>onNav('resenha')} className="btn-yellow" style={{ width:'100%', justifyContent:'center' }}>
+              ABRE O JOGO →
+            </button>
+          </div>
+        </div>
+
+        {/* how it works */}
+        <div style={{ margin:'18px 14px 0' }}>
+          <div style={{ background:'var(--paper-deep)', border:'1.5px solid var(--ink)', borderRadius:14, padding:16, display:'flex', alignItems:'center', gap:14 }}>
+            <div style={{ fontSize:32 }}>📋</div>
+            <div style={{ flex:1 }}>
+              <div className="mono" style={{ fontSize:10, letterSpacing:'.14em', opacity:.6 }}>NOVO POR AQUI?</div>
+              <div className="display" style={{ fontSize:18, lineHeight:.95, marginTop:2 }}>COMO FUNCIONA</div>
+              <div style={{ fontSize:12, color:'var(--ink-3)', marginTop:2 }}>Regras em 30 segundos.</div>
+            </div>
+            <button onClick={()=>onNav('onboarding')} className="btn-ghost" style={{ padding:'8px 12px', fontSize:11, flexShrink:0 }}>VER →</button>
+          </div>
+        </div>
+
+        {/* friends activity */}
+        <div style={{ margin:'18px 14px 18px' }}>
+          <Eyebrow num="03" sub="HOJE">A FIRMA TÁ PALPITANDO</Eyebrow>
+          <div style={{ height:8 }}/>
+          <div style={{ background:'var(--paper-white)', border:'1.5px solid var(--ink)', borderRadius:14 }}>
             {[
-              [T.BRA, T.MAR, '2','1','✓ 5pt'],
-              [T.ARG, T.AUS, '3','0','✓ 0pt'],
-              [T.FRA, T.SEN, '1','0','✓ 10pt'],
-              [T.POR, T.URU, '1','1','LIVE'],
-            ].map(([h,a,hs,as_,note], i)=>(
-              <div key={i} style={{ border:'1px solid var(--hairline)', borderRadius:8, padding:8 }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6 }}>
-                  <Flag team={h} size={20}/>
-                  <span className="mono" style={{ fontSize:11 }}>{h.code}</span>
-                  <span className="display" style={{ fontSize:18, marginLeft:'auto' }}>{hs}</span>
+              ['Lucas Mendes','#00A651','LM','palpitou 2x1 em','BRA','vs','MAR','2min'],
+              ['Bia Yamashita','#1D3557','BY','palpitou empate em','POR','vs','URU','5min'],
+              ['Renan Albuq.','#E63946','RA','reagiu 🔥 ao palpite do','Mathzi','','','12min'],
+            ].map((row, i) => (
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', borderTop: i? '1px dashed rgba(13,13,13,.15)':'none' }}>
+                <span className="avatar" style={{ width:32, height:32, fontSize:11, background: row[1] }}>{row[2]}</span>
+                <div style={{ flex:1, fontSize:13, lineHeight:1.3 }}>
+                  <strong>{row[0]}</strong> <span style={{ color:'var(--ink-3)' }}>{row[3]}</span> <span style={{ fontWeight:700 }}>{row[4]}{row[5]?` ${row[5]} `:''}{row[6]}</span>
                 </div>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6, marginTop:4 }}>
-                  <Flag team={a} size={20}/>
-                  <span className="mono" style={{ fontSize:11 }}>{a.code}</span>
-                  <span className="display" style={{ fontSize:18, marginLeft:'auto' }}>{as_}</span>
-                </div>
-                <div className="mono" style={{ fontSize:9, letterSpacing:'.14em', marginTop:6,
-                  color: note === 'LIVE' ? 'var(--red)' : note.includes('10') ? 'var(--green-deep)' : note.includes('0pt') ? 'var(--ink-3)' : 'var(--ink)'}}>
-                  {note === 'LIVE' ? <><span className="dot-live" style={{ marginRight:4 }}/> AO VIVO</> : note}
-                </div>
+                <span className="mono" style={{ fontSize:9, letterSpacing:'.14em', opacity:.5 }}>{row[7]}</span>
               </div>
             ))}
           </div>
         </div>
-      </div>
 
-      {/* resenha peek */}
-      <div style={{ margin:'18px 14px 0' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
-          <span className="display" style={{ fontSize:30 }}>RESENHA.</span>
-          <button onClick={()=>onNav('resenha')} className="mono" style={{ fontSize:10, letterSpacing:'.16em' }}>ENTRAR →</button>
-        </div>
-        <div style={{ background:'var(--paper-white)', border:'1.5px solid var(--ink)', borderRadius:14, padding:14 }}>
-          {[
-            ["Mathzi","#C9A856","se BRA não passar do Marrocos eu pago café por uma semana 🤝"],
-            ["Carla","#FFCB05","anotado na ata. testemunhas: 47 pessoas."],
-          ].map(([n, c, t], i)=>(
-            <div key={i} style={{ display:'flex', gap:10, padding:'8px 0', borderTop: i? '1px dashed rgba(13,13,13,.18)' : 'none' }}>
-              <span className="avatar" style={{ width:32, height:32, fontSize:12, background:c }}>{n[0]+n[1]}</span>
-              <div style={{ flex:1, fontSize:13 }}>
-                <span style={{ fontWeight:700 }}>{n}</span> <span className="mono" style={{ fontSize:10, letterSpacing:'.14em', opacity:.5 }}>14:0{2+i}</span>
-                <div style={{ marginTop:2, color:'var(--ink-2)' }}>{t}</div>
-              </div>
-            </div>
-          ))}
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:10, padding:'10px 12px', background:'var(--paper-deep)', borderRadius:999 }}>
-            <span className="mono" style={{ fontSize:11, opacity:.6, flex:1 }}>manda a tua aí…</span>
-            <span style={{ fontSize:14 }}>⚽</span>
-            <span style={{ fontSize:14 }}>🔥</span>
-          </div>
-        </div>
-      </div>
-
-      {/* friends activity */}
-      <div style={{ margin:'18px 14px 18px' }}>
-        <Eyebrow num="03" sub="HOJE">A FIRMA TÁ PALPITANDO</Eyebrow>
         <div style={{ height:8 }}/>
-        <div style={{ background:'var(--paper-white)', border:'1.5px solid var(--ink)', borderRadius:14 }}>
-          {[
-            ['Lucas Mendes','#00A651','LM','palpitou 2x1 em','BRA','vs','MAR','2min'],
-            ['Bia Yamashita','#1D3557','BY','palpitou empate em','POR','vs','URU','5min'],
-            ['Renan Albuq.','#E63946','RA','reagiu 🔥 ao palpite do','Mathzi','','','12min'],
-          ].map((row, i) => (
-            <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', borderTop: i? '1px dashed rgba(13,13,13,.15)':'none' }}>
-              <span className="avatar" style={{ width:32, height:32, fontSize:11, background: row[1] }}>{row[2]}</span>
-              <div style={{ flex:1, fontSize:13, lineHeight:1.3 }}>
-                <strong>{row[0]}</strong> <span style={{ color:'var(--ink-3)' }}>{row[3]}</span> <span style={{ fontWeight:700 }}>{row[4]}{row[5]?` ${row[5]} `:''}{row[6]}</span>
-              </div>
-              <span className="mono" style={{ fontSize:9, letterSpacing:'.14em', opacity:.5 }}>{row[7]}</span>
-            </div>
-          ))}
-        </div>
       </div>
+
+      <MobileNav current="home" onNav={onNav}/>
     </div>
   );
 }
@@ -170,6 +182,8 @@ function HomeMobile({ onNav }){
 function HomeDesktop({ onNav }){
   return (
     <div style={{ background:'var(--paper)', minHeight:'100%', display:'flex', flexDirection:'column' }} className="paper-grain">
+      <DesktopNav current="home" onNav={onNav}/>
+
       {/* mast */}
       <div style={{ display:'flex', alignItems:'center', gap:24, padding:'14px 32px', borderBottom:'1.5px solid var(--ink)' }}>
         <span className="mono" style={{ fontSize:11, letterSpacing:'.18em' }}>03 · JUL · 2026 · SEX</span>
@@ -179,6 +193,7 @@ function HomeDesktop({ onNav }){
           <span className="dot-live"/> POR 1 — 1 URU · {LIVE.minute}
         </span>
         <span className="mono" style={{ fontSize:11, letterSpacing:'.18em', opacity:.6 }}>POOL: 87 JOGADORES</span>
+        <button onClick={()=>onNav('onboarding')} className="btn-ghost" style={{ padding:'6px 12px', fontSize:11 }}>COMO FUNCIONA →</button>
       </div>
 
       {/* huge masthead with logo as art */}
@@ -286,8 +301,11 @@ function HomeDesktop({ onNav }){
                     ✓ SEU PALPITE: {m.yourPick.home}–{m.yourPick.away}
                   </div>
                 ) : (
-                  <div className="mono" style={{ fontSize:10, letterSpacing:'.14em', marginTop:8, color:'var(--red)' }}>
-                    ⚠ SEM PALPITE · FECHA EM 2H
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:8 }}>
+                    <div className="mono" style={{ fontSize:10, letterSpacing:'.14em', color:'var(--red)' }}>
+                      ⚠ SEM PALPITE
+                    </div>
+                    <button onClick={()=>onNav('prediction')} className="mono" style={{ fontSize:10, letterSpacing:'.14em', color:'var(--green-deep)', fontWeight:700 }}>PALPITAR →</button>
                   </div>
                 )}
               </div>
@@ -295,35 +313,44 @@ function HomeDesktop({ onNav }){
           </div>
         </div>
         <div style={{ padding:'20px 28px', borderRight:'1.5px solid var(--ink)' }}>
-          <Eyebrow num="05">RANKING · TOP 5</Eyebrow>
+          <Eyebrow num="05">RANKING · TOP 6</Eyebrow>
           <div style={{ height:12 }}/>
-          {RANKING.slice(0,6).map(p => (
-            <div key={p.rank} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom:'1px dashed rgba(13,13,13,.15)',
-              background: p.isYou ? 'var(--yellow)' : 'transparent', margin: p.isYou? '0 -10px' : 0, padding: p.isYou? '8px 10px' : '8px 0', borderRadius: p.isYou? 6:0
+          {RANKING.slice(0,6).map((p, i) => (
+            <div key={p.rank} style={{
+              display:'flex', alignItems:'center', gap:10,
+              padding: p.isYou ? '8px 10px' : '8px 0',
+              borderBottom:'1px dashed rgba(13,13,13,.15)',
+              background: p.isYou ? 'var(--yellow)' : 'transparent',
+              margin: p.isYou ? '0 -10px' : 0,
+              borderRadius: p.isYou ? 6 : 0,
             }}>
               <span className="display" style={{ fontSize:22, width:30 }}>{String(p.rank).padStart(2,'0')}</span>
               <Avatar p={p} size={32}/>
-              <div style={{ flex:1, fontSize:13, fontWeight: p.isYou? 700:500 }}>{p.name}</div>
+              <div style={{ flex:1, fontSize:13, fontWeight: p.isYou ? 700 : 500 }}>{p.name}</div>
               <span className="mono" style={{ fontSize:11, opacity:.6 }}>{p.mov}</span>
               <span className="display" style={{ fontSize:18 }}>{p.pts}</span>
             </div>
           ))}
+          <button onClick={()=>onNav('ranking')} className="btn-ghost" style={{ marginTop:10, padding:'8px 12px', fontSize:11 }}>VER TODOS →</button>
         </div>
         <div style={{ padding:'20px 28px' }}>
-          <Eyebrow num="06">RESENHA · MAIS QUENTE</Eyebrow>
+          <Eyebrow num="06">RESENHA · CANAL #GERAL</Eyebrow>
           <div style={{ height:12 }}/>
-          {[
-            ['Mathzi','#C9A856','MP',"se BRA não passar do Marrocos pago o café da firma por 1 semana"],
-            ['Carla','#FFCB05','CT',"anotado. testemunhas: 47."],
-            ['Renan','#E63946','RA',"meu palpite tá fechado. dorme tranquilo."]
-          ].map(([n,c,i,t], idx) => (
-            <div key={idx} style={{ display:'flex', gap:10, padding:'8px 0', borderBottom:'1px dashed rgba(13,13,13,.15)' }}>
-              <span className="avatar" style={{ width:30, height:30, fontSize:11, background:c }}>{i}</span>
-              <div style={{ flex:1, fontSize:13 }}>
-                <strong>{n}</strong> <span className="serif-it" style={{ color:'var(--ink-3)', fontSize:14 }}>"{t}"</span>
-              </div>
+          {/* empty state — no fake messages */}
+          <div style={{
+            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+            padding:'28px 16px', border:'1.5px dashed var(--ink)', borderRadius:12,
+            background:'var(--paper-white)', textAlign:'center', gap:8
+          }}>
+            <div style={{ fontSize:32 }}>⚽</div>
+            <div className="display" style={{ fontSize:22, lineHeight:.9 }}>SILÊNCIO<br/>TOTAL.</div>
+            <div className="serif-it" style={{ fontSize:14, color:'var(--ink-3)', lineHeight:1.4 }}>
+              87 colegas inscritos.<br/>Ninguém falou nada ainda.
             </div>
-          ))}
+            <div className="mono" style={{ fontSize:10, letterSpacing:'.14em', opacity:.6 }}>
+              isso é histórico.
+            </div>
+          </div>
           <button onClick={()=>onNav('resenha')} className="btn-ghost" style={{ marginTop:10, padding:'8px 12px', fontSize:11 }}>ENTRAR NA RESENHA →</button>
         </div>
       </div>

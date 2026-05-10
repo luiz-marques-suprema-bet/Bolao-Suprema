@@ -80,21 +80,8 @@ const PAST = [
   { home:T.ENG, away:T.KSA, hs:2, as:1, your:{h:1,a:0}, points:0, when:"03 DIAS" },
 ];
 
-/* Resenha — chat messages */
-const CHAT = [
-  { who:"Mathzi", dept:"Data", init:"MP", color:"#C9A856", time:"14:02",
-    text:"se BRA não passar do Marrocos eu pago o café da firma por uma semana 🤝" },
-  { who:"Carla", dept:"Marketing", init:"CT", color:"#FFCB05", time:"14:03",
-    text:"anotado na ata. testemunhas: 47 pessoas." },
-  { who:"Renan", dept:"CEO", init:"RA", color:"#E63946", time:"14:05",
-    text:"meu palpite tá fechado. dorme tranquilo, marrocano." },
-  { who:"Você", dept:"Design", init:"FS", color:"#FFCB05", time:"14:06", isYou:true,
-    text:"alguém aí palpitou empate Portugal x Uruguai? sinto cheiro de prorrogação" },
-  { who:"Diogo", dept:"Mobile", init:"DS", color:"#E63946", time:"14:09",
-    text:"quem palpitou empate ali ganhou bolão e psicólogo de graça" },
-  { who:"Bia", dept:"Produto", init:"BY", color:"#1D3557", time:"14:12", reaction:"⚽",
-    text:"FYI: prazo dos palpites das oitavas fecha 30min antes do 1º jogo. ninguém esquece desta vez 🙏" },
-];
+/* Resenha — chat messages (start empty; populated by real users) */
+const CHAT = [];
 
 /* Bracket — round of 16 → final, with predictions/results */
 const BRACKET = {
