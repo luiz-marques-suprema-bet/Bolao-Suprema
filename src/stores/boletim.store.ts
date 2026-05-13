@@ -1,31 +1,185 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type { Boletim } from '@/types'
+import { supabase, isMockMode } from '@/lib/supabase'
 
-interface BoletimState {
-  bulletins: Boletim[]
-  addBoletim: (b: Boletim) => void
-  togglePin: (id: string) => void
-  deleteBoletim: (id: string) => void
+// ─── DB row → Boletim ────────────────────────────────────────────────────────
+
+interface BoletimRow {
+  id: string
+  label: string
+  title: string
+  subtitle: string | null
+  body: string
+  image_url: string | null
+  author_id: string
+  author_name: string
+  is_pinned: boolean
+  created_at: string
 }
 
-export const useBoletimStore = create<BoletimState>()(
-  persist(
-    (set) => ({
-      bulletins: [],
+function mapRow(row: BoletimRow): Boletim {
+  return {
+    id:         row.id,
+    label:      row.label,
+    title:      row.title,
+    subtitle:   row.subtitle ?? undefined,
+    body:       row.body,
+    imageUrl:   row.image_url ?? undefined,
+    authorId:   row.author_id,
+    authorName: row.author_name,
+    isPinned:   row.is_pinned,
+    createdAt:  row.created_at,
+  }
+}
 
-      addBoletim: (b) => set((s) => ({ bulletins: [b, ...s.bulletins] })),
+// ─── Store ────────────────────────────────────────────────────────────────────
 
-      togglePin: (id) =>
-        set((s) => ({
-          bulletins: s.bulletins.map((b) =>
-            b.id === id ? { ...b, isPinned: !b.isPinned } : b
-          ),
-        })),
+interface BoletimState {
+  bulletins:  Boletim[]
+  isLoaded:   boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _channel:   any | null
 
-      deleteBoletim: (id) =>
-        set((s) => ({ bulletins: s.bulletins.filter((b) => b.id !== id) })),
-    }),
-    { name: 'bolao-boletins' }
-  )
-)
+  init:          () => Promise<void>
+  destroy:       () => void
+  addBoletim:    (b: Omit<Boletim, 'id' | 'createdAt'>) => Promise<void>
+  togglePin:     (id: string) => Promise<void>
+  deleteBoletim: (id: string) => Promise<void>
+}
+
+export const useBoletimStore = create<BoletimState>()((set, get) => ({
+  bulletins: [],
+  isLoaded:  false,
+  _channel:  null,
+
+  // ── init: load + subscribe ────────────────────────────────────────────────
+
+  init: async () => {
+    if (get().isLoaded) return
+
+    if (isMockMode) {
+      set({ isLoaded: true })
+      return
+    }
+
+    const { data } = await supabase
+      .from('bulletins')
+      .select('*')
+      .order('is_pinned', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (data) {
+      set({ bulletins: (data as BoletimRow[]).map(mapRow), isLoaded: true })
+    } else {
+      set({ isLoaded: true })
+    }
+
+    // Realtime: INSERT / UPDATE / DELETE
+    const channel = supabase
+      .channel('bulletins_v1')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bulletins' }, (payload) => {
+        const b = mapRow(payload.new as BoletimRow)
+        set(s => ({ bulletins: [b, ...s.bulletins] }))
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bulletins' }, (payload) => {
+        const b = mapRow(payload.new as BoletimRow)
+        set(s => ({ bulletins: s.bulletins.map(x => x.id === b.id ? b : x) }))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'bulletins' }, (payload) => {
+        set(s => ({ bulletins: s.bulletins.filter(x => x.id !== payload.old.id) }))
+      })
+      .subscribe()
+
+    set({ _channel: channel })
+  },
+
+  destroy: () => {
+    const { _channel } = get()
+    if (_channel) supabase.removeChannel(_channel)
+    set({ _channel: null, bulletins: [], isLoaded: false })
+  },
+
+  // ── addBoletim ────────────────────────────────────────────────────────────
+
+  addBoletim: async (b) => {
+    if (isMockMode) {
+      const mock: Boletim = { ...b, id: `b-${Date.now()}`, createdAt: new Date().toISOString() }
+      set(s => ({ bulletins: [mock, ...s.bulletins] }))
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('bulletins')
+      .insert({
+        label:       b.label,
+        title:       b.title,
+        subtitle:    b.subtitle ?? null,
+        body:        b.body,
+        image_url:   b.imageUrl ?? null,
+        author_id:   b.authorId,
+        author_name: b.authorName,
+        is_pinned:   b.isPinned ?? false,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[Boletim] Erro ao publicar:', error.message)
+      return
+    }
+    if (data) {
+      // Realtime já vai inserir via subscription, mas adicionamos otimisticamente
+      const novo = mapRow(data as BoletimRow)
+      set(s => {
+        if (s.bulletins.some(x => x.id === novo.id)) return s
+        return { bulletins: [novo, ...s.bulletins] }
+      })
+    }
+  },
+
+  // ── togglePin ─────────────────────────────────────────────────────────────
+
+  togglePin: async (id) => {
+    const current = get().bulletins.find(b => b.id === id)
+    if (!current) return
+
+    const newPinned = !current.isPinned
+
+    // Optimistic update
+    set(s => ({
+      bulletins: s.bulletins.map(b => b.id === id ? { ...b, isPinned: newPinned } : b),
+    }))
+
+    if (isMockMode) return
+
+    const { error } = await supabase
+      .from('bulletins')
+      .update({ is_pinned: newPinned })
+      .eq('id', id)
+
+    if (error) {
+      console.error('[Boletim] Erro ao fixar:', error.message)
+      // Revert
+      set(s => ({
+        bulletins: s.bulletins.map(b => b.id === id ? { ...b, isPinned: !newPinned } : b),
+      }))
+    }
+  },
+
+  // ── deleteBoletim ─────────────────────────────────────────────────────────
+
+  deleteBoletim: async (id) => {
+    // Optimistic remove
+    const prev = get().bulletins
+    set(s => ({ bulletins: s.bulletins.filter(b => b.id !== id) }))
+
+    if (isMockMode) return
+
+    const { error } = await supabase.from('bulletins').delete().eq('id', id)
+    if (error) {
+      console.error('[Boletim] Erro ao excluir:', error.message)
+      set({ bulletins: prev })
+    }
+  },
+}))

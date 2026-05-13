@@ -29,6 +29,7 @@ export interface AppUser {
   favoritePlayerImg?: string
   since: string
   isAdmin: boolean
+  isMarketing: boolean
   createdAt: string
 }
 

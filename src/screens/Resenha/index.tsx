@@ -10,7 +10,7 @@ import type { ChatMessage, ChatPoll } from '@/types'
 
 // ─── Tenor GIF API ─────────────────────────────────────────────────────────────
 
-const TENOR_KEY = (import.meta.env.VITE_TENOR_KEY as string | undefined) ?? 'LIVDSRZULELA'
+const TENOR_KEY = import.meta.env.VITE_TENOR_KEY as string | undefined
 
 interface GifResult {
   id: string
@@ -19,6 +19,7 @@ interface GifResult {
 }
 
 async function fetchGifs(query: string): Promise<GifResult[]> {
+  if (!TENOR_KEY) return []
   const endpoint = query.trim()
     ? `https://api.tenor.com/v1/search?q=${encodeURIComponent(query)}&key=${TENOR_KEY}&limit=20&contentfilter=medium&media_filter=minimal`
     : `https://api.tenor.com/v1/trending?key=${TENOR_KEY}&limit=20&contentfilter=medium&media_filter=minimal`
@@ -505,12 +506,12 @@ export function ResenhaScreen() {
   }, [addMessage, buildMsg])
 
   const togglePin = useCallback((id: string) => {
-    setPinned(pinnedId === id ? null : id)
+    void setPinned(pinnedId === id ? null : id)
   }, [setPinned, pinnedId])
 
   const vote = useCallback((pollMsgId: string, optionId: string) => {
     const userId = me?.id ?? 'me'
-    voteOnPoll(pollMsgId, userId, optionId)
+    void voteOnPoll(pollMsgId, userId, optionId)
   }, [me, voteOnPoll])
 
   const pinnedMsg = pinnedId ? messages.find(m => m.id === pinnedId) : null

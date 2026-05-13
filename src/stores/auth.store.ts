@@ -14,25 +14,35 @@ function syncPredictions(userId: string) {
 
 // ─── DB row → AppUser ─────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapUser(row: any): AppUser {
+interface UserRow {
+  id: string; email: string; first_name: string; last_name: string
+  dept: string; initials: string; color: string
+  avatar_url?: string | null; banner_url?: string | null; bio?: string | null
+  favorite_team?: string | null; favorite_player?: string | null
+  favorite_player_img?: string | null
+  champion_pick?: string | null; vice_pick?: string | null; scorer_pick?: string | null
+  since: string; is_admin: boolean; is_marketing: boolean; created_at: string
+}
+
+function mapUser(row: UserRow): AppUser {
   return {
-    id: row.id,
-    email: row.email,
-    firstName: row.first_name ?? '',
-    lastName: row.last_name ?? '',
-    dept: row.dept ?? '',
-    initials: row.initials ?? '',
-    color: row.color ?? '#00A651',
-    avatarUrl: row.avatar_url ?? undefined,
-    bannerUrl: row.banner_url ?? undefined,
-    bio: row.bio ?? undefined,
-    favoriteTeam: row.favorite_team ?? undefined,
+    id:                row.id,
+    email:             row.email,
+    firstName:         row.first_name  ?? '',
+    lastName:          row.last_name   ?? '',
+    dept:              row.dept        ?? '',
+    initials:          row.initials    ?? '',
+    color:             row.color       ?? '#00A651',
+    avatarUrl:         row.avatar_url  ?? undefined,
+    bannerUrl:         row.banner_url  ?? undefined,
+    bio:               row.bio         ?? undefined,
+    favoriteTeam:      row.favorite_team      ?? undefined,
     favoritePlayer:    row.favorite_player     ?? undefined,
     favoritePlayerImg: row.favorite_player_img ?? undefined,
-    since: row.since ?? String(new Date().getFullYear()),
-    isAdmin: row.is_admin ?? false,
-    createdAt: row.created_at ?? new Date().toISOString(),
+    since:             row.since ?? String(new Date().getFullYear()),
+    isAdmin:           row.is_admin    ?? false,
+    isMarketing:       row.is_marketing ?? false,
+    createdAt:         row.created_at  ?? new Date().toISOString(),
   }
 }
 

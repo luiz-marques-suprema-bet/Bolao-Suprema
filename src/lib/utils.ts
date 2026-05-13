@@ -26,11 +26,13 @@ export function getInitials(name: string): string {
     .toUpperCase()
 }
 
-/** Deterministic color from string (for avatars) */
-const AVATAR_COLORS = [
-  '#00A651', '#E63946', '#1D3557', '#FFCB05',
-  '#6FB4FF', '#C9A856', '#007A3E', '#2A2A2A',
+/** Palette used for user avatar colors (picker + deterministic assignment) */
+export const AVATAR_COLORS = [
+  '#00A651', '#007A3E', '#E63946', '#1D3557',
+  '#FFCB05', '#6FB4FF', '#C9A856', '#FF6600',
 ]
+
+/** Deterministic color from string (for avatars) */
 export function colorFromString(str: string): string {
   let hash = 0
   for (let i = 0; i < str.length; i++) {

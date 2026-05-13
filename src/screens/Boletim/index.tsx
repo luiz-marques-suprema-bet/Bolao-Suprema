@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/auth.store'
 import { useBoletimStore } from '@/stores/boletim.store'
@@ -7,12 +7,12 @@ import type { Boletim } from '@/types'
 // ─── Label colour map ─────────────────────────────────────────────────────────
 
 const LABEL_COLORS: Record<string, string> = {
-  REGRAS:    'bg-ink text-paper',
-  BRASIL:    'bg-green text-paper',
-  AGENDA:    'bg-yellow text-ink',
-  DESTAQUE:  'bg-red text-paper',
-  AVISO:     'bg-yellow text-ink',
-  PRÊMIO:    'bg-green text-paper',
+  REGRAS:   'bg-ink text-paper',
+  BRASIL:   'bg-green text-paper',
+  AGENDA:   'bg-yellow text-ink',
+  DESTAQUE: 'bg-red text-paper',
+  AVISO:    'bg-yellow text-ink',
+  'PRÊMIO': 'bg-green text-paper',
 }
 const labelColor = (l: string) => LABEL_COLORS[l.toUpperCase()] ?? 'bg-ink text-paper'
 
@@ -20,13 +20,13 @@ const labelColor = (l: string) => LABEL_COLORS[l.toUpperCase()] ?? 'bg-ink text-
 
 function BoletimCard({
   b,
-  isAdmin,
+  canEdit,
   onDelete,
   onTogglePin,
   featured = false,
 }: {
   b: Boletim
-  isAdmin: boolean
+  canEdit: boolean
   onDelete: (id: string) => void
   onTogglePin: (id: string) => void
   featured?: boolean
@@ -58,7 +58,7 @@ function BoletimCard({
               </div>
             )}
           </div>
-          {isAdmin && (
+          {canEdit && (
             <div className="flex flex-col gap-1 flex-shrink-0">
               <button
                 onClick={() => onTogglePin(b.id)}
@@ -130,7 +130,7 @@ function BoletimCard({
                 <img src={b.imageUrl} alt={b.title} className="w-full h-36 object-cover mb-3" />
               )}
               <p className="font-sans text-[13px] text-ink-2 leading-relaxed">{b.body}</p>
-              {isAdmin && (
+              {canEdit && (
                 <div className="flex gap-2 mt-4">
                   <button
                     onClick={() => onTogglePin(b.id)}
@@ -158,12 +158,14 @@ function BoletimCard({
 
 const PRESET_LABELS = ['REGRAS', 'BRASIL', 'AGENDA', 'DESTAQUE', 'AVISO', 'PRÊMIO']
 
+type NewBoletim = Omit<Boletim, 'id' | 'createdAt'>
+
 function CreateModal({
   onClose,
   onCreate,
 }: {
   onClose: () => void
-  onCreate: (b: Boletim) => void
+  onCreate: (b: NewBoletim) => void
 }) {
   const { user } = useAuthStore()
   const [label, setLabel] = useState('DESTAQUE')
@@ -171,22 +173,24 @@ function CreateModal({
   const [subtitle, setSubtitle] = useState('')
   const [body, setBody] = useState('')
   const [imageUrl, setImageUrl] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const valid = title.trim().length > 0 && body.trim().length > 0
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!valid) return
-    onCreate({
-      id: `b-${Date.now()}`,
+    setSaving(true)
+    await onCreate({
       label,
-      title: title.trim(),
-      subtitle: subtitle.trim() || undefined,
-      body: body.trim(),
-      imageUrl: imageUrl.trim() || undefined,
-      authorId: user?.id ?? 'admin',
+      title:      title.trim(),
+      subtitle:   subtitle.trim() || undefined,
+      body:       body.trim(),
+      imageUrl:   imageUrl.trim() || undefined,
+      authorId:   user?.id   ?? 'admin',
       authorName: user ? `${user.firstName} ${user.lastName}` : 'Admin',
-      createdAt: new Date().toISOString(),
+      isPinned:   false,
     })
+    setSaving(false)
   }
 
   return (
@@ -215,7 +219,6 @@ function CreateModal({
         </div>
 
         <div className="space-y-3">
-          {/* Label selector */}
           <div>
             <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-1.5">CATEGORIA</p>
             <div className="flex flex-wrap gap-1.5">
@@ -267,11 +270,11 @@ function CreateModal({
           </button>
           <button
             onClick={handleCreate}
-            disabled={!valid}
+            disabled={!valid || saving}
             className="btn-yellow text-[11px] disabled:opacity-40"
             style={{ flex: 2 }}
           >
-            PUBLICAR BOLETIM
+            {saving ? 'PUBLICANDO…' : 'PUBLICAR BOLETIM'}
           </button>
         </div>
       </motion.div>
@@ -282,10 +285,15 @@ function CreateModal({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function BoletimScreen() {
-  const { bulletins, addBoletim, togglePin, deleteBoletim } = useBoletimStore()
+  const { bulletins, isLoaded, init, destroy, addBoletim, togglePin, deleteBoletim } = useBoletimStore()
   const { user } = useAuthStore()
-  const isAdmin = user?.isAdmin ?? false
+  const canEdit = (user?.isAdmin || user?.isMarketing) ?? false
   const [creating, setCreating] = useState(false)
+
+  useEffect(() => {
+    init()
+    return () => { destroy() }
+  }, [init, destroy])
 
   const sorted = [...bulletins].sort((a, b) => {
     if (a.isPinned && !b.isPinned) return -1
@@ -294,11 +302,19 @@ export function BoletimScreen() {
   })
 
   const featured = sorted[0]
-  const rest = sorted.slice(1)
+  const rest     = sorted.slice(1)
 
-  const handleCreate = (b: Boletim) => {
-    addBoletim(b)
+  const handleCreate = async (b: NewBoletim) => {
+    await addBoletim(b)
     setCreating(false)
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <span className="font-mono text-[11px] tracking-eyebrow text-ink-3 animate-pulse">CARREGANDO…</span>
+      </div>
+    )
   }
 
   return (
@@ -315,7 +331,7 @@ export function BoletimScreen() {
               da firma
             </div>
           </div>
-          {isAdmin && (
+          {canEdit && (
             <button
               onClick={() => setCreating(true)}
               className="btn-ink text-[11px] px-5 py-3 flex-shrink-0"
@@ -335,18 +351,16 @@ export function BoletimScreen() {
           </div>
         ) : (
           <>
-            {/* Featured (first/pinned) */}
             {featured && (
               <BoletimCard
                 b={featured}
-                isAdmin={isAdmin}
+                canEdit={canEdit}
                 onDelete={deleteBoletim}
                 onTogglePin={togglePin}
                 featured
               />
             )}
 
-            {/* Horizontal rule with date */}
             {rest.length > 0 && (
               <div className="flex items-center gap-3 py-1">
                 <div className="flex-1 h-px bg-hairline" />
@@ -355,13 +369,12 @@ export function BoletimScreen() {
               </div>
             )}
 
-            {/* Rest — two columns on desktop */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {rest.map(b => (
                 <BoletimCard
                   key={b.id}
                   b={b}
-                  isAdmin={isAdmin}
+                  canEdit={canEdit}
                   onDelete={deleteBoletim}
                   onTogglePin={togglePin}
                 />
@@ -371,7 +384,6 @@ export function BoletimScreen() {
         )}
       </div>
 
-      {/* ── Create modal ── */}
       <AnimatePresence>
         {creating && (
           <CreateModal onClose={() => setCreating(false)} onCreate={handleCreate} />

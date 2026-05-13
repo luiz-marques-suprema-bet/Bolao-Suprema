@@ -10,15 +10,13 @@ import { usePredictionStore } from '@/stores/prediction.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
-import { getInitials } from '@/lib/utils'
+import { getInitials, fmtPts, AVATAR_COLORS } from '@/lib/utils'
 import { searchPlayers } from '@/lib/thesportsdb'
+import { supabase, isMockMode } from '@/lib/supabase'
 import type { PlayerResult } from '@/lib/thesportsdb'
 import type { TeamCode } from '@/types'
 
-const AVATAR_COLORS = [
-  '#00A651', '#007A3E', '#E63946', '#1D3557',
-  '#FFCB05', '#6FB4FF', '#C9A856', '#FF6600',
-]
+interface UserStats { pts: number; correct: number; exact: number; rank: number | null }
 
 // ─── Player Picker ────────────────────────────────────────────────────────────
 
@@ -206,6 +204,21 @@ function useProfileForm() {
   const [favoritePlayer, setFavoritePlayer]     = useState(user?.favoritePlayer ?? '')
   const [favoritePlayerImg, setFavoritePlayerImg] = useState<string | undefined>(user?.favoritePlayerImg)
   const [saving, setSaving]                     = useState(false)
+  const [stats, setStats]                       = useState<UserStats>({ pts: 0, correct: 0, exact: 0, rank: null })
+
+  useEffect(() => {
+    if (!user?.id || isMockMode) return
+    supabase
+      .from('ranking_snapshots')
+      .select('pts, correct, exact_score, rank')
+      .eq('user_id', user.id)
+      .order('snapshot_at', { ascending: false })
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data) setStats({ pts: data.pts, correct: data.correct, exact: data.exact_score, rank: data.rank })
+      })
+  }, [user?.id])
 
   const [photoFile, setPhotoFile]       = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(user?.avatarUrl ?? null)
@@ -252,7 +265,7 @@ function useProfileForm() {
     handlePickPhoto, handlePickBanner,
     initials, saving,
     handleSave, handleSignOut, handleClearPredictions,
-    championPick, vicePick, scorerPick,
+    championPick, vicePick, scorerPick, stats,
   }
 }
 
@@ -571,9 +584,9 @@ function ProfileDesktop() {
                   {f.bio && <p className="font-sans text-[11px] text-ink-2 mt-1.5 leading-snug line-clamp-2">{f.bio}</p>}
 
                   <div className="border-t border-hairline mt-3 pt-3 grid grid-cols-3 gap-1 text-center">
-                    <div><div className="font-display text-xl">0</div><div className="font-mono text-[8px] text-ink-4">PTS</div></div>
-                    <div><div className="font-display text-xl">—</div><div className="font-mono text-[8px] text-ink-4">ACERTOS</div></div>
-                    <div><div className="font-display text-xl">—</div><div className="font-mono text-[8px] text-ink-4">EXATOS</div></div>
+                    <div><div className="font-display text-xl">{fmtPts(f.stats.pts)}</div><div className="font-mono text-[8px] text-ink-4">PTS</div></div>
+                    <div><div className="font-display text-xl">{f.stats.correct || '—'}</div><div className="font-mono text-[8px] text-ink-4">ACERTOS</div></div>
+                    <div><div className="font-display text-xl">{f.stats.exact || '—'}</div><div className="font-mono text-[8px] text-ink-4">EXATOS</div></div>
                   </div>
 
                   {f.favoriteTeam && TEAMS[f.favoriteTeam] && (

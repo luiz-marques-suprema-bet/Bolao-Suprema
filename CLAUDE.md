@@ -1,133 +1,123 @@
-# CLAUDE.md
+# CLAUDE.md — Bolão Suprema
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Bolão oficial da Suprema Gaming para a Copa do Mundo 2026.
+App web com ~300 participantes, hospedado em GitHub Pages.
 
-## Estado do projeto
+## Stack
 
-**Antes de qualquer tarefa, verifique** [`.claude/rules/project-context.md`](.claude/rules/project-context.md):
+| Camada | Tecnologia |
+|--------|-----------|
+| Frontend | React 19 + TypeScript + Vite |
+| Estilo | Tailwind CSS (tokens em `tailwind.config.ts`) |
+| Animações | Framer Motion |
+| Roteamento | React Router v6 (HashRouter — necessário para GitHub Pages) |
+| Estado | Zustand (sem Redux) |
+| Backend / DB | Supabase (PostgreSQL + Realtime + Storage) |
+| Deploy | GitHub Actions → GitHub Pages |
 
-- Se contiver `<!-- status: template -->` ou placeholders como `<NOME>` → o projeto **não foi inicializado**. Instrua o usuário a rodar `/setup` primeiro.
-- Se contiver `<!-- status: active -->` → o projeto está configurado. Use as informações de stack e domínio de lá como fonte de verdade.
-
-## Inicialização (primeira vez)
+## Estrutura
 
 ```
-/setup
+src/
+  App.tsx              # Roteador principal (HashRouter)
+  screens/             # Uma pasta por tela
+    Home/              # Capa com highlights e notícias
+    Boletim/           # Mural de comunicados (admin + marketing)
+    Bracket/           # Chaveamento mata-mata
+    Prediction/        # Fazer palpites de partidas
+    Ranking/           # Classificação geral
+    Resenha/           # Chat ao vivo com GIF e enquetes
+    Profile/           # Perfil e configurações do usuário
+    UserProfile/       # Ver perfil de outro usuário
+    Admin/             # Painel admin (fechar partidas, registrar placares)
+    Login/ Register/ Onboarding/
+  stores/              # Zustand stores
+    auth.store.ts      # Autenticação + perfil
+    prediction.store.ts # Palpites + apostas gerais
+    chat.store.ts      # Chat em tempo real + votos + pinning
+    boletim.store.ts   # Boletins (Supabase + Realtime)
+    bracket.store.ts   # Chaveamento
+  lib/
+    supabase.ts        # Client Supabase + uploadFile
+    thesportsdb.ts     # Busca de jogadores (perfil)
+    footballnews.ts    # Notícias Copa 2026 (Home)
+    scorebat.ts        # Highlights de vídeo (Home)
+    utils.ts           # cn, fmtPts, getInitials, AVATAR_COLORS, etc.
+  components/
+    navigation/        # MobileNav, DesktopNav
+    shared/            # Logo, Avatar, Flag, Stamp, Marquee, etc.
+  data/
+    teams.ts           # 48 seleções da Copa 2026
+    wc2026.ts          # Grupos e estrutura do torneio
+    mock.ts            # Dados mock para desenvolvimento sem Supabase
+  types/index.ts       # Todos os tipos TypeScript do projeto
+  hooks/
+    useBreakpoint.ts   # useIsDesktop()
 ```
 
-Wizard interativo que:
-1. Coleta nome, domínio, stack e convenções do projeto
-2. Preenche `.claude/rules/project-context.md` automaticamente
-3. Bootstrapa os domínios iniciais da KB via `/train-kb`
-4. Sincroniza o CLAUDE.md com o contexto do projeto
+## Variáveis de Ambiente
 
-Após o `/setup`, o scaffold está pronto para trabalhar.
+```env
+# Obrigatórias para produção:
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
 
-## O que é este repositório
-
-Scaffold pessoal para desenvolvimento assistido por IA, baseado em **SDD** (Spec-Driven Development). O contrato completo para agentes está em [`.claude/AGENTS.md`](.claude/AGENTS.md).
-
-Diretórios `src/`, `tests/`, `design/`, `notes/` estão vazios no bootstrap — conteúdo gerado vive em `.claude/sdd/`, `.claude/dev/` e `.claude/kb/`.
-
-## Slash commands disponíveis
-
-| Comando | Propósito |
-|---------|-----------|
-| `/setup` | **Inicialização** — wizard completo de configuração do projeto |
-| `/audit-agents` | Analisa cobertura de agentes e gera customizados para lacunas do projeto |
-| `/train-kb` | Bootstrap de novo domínio na KB |
-| `/brainstorm` | Fase 0 SDD — exploração de ideia |
-| `/define` | Fase 1 SDD — captura de requisitos |
-| `/design` | Fase 2 SDD — arquitetura e spec técnica |
-| `/build` | Fase 3 SDD — implementação |
-| `/ship` | Fase 4 SDD — arquivamento e lições |
-| `/iterate` | Atualizar requisitos no meio de uma feature |
-| `/dev` | Dev Loop — tarefa pequena sem SDD completo |
-| `/review` | Revisão de PR ou diff |
-| `/create-kb` | Criar entrada individual na KB |
-| `/sync-context` | Ressincronizar CLAUDE.md com estado atual do projeto |
-
-Todos os comandos ficam em `.claude/commands/`.
-
-## Workflow SDD (features maiores)
-
-Cinco fases sequenciais — **nunca pule fases** sem autorização explícita.
-
-| Fase | Subagent | Artefato gerado |
-|------|----------|-----------------|
-| 0. Brainstorm | `brainstorm-agent` | `.claude/sdd/features/BRAINSTORM_<FEATURE>.md` |
-| 1. Define | `define-agent` | `.claude/sdd/features/DEFINE_<FEATURE>.md` |
-| 2. Design | `design-agent` | `.claude/sdd/features/DESIGN_<FEATURE>.md` |
-| 3. Build | `build-agent` | código + `.claude/sdd/reports/BUILD_REPORT_<FEATURE>.md` |
-| 4. Ship | `ship-agent` | `.claude/sdd/archive/<FEATURE>/SHIPPED_<DATE>.md` |
-
-Templates em `.claude/sdd/templates/`. Passe sempre o artefato da fase anterior como contexto.
-
-## Dev Loop (tarefas pequenas)
-
-Para utilitários, protótipos ou arquivos únicos, use o Dev Loop:
-
-1. `prompt-crafter` → gera `.claude/dev/tasks/PROMPT_<NOME>.md`
-2. `dev-loop-executor` → executa e registra progresso em `.claude/dev/progress/`
-
-## Roteamento de subagents
-
-Invoke subagents via ferramenta `Agent` com `subagent_type` igual ao `name` no frontmatter do agente. Tarefas independentes rodam em paralelo.
-
-| Categoria | Diretório | Agentes principais |
-|-----------|-----------|-------------------|
-| Workflow SDD | `workflow/` | `brainstorm-agent`, `define-agent`, `design-agent`, `build-agent`, `ship-agent`, `iterate-agent` |
-| Setores técnicos | `setores/` | `setor-frontend`, `setor-backend`, `setor-dados`, `setor-devops`, `setor-ia`, `setor-seguranca`, `setor-qa` |
-| Testes | `testes/` | `qa-automation`, `integration-tester`, `regression-tester`, `performance-tester`, `test-generator` |
-| Qualidade | `qualidade/` | `code-reviewer`, `dual-reviewer`, `code-cleaner`, `code-documenter`, `python-developer`, `auditor-qualidade`, `acessibilidade-reviewer`, `security-auditor`, `performance-auditor` |
-| Conteúdo | `conteudo/` | `redator-tecnico`, `copywriter`, `doc-generator`, `changelog-writer`, `tutorial-writer` |
-| Planejamento | `planejamento/` | `orquestrador-mestre`, `planejador-estrategico`, `cronograma-tatico` |
-| KB | `kb/` | `orquestrador-de-kb`, `curador-kb`, `taxonomista-kb` |
-| Exploração | `exploration/` | `codebase-explorer`, `kb-architect` |
-| Comunicação | `communication/` | `adaptive-explainer`, `meeting-analyst`, `the-planner` |
-| Dev Loop | `dev/` | `prompt-crafter`, `dev-loop-executor` |
-| IA/ML | `ai-ml/` | `ai-prompt-specialist`, `genai-architect`, `llm-specialist`, `ai-data-engineer` |
-
-Quando o usuário escrever `@nome-do-agente`, invoque esse subagent com o restante da mensagem como tarefa.
-
-## KB em 4 camadas
-
-Todo arquivo em `.claude/kb/` pertence a **exatamente uma** camada:
-
-| Camada | Pergunta | Exemplos de conteúdo |
-|--------|----------|----------------------|
-| `business/` | Qual é a regra de negócio? | KPIs, glossário, políticas |
-| `tools/` | Como funciona esta tecnologia? | Docs agnósticas de fornecedor |
-| `implementation/` | O que nós construímos? | URLs internas, schemas, IDs concretos |
-| `operations/` | Como rodo ou recupero? | Runbooks, playbooks de incidente |
-
-Caminho canônico: `.claude/kb/<camada>/<domínio>/<tipo>/<arquivo>.md`. Templates em `.claude/kb/_templates/`. Taxonomia em `.claude/kb/_taxonomy.yaml`.
-
-Frontmatter obrigatório em cada arquivo da KB:
-
-```yaml
----
-id: <kebab-case>
-layer: business | tools | implementation | operations
-domain: <nome-da-pasta>
-content_type: concept | pattern | reference | spec | runbook | index | quick-reference
-status: active | scaffolded | wip | deprecated | archived
----
+# Opcionais:
+VITE_MOCK_AUTH=true               # Pula Supabase, usa dados mock (dev local)
+VITE_TENOR_KEY=                   # GIFs na Resenha (sem chave = GIFs desabilitados)
+VITE_THESPORTSDB_KEY=             # Busca jogadores (sem chave = usa chave free limitada)
+VITE_FNEWS_URL=                   # API de notícias (sem chave = sem seção de notícias)
+VITE_FNEWS_KEY=
+VITE_FNEWS_HOST=
 ```
 
-## Regras de contexto
+## Banco de Dados (Supabase)
 
-As regras em `.claude/rules/` documentam contratos do sistema:
+Tabelas principais:
+- `users` — perfis dos participantes. Campos: `is_admin`, `is_marketing`
+- `matches` — calendário de partidas gerido pelo admin
+- `predictions` — palpites de placar por usuário/partida
+- `bracket_picks` — palpites de chaveamento
+- `bulletins` — boletins do Boletim (escrita: admin + is_marketing)
+- `chat_messages` — mensagens da Resenha
+- `poll_votes` — votos em enquetes (persistidos separadamente)
+- `channel_pins` — mensagem fixada por canal
+- `ranking_snapshots` — snapshots de ranking (pts, acertos, exatos)
 
-- [`workflow-sdd.md`](.claude/rules/workflow-sdd.md) — fases SDD, quando invocar cada agente
-- [`agent-routing.md`](.claude/rules/agent-routing.md) — mapa completo de subagents por gatilho
-- [`project-context.md`](.claude/rules/project-context.md) — stack, equipa, convenções (**preencher via `/setup`**)
-- [`kb-taxonomy.md`](.claude/rules/kb-taxonomy.md) — disciplina das 4 camadas da KB
+Schema completo e migrations: `supabase-schema.sql`
 
-## Telemetria
+## Roles de Usuário
 
-Cada fase do workflow emite um registro conforme `.claude/telemetry/SESSION_SCHEMA.yaml`. Não fabrique entradas — deixe os subagents escreverem.
+| Flag | Pode fazer |
+|------|-----------|
+| nenhuma | jogar, fazer palpites, usar o chat |
+| `is_marketing = true` | publicar, fixar e excluir boletins |
+| `is_admin = true` | tudo acima + abrir/fechar partidas, registrar placares, criar enquetes, fixar mensagens |
 
-## MCPs
+Para promover um usuário a marketing no Supabase:
+```sql
+update users set is_marketing = true where email = 'email@exemplo.com';
+```
 
-Integrações MCP são **opcionais**. Se não estiverem configuradas, trabalhe com KB local e código do repositório.
+## Deploy
+
+O deploy é automático via GitHub Actions ao fazer push para `main`.
+Workflow em `.github/workflows/`. O build vai para a branch `gh-pages`.
+
+## Desenvolvimento Local
+
+```bash
+npm install
+cp .env.example .env.local   # preencher vars ou usar VITE_MOCK_AUTH=true
+npm run dev
+```
+
+Com `VITE_MOCK_AUTH=true`, o app funciona sem Supabase usando dados de `src/data/mock.ts`.
+
+## Convenções
+
+- TypeScript estrito — sem `any` explícito
+- Tailwind para estilos; sem CSS-in-JS na camada `src/`
+- Stores Zustand: operações de DB são assíncronas com rollback em caso de erro
+- Realtime Supabase: cada store gerencia seu próprio canal e faz `removeChannel` no destroy
+- Imagens de usuário sobem para o bucket `user-media` no Supabase Storage
