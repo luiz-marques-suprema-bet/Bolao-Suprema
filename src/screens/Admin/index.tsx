@@ -8,7 +8,6 @@ import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
 import { POINT_RULES } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
-import { calculatePoints } from '@/lib/scoring'
 import { cn } from '@/lib/utils'
 import { formatMatchDateTime } from '@/lib/matchTime'
 import { createInvite, fetchAuditLogs, fetchInvites, fetchParticipants, fetchScoringRules, fetchSystemHealth, refreshRanking, updateParticipantStatus, downloadCsv, setMarketStatus, settleMatchResult } from '@/services/product'
@@ -67,40 +66,16 @@ async function fetchKpis(): Promise<KpiData> {
 async function updateMatchStatus(
   matchCode: string,
   status: MatchStatus,
-  extra?: { homeScore?: number; awayScore?: number; liveMinute?: string; winner?: string; lockReason?: string }
+  extra?: { lockReason?: string }
 ) {
   const market = marketStatusFor(status)
-  if (market === 'locked' || market === 'open' || market === 'closed' || market === 'settled') {
-    const rpc = await setMarketStatus(matchCode, market, extra?.lockReason)
-    if (rpc.error) return { message: rpc.error }
-    if (status !== 'finished' && extra?.homeScore === undefined && extra?.awayScore === undefined) return null
-  }
-  const payload: Record<string, unknown> = { status }
-  payload.market_status = marketStatusFor(status)
-  if (status === 'locked') {
-    payload.locked_at = new Date().toISOString()
-    payload.lock_reason = extra?.lockReason ?? 'admin_lock'
-  }
-  if (status === 'open') {
-    payload.unlocked_at = new Date().toISOString()
-    payload.locked_at = null
-    payload.lock_reason = null
-    payload.settled_at = null
-  }
   if (status === 'finished') {
-    payload.settled_at = new Date().toISOString()
+    return { message: 'Use o fluxo de registrar resultado para encerrar e pontuar a partida.' }
   }
-  if (extra?.homeScore !== undefined) payload.home_score = extra.homeScore
-  if (extra?.awayScore !== undefined) payload.away_score = extra.awayScore
-  if (extra?.liveMinute !== undefined) payload.live_minute = extra.liveMinute
-  if (extra?.winner !== undefined) payload.winner = extra.winner
 
-  const { error } = await supabase
-    .from('matches')
-    .update(payload)
-    .eq('match_code', matchCode)
-
-  return error
+  const rpc = await setMarketStatus(matchCode, market, extra?.lockReason)
+  if (rpc.error) return { message: rpc.error }
+  return null
 }
 
 /**
@@ -111,57 +86,11 @@ async function setMatchResult(
   matchCode: string,
   homeScore: number,
   awayScore: number,
-  stage: MatchStage
+  _stage: MatchStage
 ): Promise<{ scored: number; error: string | null }> {
   const rpc = await settleMatchResult(matchCode, homeScore, awayScore)
   if (!rpc.error) return { scored: 0, error: null }
-
-  // 1. Atualizar o placar e status no banco
-  const winner =
-    homeScore > awayScore ? WC2026_MATCHES.find(m => m.id === matchCode)?.home.code :
-    awayScore > homeScore ? WC2026_MATCHES.find(m => m.id === matchCode)?.away.code :
-    'draw'
-
-  const matchErr = await updateMatchStatus(matchCode, 'finished', {
-    homeScore, awayScore, winner: winner ?? undefined
-  })
-  if (matchErr) return { scored: 0, error: matchErr.message }
-
-  // 2. Buscar todas as predictions desta partida
-  const { data: preds, error: predsErr } = await supabase
-    .from('predictions')
-    .select('id, home_score, away_score')
-    .eq('match_code', matchCode)
-
-  if (predsErr) return { scored: 0, error: predsErr.message }
-  if (!preds?.length) return { scored: 0, error: null }
-
-  // 3. Calcular pontos para cada prediction
-  const updates = preds.map(p => ({
-    id: p.id,
-    points_earned: calculatePoints(
-      { homeScore: p.home_score, awayScore: p.away_score },
-      { homeScore, awayScore },
-      stage
-    ),
-  }))
-
-  // 4. Upsert em batch (Supabase não tem bulk update por PK diretamente; usamos Promise.all)
-  const results = await Promise.all(
-    updates.map(u =>
-      supabase
-        .from('predictions')
-        .update({ points_earned: u.points_earned })
-        .eq('id', u.id)
-    )
-  )
-
-  const errors = results.filter(r => r.error)
-  if (errors.length > 0) {
-    return { scored: updates.length - errors.length, error: `${errors.length} erros ao pontuar` }
-  }
-
-  return { scored: updates.length, error: null }
+  return { scored: 0, error: rpc.error }
 }
 
 // ─── Status badge ──────────────────────────────────────────────────────────────
@@ -383,26 +312,21 @@ async function openGroupMatches(groupCode: string, onAction: (msg: string, ok: b
     .filter(m => m.group === groupCode)
     .map(m => m.id)
 
-  const { error } = await supabase
-    .from('matches')
-    .update({ status: 'open', market_status: 'open', unlocked_at: new Date().toISOString(), locked_at: null, lock_reason: null, settled_at: null })
-    .in('match_code', matchCodes)
-    .eq('status', 'scheduled')
+  const results = await Promise.all(matchCodes.map(code => setMarketStatus(code, 'open', `group_${groupCode}_open`)))
+  const failed = results.find(result => result.error)
 
-  if (error) onAction(`Erro: ${error.message}`, false)
+  if (failed?.error) onAction(`Erro: ${failed.error}`, false)
   else onAction(`✓ Partidas do Grupo ${groupCode} abertas para apostas`, true)
 }
 
-async function lockAllOpenMatches(onAction: (msg: string, ok: boolean) => void) {
+async function lockAllOpenMatches(matchCodes: string[], onAction: (msg: string, ok: boolean) => void) {
   if (isMockMode) { onAction('Mock mode: ação não persiste', false); return }
-  const { error, count } = await supabase
-    .from('matches')
-    .update({ status: 'locked', market_status: 'locked', locked_at: new Date().toISOString(), lock_reason: 'bulk_admin_lock' })
-    .eq('status', 'open')
-    .select('id', { count: 'exact', head: true })
-
-  if (error) onAction(`Erro: ${error.message}`, false)
-  else onAction(`✓ ${count ?? 0} partidas abertas → BLOQUEADAS`, true)
+  const openCodes = matchCodes
+  if (matchCodes.length === 0) { onAction('Nenhuma partida aberta para bloquear', true); return }
+  const results = await Promise.all(matchCodes.map(code => setMarketStatus(code, 'locked', 'bulk_admin_lock')))
+  const failed = results.find(result => result.error)
+  if (failed?.error) onAction(`Erro: ${failed.error}`, false)
+  else onAction(`✓ ${openCodes.length} partidas abertas → BLOQUEADAS`, true)
 }
 
 // ─── Export CSV ───────────────────────────────────────────────────────────────
@@ -659,7 +583,8 @@ function useAdminData() {
 // ─── Mobile ───────────────────────────────────────────────────────────────────
 
 function AdminMobile() {
-  const { kpis, filtered, filter, setFilter, selectedGroup, setSelectedGroup, toast, showToast } = useAdminData()
+  const { kpis, filtered, allMatches, filter, setFilter, selectedGroup, setSelectedGroup, toast, showToast } = useAdminData()
+  const openMatchCodes = allMatches.filter(match => match.status === 'open').map(match => match.id)
 
   return (
     <div className="min-h-dvh bg-paper pb-24">
@@ -698,7 +623,7 @@ function AdminMobile() {
       {/* Bulk actions */}
       <div className="px-4 pt-3 space-y-2">
         <button
-          onClick={() => lockAllOpenMatches(showToast)}
+          onClick={() => lockAllOpenMatches(openMatchCodes, showToast)}
           className="btn-ghost w-full justify-center text-[10px]"
         >
           BLOQUEAR TODAS AS APOSTAS ABERTAS
@@ -772,7 +697,8 @@ function AdminMobile() {
 // ─── Desktop ──────────────────────────────────────────────────────────────────
 
 function AdminDesktop() {
-  const { kpis, filtered, filter, setFilter, selectedGroup, setSelectedGroup, toast, showToast } = useAdminData()
+  const { kpis, filtered, allMatches, filter, setFilter, selectedGroup, setSelectedGroup, toast, showToast } = useAdminData()
+  const openMatchCodes = allMatches.filter(match => match.status === 'open').map(match => match.id)
 
   return (
     <div className="min-h-dvh bg-paper">
@@ -789,7 +715,7 @@ function AdminDesktop() {
               EXPORTAR CSV ↓
             </button>
             <button
-              onClick={() => lockAllOpenMatches(showToast)}
+              onClick={() => lockAllOpenMatches(openMatchCodes, showToast)}
               className="btn-ghost border-yellow/60"
             >
               BLOQUEAR TODAS APOSTAS
@@ -904,7 +830,7 @@ function AdminDesktop() {
                 ))}
               </div>
               <button
-                onClick={() => lockAllOpenMatches(showToast)}
+                onClick={() => lockAllOpenMatches(openMatchCodes, showToast)}
                 className="btn-ghost w-full justify-center text-[10px] border-yellow/60"
               >
                 BLOQUEAR TODAS AS APOSTAS ABERTAS

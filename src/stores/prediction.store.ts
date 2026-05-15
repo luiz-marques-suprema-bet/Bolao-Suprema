@@ -5,6 +5,7 @@ import { WC2026_MATCHES } from '@/data/wc2026'
 import { isBetOpen } from '@/lib/markets'
 import { validateChampionVice } from '@/lib/tournamentValidation'
 import { useMatchStore } from '@/stores/match.store'
+import { saveGeneralPicks, savePrediction } from '@/services/product'
 
 interface PredictionResult {
   ok: boolean
@@ -125,25 +126,28 @@ export const usePredictionStore = create<PredictionState>()(
 
         const userId = get()._userId
         if (!isMockMode && userId) {
-          supabase.from('predictions').upsert(
-            {
-              user_id:   userId,
-              match_code: prediction.matchId,
-              home_score: prediction.homeScore,
-              away_score: prediction.awayScore,
-              submitted_at: prediction.submittedAt,
-            },
-            { onConflict: 'user_id,match_code' }
-          ).then(({ error }) => {
-            if (error) {
-              console.error('[Predictions] Upsert error:', error.message)
+          savePrediction(prediction.matchId, prediction.homeScore, prediction.awayScore)
+            .then((res) => {
+              if (res.error) {
+                console.error('[Predictions] Save error:', res.error)
+                set((s) => {
+                  const predictions = { ...s.predictions }
+                  delete predictions[prediction.matchId]
+                  return { predictions, lastError: res.error }
+                })
+                return
+              }
+              if (res.data) {
+                set((s) => ({ predictions: { ...s.predictions, [prediction.matchId]: res.data } }))
+              }
+            })
+            .catch((error) => {
               set((s) => {
                 const predictions = { ...s.predictions }
                 delete predictions[prediction.matchId]
                 return { predictions, lastError: error.message }
               })
-            }
-          })
+            })
         }
         return { ok: true }
       },
@@ -167,6 +171,7 @@ export const usePredictionStore = create<PredictionState>()(
 
       setChampionPick: (teamCode) => {
         const value = teamCode || null
+        const before = { championPick: get().championPick, vicePick: get().vicePick, scorerPick: get().scorerPick }
         const validation = validateChampionVice(value, get().vicePick)
         if (!validation.valid) {
           set({ lastError: validation.error })
@@ -175,13 +180,14 @@ export const usePredictionStore = create<PredictionState>()(
         set({ championPick: value, lastError: null })
         const uid = get()._userId
         if (!isMockMode && uid) {
-          supabase.from('users').update({ champion_pick: value }).eq('id', uid)
-            .then(({ error }) => { if (error) set({ lastError: error.message }) })
+          saveGeneralPicks(value, get().vicePick, get().scorerPick)
+            .then(res => { if (res.error) set({ ...before, lastError: res.error }) })
         }
       },
 
       setVicePick: (teamCode) => {
         const value = teamCode || null
+        const before = { championPick: get().championPick, vicePick: get().vicePick, scorerPick: get().scorerPick }
         const validation = validateChampionVice(get().championPick, value)
         if (!validation.valid) {
           set({ lastError: validation.error })
@@ -190,17 +196,18 @@ export const usePredictionStore = create<PredictionState>()(
         set({ vicePick: value, lastError: null })
         const uid = get()._userId
         if (!isMockMode && uid) {
-          supabase.from('users').update({ vice_pick: value }).eq('id', uid)
-            .then(({ error }) => { if (error) set({ lastError: error.message }) })
+          saveGeneralPicks(get().championPick, value, get().scorerPick)
+            .then(res => { if (res.error) set({ ...before, lastError: res.error }) })
         }
       },
 
       setScorerPick: (playerName) => {
+        const before = { championPick: get().championPick, vicePick: get().vicePick, scorerPick: get().scorerPick }
         set({ scorerPick: playerName, lastError: null })
         const uid = get()._userId
         if (!isMockMode && uid) {
-          supabase.from('users').update({ scorer_pick: playerName }).eq('id', uid)
-            .then(({ error }) => { if (error) console.error('[Predictions] scorer_pick:', error.message) })
+          saveGeneralPicks(get().championPick, get().vicePick, playerName)
+            .then(res => { if (res.error) set({ ...before, lastError: res.error }) })
         }
       },
     })

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { BracketRound, TeamCode } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
+import { deleteBracketPick, saveBracketPick } from '@/services/product'
 
 function roundFromSlotId(slotId: string): BracketRound {
   if (slotId.startsWith('r32_')) return 'r32'
@@ -99,21 +100,21 @@ export const useBracketStore = create<BracketState>()(
 
         const userId = get()._userId
         if (!isMockMode && userId) {
-          supabase.from('bracket_picks').upsert(
-            {
-              user_id:       userId,
-              slot_id:       slotId,
-              round:         roundFromSlotId(slotId),
-              picked_winner: winner,
-            },
-            { onConflict: 'user_id,slot_id' }
-          ).then(({ error }) => {
-            if (error) console.error('[Bracket] setPick error:', error.message)
+          saveBracketPick(slotId, roundFromSlotId(slotId), winner).then((res) => {
+            if (res.error) {
+              console.error('[Bracket] setPick error:', res.error)
+              set((s) => {
+                const picks = { ...s.picks }
+                delete picks[slotId]
+                return { picks }
+              })
+            }
           })
         }
       },
 
       clearPick: (slotId) => {
+        const previous = get().picks[slotId]
         set((s) => {
           const picks = { ...s.picks }
           delete picks[slotId]
@@ -122,13 +123,12 @@ export const useBracketStore = create<BracketState>()(
 
         const userId = get()._userId
         if (!isMockMode && userId) {
-          supabase.from('bracket_picks')
-            .delete()
-            .eq('user_id', userId)
-            .eq('slot_id', slotId)
-            .then(({ error }) => {
-              if (error) console.error('[Bracket] clearPick error:', error.message)
-            })
+          deleteBracketPick(slotId).then((res) => {
+            if (res.error) {
+              console.error('[Bracket] clearPick error:', res.error)
+              if (previous) set((s) => ({ picks: { ...s.picks, [slotId]: previous } }))
+            }
+          })
         }
       },
 

@@ -88,6 +88,19 @@ Aplicadas nesta onda:
 - `20260515150000_harden_rpc_permissions.sql`
 - `20260515151000_index_new_foreign_keys.sql`
 - `20260515162000_harden_user_profile_privacy.sql`
+- `20260515170000_add_product_write_rpcs.sql`
+- `20260515171500_harden_product_write_rpc_grants.sql`
+- `20260515173000_harden_audit_trigger_functions.sql`
+
+Os writes criticos de produto devem passar por RPCs auditadas:
+
+- `save_prediction`: salva palpite somente para participante ativo e mercado aberto.
+- `save_general_picks`: salva campeao/vice/artilheiro com validacao de prazo e chaveamento.
+- `save_bracket_pick` / `delete_bracket_pick`: salvam chave respeitando locks por fase.
+- `create_participant_invite`: cria convite somente para admin.
+- `save_scoring_rule`: altera regra de pontuacao somente para admin.
+
+`log_audit` nao deve ser chamado diretamente pelo frontend. Triggers e RPCs gravam auditoria no banco.
 
 Antes de aplicar em producao:
 
@@ -109,6 +122,7 @@ Nunca apagar tabelas/buckets antigos sem confirmacao. Para rollback rapido, reve
 - Admin aprova participante.
 - Usuario completa perfil, palpita e acompanha ranking.
 - Admin bloqueia/desbloqueia mercados e apura resultados.
+- Palpites, apostas gerais e chaveamento sao bloqueados tambem no banco/RPC, nao apenas na UI.
 - Marketing publica boletins.
 - Admin modera Resenha e consulta auditoria/exportacoes.
 - Admin cria links de convite no painel operacional; usuario entra pendente ate aprovacao.

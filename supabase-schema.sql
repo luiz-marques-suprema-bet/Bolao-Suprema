@@ -467,13 +467,17 @@ on conflict (match_code) do nothing;
 -- - 20260515150000_harden_rpc_permissions.sql
 -- - 20260515151000_index_new_foreign_keys.sql
 -- - 20260515162000_harden_user_profile_privacy.sql
+-- - 20260515170000_add_product_write_rpcs.sql
+-- - 20260515171500_harden_product_write_rpc_grants.sql
+-- - 20260515173000_harden_audit_trigger_functions.sql
 --
 -- Elas adicionam governanca de produto sem apagar dados existentes:
 -- audit_logs, participant_invites, scoring_rules, notifications,
 -- bracket_round_locks, ranking_breakdowns, regulation_versions, system_events,
 -- roles/status de participante em users, moderacao auditavel da Resenha,
 -- buckets avatars/banners/bulletins com limite 5 MB, hardening de policies
--- e privacidade de perfil aplicada por RLS.
+-- privacidade de perfil aplicada por RLS e RPCs auditadas para writes criticos
+-- de palpites, apostas gerais, chaveamento, convites e pontuacao.
 -- ══════════════════════════════════════════════════════════════
 -- 1. Authentication → Providers → Email
 --    ✓ Enable Email Provider

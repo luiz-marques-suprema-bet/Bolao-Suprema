@@ -11,6 +11,8 @@ import type {
   ScoringRule,
   SystemHealthStatus,
   UserRole,
+  Prediction,
+  BracketPick,
 } from '@/types'
 
 export interface ServiceResult<T> {
@@ -39,14 +41,73 @@ export function sanitizeText(value: string, max = 1000): string {
 }
 
 export async function logAudit(action: AuditAction, entityType: string, entityId?: string, before?: unknown, after?: unknown) {
-  if (isMockMode) return
-  await supabase.rpc('log_audit', {
-    p_action: action,
-    p_entity_type: entityType,
-    p_entity_id: entityId ?? null,
-    p_before: before ?? null,
-    p_after: after ?? null,
+  console.warn('[Audit] Direct client audit is disabled; use audited RPCs for sensitive actions.', {
+    action,
+    entityType,
+    entityId,
+    before,
+    after,
   })
+}
+
+export async function savePrediction(matchCode: string, homeScore: number, awayScore: number): Promise<ServiceResult<Prediction>> {
+  const blocked = requireSupabase()
+  if (blocked) return fail(blocked)
+  const { data, error } = await supabase.rpc('save_prediction', {
+    p_match_code: matchCode,
+    p_home_score: homeScore,
+    p_away_score: awayScore,
+  })
+  if (error) return fail(error.message)
+  return ok({
+    id: data.id,
+    userId: data.user_id,
+    matchId: data.match_code,
+    homeScore: data.home_score,
+    awayScore: data.away_score,
+    submittedAt: data.submitted_at,
+    pointsEarned: data.points_earned ?? undefined,
+  })
+}
+
+export async function saveGeneralPicks(champion: string | null, vice: string | null, scorer: string | null) {
+  const blocked = requireSupabase()
+  if (blocked) return fail<AppUser>(blocked)
+  const { data, error } = await supabase.rpc('save_general_picks', {
+    p_champion: champion ?? '',
+    p_vice: vice ?? '',
+    p_scorer: scorer ?? '',
+  })
+  if (error) return fail(error.message)
+  return ok(data as AppUser)
+}
+
+export async function saveBracketPick(slotId: string, round: string, winner: string): Promise<ServiceResult<BracketPick>> {
+  const blocked = requireSupabase()
+  if (blocked) return fail(blocked)
+  const { data, error } = await supabase.rpc('save_bracket_pick', {
+    p_slot_id: slotId,
+    p_round: round,
+    p_winner: winner,
+  })
+  if (error) return fail(error.message)
+  return ok({
+    id: data.id,
+    userId: data.user_id,
+    slotId: data.slot_id,
+    round: data.round,
+    pickedWinner: data.picked_winner,
+    lockedAt: data.locked_at,
+    isCorrect: data.is_correct ?? undefined,
+  })
+}
+
+export async function deleteBracketPick(slotId: string) {
+  const blocked = requireSupabase()
+  if (blocked) return fail(blocked)
+  const { error } = await supabase.rpc('delete_bracket_pick', { p_slot_id: slotId })
+  if (error) return fail(error.message)
+  return ok(true)
 }
 
 export async function setMarketStatus(matchCode: string, status: MarketStatus, reason?: string) {
@@ -116,19 +177,26 @@ export async function fetchScoringRules(): Promise<ServiceResult<ScoringRule[]>>
 export async function saveScoringRule(rule: ScoringRule) {
   const blocked = requireSupabase()
   if (blocked) return fail(blocked)
-  const { error } = await supabase.from('scoring_rules').upsert({
-    id: rule.id,
-    label: rule.label,
-    category: rule.category,
-    stage: rule.stage,
-    points: rule.points,
-    sort_order: rule.sortOrder,
-    is_active: rule.isActive,
-    updated_at: new Date().toISOString(),
+  const { data, error } = await supabase.rpc('save_scoring_rule', {
+    p_id: rule.id,
+    p_label: rule.label,
+    p_category: rule.category,
+    p_stage: rule.stage,
+    p_points: rule.points,
+    p_sort_order: rule.sortOrder,
+    p_is_active: rule.isActive,
   })
   if (error) return fail(error.message)
-  await logAudit('scoring_rule_updated', 'scoring_rule', rule.id, null, rule)
-  return ok(rule)
+  return ok({
+    id: data.id,
+    label: data.label,
+    category: data.category,
+    stage: data.stage,
+    points: data.points,
+    sortOrder: data.sort_order,
+    isActive: data.is_active,
+    updatedAt: data.updated_at,
+  })
 }
 
 export async function refreshRanking(): Promise<ServiceResult<RankingComputationResult>> {
@@ -207,15 +275,12 @@ export async function fetchInvites(): Promise<ServiceResult<Invite[]>> {
 export async function createInvite(label = 'Convite Bolao Suprema') {
   const blocked = requireSupabase()
   if (blocked) return fail<Invite>(blocked)
-  const code = crypto.randomUUID().slice(0, 8).toUpperCase()
-  const { data: userData } = await supabase.auth.getUser()
-  const { data, error } = await supabase
-    .from('participant_invites')
-    .insert({ code, label, created_by: userData.user?.id ?? null })
-    .select()
-    .single()
+  const { data, error } = await supabase.rpc('create_participant_invite', {
+    p_label: label,
+    p_max_uses: null,
+    p_expires_at: null,
+  })
   if (error) return fail(error.message)
-  await logAudit('invite_created', 'invite', data.id, null, data)
   return ok({
     id: data.id,
     code: data.code,
