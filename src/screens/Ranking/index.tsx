@@ -5,7 +5,8 @@ import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/stores/auth.store'
 import { fmtPts, cn } from '@/lib/utils'
 import { fetchRanking } from '@/lib/ranking'
-import type { RankingEntry, Mov } from '@/types'
+import { fetchRankingBreakdown, fetchScoringRules } from '@/services/product'
+import type { RankingBreakdown, RankingEntry, Mov, ScoringRule } from '@/types'
 
 const MOV_COLOR = (mov: string) =>
   mov.startsWith('+') ? 'text-green' : mov.startsWith('-') ? 'text-red' : 'text-ink-4'
@@ -21,6 +22,26 @@ function useRanking() {
   }, [me?.id])
 
   return { ranking, loading }
+}
+
+function useScoring() {
+  const [rules, setRules] = useState<ScoringRule[]>([])
+  useEffect(() => {
+    fetchScoringRules().then(res => setRules(res.data ?? []))
+  }, [])
+  return rules
+}
+
+function useBreakdown(userId?: string) {
+  const [items, setItems] = useState<RankingBreakdown[]>([])
+  useEffect(() => {
+    if (!userId) {
+      setItems([])
+      return
+    }
+    fetchRankingBreakdown(userId).then(res => setItems(res.data ?? []))
+  }, [userId])
+  return items
 }
 
 export function RankingScreen() {
@@ -76,12 +97,61 @@ function EmptyRanking() {
   )
 }
 
+function ScoringRulesBox({ rules }: { rules: ScoringRule[] }) {
+  const visible = rules.length > 0 ? rules : [
+    { id: 'group_exact', label: 'Placar exato', points: 10, category: 'match', stage: 'group', sortOrder: 1, isActive: true },
+    { id: 'group_result', label: 'Acertar vencedor/empate', points: 5, category: 'match', stage: 'group', sortOrder: 2, isActive: true },
+    { id: 'champion', label: 'Campeao', points: 25, category: 'general', stage: 'all', sortOrder: 3, isActive: true },
+    { id: 'runner_up', label: 'Vice', points: 15, category: 'general', stage: 'all', sortOrder: 4, isActive: true },
+    { id: 'top_scorer', label: 'Artilheiro', points: 10, category: 'general', stage: 'all', sortOrder: 5, isActive: true },
+  ]
+  return (
+    <div className="border-2 border-ink p-4">
+      <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">COMO PONTUAR</p>
+      <div className="space-y-2">
+        {visible.filter(r => r.isActive).slice(0, 9).map(rule => (
+          <div key={rule.id} className="flex items-center gap-2">
+            <span className="font-display text-xl text-green w-8 flex-shrink-0">+{rule.points}</span>
+            <span className="font-mono text-[11px] text-ink-3">{rule.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function BreakdownBox({ items }: { items: RankingBreakdown[] }) {
+  return (
+    <div className="border-2 border-ink p-4">
+      <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">COMO SUA PONTUACAO FOI CALCULADA</p>
+      {items.length === 0 ? (
+        <p className="font-mono text-[11px] text-ink-3 leading-relaxed">
+          Ainda nao ha pontos apurados para detalhar. Quando um resultado for registrado, cada origem de ponto aparece aqui.
+        </p>
+      ) : (
+        <div className="space-y-2 max-h-64 overflow-auto">
+          {items.slice(0, 12).map(item => (
+            <div key={item.id} className="flex items-start justify-between gap-3 border-b border-hairline pb-2">
+              <div>
+                <div className="font-mono text-[10px] font-bold">{item.label}</div>
+                <div className="font-mono text-[8px] text-ink-4">{item.sourceType} · {item.sourceId}</div>
+              </div>
+              <span className="font-display text-xl text-green">+{item.points}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Mobile ───────────────────────────────────────────────────────────────────
 
 function RankingMobile() {
   const [tab, setTab] = useState<'geral' | 'squad' | 'semana'>('geral')
   const me = useAuthStore(s => s.user)
   const { ranking: fullRanking, loading } = useRanking()
+  const rules = useScoring()
   const myEntry = fullRanking.find(r => r.isYou)
 
   const ranking = tab === 'squad' && me
@@ -199,11 +269,13 @@ function RankingMobile() {
 function RankingDesktop() {
   const meUser = useAuthStore(s => s.user)
   const { ranking, loading } = useRanking()
+  const rules = useScoring()
   const top3 = ranking.slice(0, 3)
   const me = ranking.find(r => r.isYou) ?? (meUser ? {
     userId: meUser.id, name: `${meUser.firstName} ${meUser.lastName}`, dept: meUser.dept,
     initials: meUser.initials, color: meUser.color, pts: 0, correct: 0, exact: 0, streak: 0, mov: '—' as Mov, rank: 0, isYou: true
   } : undefined)
+  const breakdown = useBreakdown(meUser?.id)
 
   if (loading) return (
     <div className="min-h-dvh bg-paper flex items-center justify-center">

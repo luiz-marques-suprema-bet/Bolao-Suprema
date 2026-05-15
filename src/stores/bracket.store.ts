@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type { BracketRound, TeamCode } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
 
@@ -68,7 +67,6 @@ const QF_TO_SF: Record<number, { sfPosition: number; side: 'home' | 'away' }> = 
 
 
 export const useBracketStore = create<BracketState>()(
-  persist(
     (set, get) => ({
       picks: {},
       lockedRounds: [],
@@ -85,14 +83,13 @@ export const useBracketStore = create<BracketState>()(
           .select('slot_id, picked_winner')
           .eq('user_id', userId)
 
-        if (!data?.length) return
         const picks: Record<string, TeamCode> = {}
-        for (const row of data) {
+        for (const row of data ?? []) {
           if (row.slot_id && row.picked_winner) {
             picks[row.slot_id] = row.picked_winner as TeamCode
           }
         }
-        set((s) => ({ picks: { ...s.picks, ...picks } }))
+        set({ picks })
       },
 
       // ── Picks: local + Supabase upsert ──────────────────────────────────────
@@ -206,7 +203,5 @@ export const useBracketStore = create<BracketState>()(
 
         return { home: null, away: null }
       },
-    }),
-    { name: 'bolao-bracket' }
-  )
+    })
 )

@@ -21,11 +21,17 @@ function mapUser(row: any): AppUser {
     bannerUrl: row.banner_url ?? undefined,
     bio: row.bio ?? undefined,
     favoriteTeam: row.favorite_team ?? undefined,
-    favoritePlayer:    row.favorite_player     ?? undefined,
-    favoritePlayerImg: row.favorite_player_img ?? undefined,
-    since: row.since ?? '2026',
-    isAdmin: row.is_admin ?? false,
-    createdAt: row.created_at ?? '',
+  favoritePlayer:    row.favorite_player     ?? undefined,
+  favoritePlayerImg: row.favorite_player_img ?? undefined,
+  since: row.since ?? '2026',
+  isAdmin: row.is_admin ?? false,
+  isMarketing: row.is_marketing ?? false,
+  isOwner: row.is_owner ?? false,
+  userRole: row.user_role ?? (row.is_admin ? 'admin' : row.is_marketing ? 'marketing' : 'user'),
+  participantStatus: row.participant_status ?? 'active',
+  privacyHideEmail: row.privacy_hide_email ?? true,
+  privacyHideProfile: row.privacy_hide_profile ?? false,
+  createdAt: row.created_at ?? '',
   }
 }
 
@@ -43,15 +49,19 @@ export function UserProfileScreen() {
     if (!userId) { setLoading(false); return }
 
     if (isMockMode) {
-      // In mock mode show mock user
-      setProfile(me)
+      setProfile(null)
       setLoading(false)
       return
     }
 
     supabase.from('users').select('*').eq('id', userId).single()
       .then(({ data }) => {
-        setProfile(data ? mapUser(data) : null)
+        const mapped = data ? mapUser(data) : null
+        if (mapped?.privacyHideProfile && !me?.isAdmin && me?.id !== mapped.id) {
+          setProfile(null)
+        } else {
+          setProfile(mapped)
+        }
         setLoading(false)
       })
   }, [userId, me, navigate])

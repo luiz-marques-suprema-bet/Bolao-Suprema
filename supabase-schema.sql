@@ -457,6 +457,23 @@ on conflict (match_code) do nothing;
 
 -- ══════════════════════════════════════════════════════════════
 -- ⚙  CONFIGURAÇÃO OTP (fazer no Dashboard do Supabase)
+
+-- ============================================================================
+-- Produto interno real
+-- ============================================================================
+-- Para instalacoes novas, execute tambem as migrations em supabase/migrations:
+-- - 20260515143000_internal_product_governance.sql
+-- - 20260515144500_harden_storage_listing.sql
+-- - 20260515150000_harden_rpc_permissions.sql
+-- - 20260515151000_index_new_foreign_keys.sql
+-- - 20260515162000_harden_user_profile_privacy.sql
+--
+-- Elas adicionam governanca de produto sem apagar dados existentes:
+-- audit_logs, participant_invites, scoring_rules, notifications,
+-- bracket_round_locks, ranking_breakdowns, regulation_versions, system_events,
+-- roles/status de participante em users, moderacao auditavel da Resenha,
+-- buckets avatars/banners/bulletins com limite 5 MB, hardening de policies
+-- e privacidade de perfil aplicada por RLS.
 -- ══════════════════════════════════════════════════════════════
 -- 1. Authentication → Providers → Email
 --    ✓ Enable Email Provider

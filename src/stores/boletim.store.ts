@@ -106,8 +106,7 @@ export const useBoletimStore = create<BoletimState>()((set, get) => ({
 
   addBoletim: async (b) => {
     if (isMockMode) {
-      const mock: Boletim = { ...b, id: `b-${Date.now()}`, createdAt: new Date().toISOString() }
-      set(s => ({ bulletins: [mock, ...s.bulletins] }))
+      console.error('[Boletim] Supabase nao esta configurado. Publicacao exige persistencia real.')
       return
     }
 

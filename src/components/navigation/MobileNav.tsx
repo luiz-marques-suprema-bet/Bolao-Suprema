@@ -7,7 +7,9 @@ const NAV_ITEMS = [
   { id: 'home',       label: 'HOME',    icon: '○',  path: '/home' },
   { id: 'boletim',   label: 'BOLETIM', icon: '≡',  path: '/boletim' },
   { id: 'prediction',label: 'PALPITAR',icon: '✦',  path: '/prediction' },
+  { id: 'mine',      label: 'MEUS',    icon: '✓',  path: '/meus-palpites' },
   { id: 'ranking',   label: 'RANKING', icon: '▲',  path: '/ranking' },
+  { id: 'alerts',    label: 'AVISOS',  icon: '!',   path: '/notificacoes' },
   { id: 'resenha',   label: 'RESENHA', icon: '◎',  path: '/resenha' },
   { id: 'profile',   label: 'EU',      icon: '◈',  path: '/profile' },
 ]
@@ -22,7 +24,7 @@ export function MobileNav() {
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-paper"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="grid grid-cols-6">
+      <div className="grid grid-cols-8">
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.path
           const isProfile = item.id === 'profile'

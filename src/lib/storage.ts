@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import type { StorageBucket } from '@/types'
 
 export const USER_MEDIA_BUCKET = 'user-media'
 export const USER_MEDIA_MAX_BYTES = 5 * 1024 * 1024
@@ -14,6 +15,7 @@ export async function uploadUserMedia(
   userId: string,
   filename: string,
   file: File,
+  bucket: StorageBucket | typeof USER_MEDIA_BUCKET = USER_MEDIA_BUCKET,
 ): Promise<string | null> {
   const validation = validateUserMediaImage(file)
   if (validation) {
@@ -22,9 +24,11 @@ export async function uploadUserMedia(
   }
 
   const ext = file.name.split('.').pop() ?? 'jpg'
-  const path = `${userId}/${filename}.${ext}`
+  const path = bucket === 'bulletins'
+    ? `${userId}/bulletins/${Date.now()}-${filename}.${ext}`
+    : `${userId}/${filename}.${ext}`
   const { error } = await supabase.storage
-    .from(USER_MEDIA_BUCKET)
+    .from(bucket)
     .upload(path, file, { upsert: true, contentType: file.type })
 
   if (error) {
@@ -32,5 +36,17 @@ export async function uploadUserMedia(
     return null
   }
 
-  return supabase.storage.from(USER_MEDIA_BUCKET).getPublicUrl(path).data.publicUrl
+  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl
+}
+
+export async function uploadAvatar(userId: string, file: File) {
+  return uploadUserMedia(userId, 'avatar', file, 'avatars')
+}
+
+export async function uploadBanner(userId: string, file: File) {
+  return uploadUserMedia(userId, 'banner', file, 'banners')
+}
+
+export async function uploadBulletinImage(userId: string, file: File) {
+  return uploadUserMedia(userId, 'image', file, 'bulletins')
 }

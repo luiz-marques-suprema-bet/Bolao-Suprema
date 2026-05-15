@@ -11,7 +11,8 @@ import { supabase, isMockMode } from '@/lib/supabase'
 import { calculatePoints } from '@/lib/scoring'
 import { cn } from '@/lib/utils'
 import { formatMatchDateTime } from '@/lib/matchTime'
-import type { MarketStatus, MatchStatus, MatchStage } from '@/types'
+import { createInvite, fetchAuditLogs, fetchInvites, fetchParticipants, fetchScoringRules, fetchSystemHealth, refreshRanking, updateParticipantStatus, downloadCsv, setMarketStatus, settleMatchResult } from '@/services/product'
+import type { Invite, MarketStatus, MatchStatus, MatchStage, ParticipantStatus, ScoringRule, SystemHealthStatus } from '@/types'
 
 function marketStatusFor(status: MatchStatus): MarketStatus {
   if (status === 'locked') return 'locked'
@@ -68,6 +69,12 @@ async function updateMatchStatus(
   status: MatchStatus,
   extra?: { homeScore?: number; awayScore?: number; liveMinute?: string; winner?: string; lockReason?: string }
 ) {
+  const market = marketStatusFor(status)
+  if (market === 'locked' || market === 'open' || market === 'closed' || market === 'settled') {
+    const rpc = await setMarketStatus(matchCode, market, extra?.lockReason)
+    if (rpc.error) return { message: rpc.error }
+    if (status !== 'finished' && extra?.homeScore === undefined && extra?.awayScore === undefined) return null
+  }
   const payload: Record<string, unknown> = { status }
   payload.market_status = marketStatusFor(status)
   if (status === 'locked') {
@@ -106,6 +113,9 @@ async function setMatchResult(
   awayScore: number,
   stage: MatchStage
 ): Promise<{ scored: number; error: string | null }> {
+  const rpc = await settleMatchResult(matchCode, homeScore, awayScore)
+  if (!rpc.error) return { scored: 0, error: null }
+
   // 1. Atualizar o placar e status no banco
   const winner =
     homeScore > awayScore ? WC2026_MATCHES.find(m => m.id === matchCode)?.home.code :
@@ -445,6 +455,159 @@ function KpiCard({ label, value, sub }: { label: string; value: number | string;
   )
 }
 
+function AdminOpsPanel() {
+  const [health, setHealth] = useState<SystemHealthStatus | null>(null)
+  const [participants, setParticipants] = useState<Array<Record<string, unknown>>>([])
+  const [rules, setRules] = useState<ScoringRule[]>([])
+  const [audit, setAudit] = useState<Array<Record<string, unknown>>>([])
+  const [invites, setInvites] = useState<Invite[]>([])
+  const [inviteLabel, setInviteLabel] = useState('Convite interno')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    const [h, p, r, a, i] = await Promise.all([
+      fetchSystemHealth(),
+      fetchParticipants(),
+      fetchScoringRules(),
+      fetchAuditLogs(20),
+      fetchInvites(),
+    ])
+    setHealth(h.data)
+    setParticipants((p.data ?? []) as Array<Record<string, unknown>>)
+    setRules(r.data ?? [])
+    setAudit((a.data ?? []) as Array<Record<string, unknown>>)
+    setInvites(i.data ?? [])
+    setError(h.error ?? p.error ?? r.error ?? a.error ?? i.error)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  async function setParticipant(id: unknown, status: ParticipantStatus) {
+    if (typeof id !== 'string') return
+    setBusy(true)
+    const res = await updateParticipantStatus(id, status)
+    setBusy(false)
+    if (res.error) setError(res.error)
+    await load()
+  }
+
+  async function recalcRanking() {
+    setBusy(true)
+    const res = await refreshRanking()
+    setBusy(false)
+    if (res.error) setError(res.error)
+    await load()
+  }
+
+  async function handleCreateInvite() {
+    setBusy(true)
+    const res = await createInvite(inviteLabel || 'Convite interno')
+    setBusy(false)
+    if (res.error) setError(res.error)
+    await load()
+  }
+
+  return (
+    <section className="border-2 border-ink mb-6">
+      <div className="px-4 py-3 bg-ink text-paper flex items-center justify-between gap-3">
+        <div>
+          <div className="font-display text-xl">OPERACAO T.I.</div>
+          <div className="font-mono text-[9px] text-paper/50">saude, participantes, regras, auditoria e exportacoes</div>
+        </div>
+        <button disabled={busy} onClick={load} className="btn-yellow text-[10px]">ATUALIZAR</button>
+      </div>
+      {error && <div className="px-4 py-2 border-b border-red/30 bg-red/5 font-mono text-[10px] text-red">{error}</div>}
+      <div className="grid md:grid-cols-4 gap-0 border-b border-hairline">
+        <Mini label="usuarios" value={health?.usersTotal ?? '—'} />
+        <Mini label="pendentes" value={health?.usersPending ?? '—'} />
+        <Mini label="palpites" value={health?.predictionsTotal ?? '—'} />
+        <Mini label="mercados abertos" value={health?.marketsOpen ?? '—'} />
+      </div>
+      <div className="grid lg:grid-cols-4 gap-0">
+        <div className="p-4 border-r border-hairline">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display text-lg">PARTICIPANTES</h3>
+            <button onClick={() => downloadCsv(`participantes-${Date.now()}.csv`, participants)} className="font-mono text-[9px] underline">CSV</button>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-auto">
+            {participants.slice(0, 12).map(p => (
+              <div key={String(p.id)} className="border border-hairline p-2">
+                <div className="font-mono text-[10px] font-bold truncate">{String(p.first_name ?? '')} {String(p.last_name ?? '')}</div>
+                <div className="font-mono text-[8px] text-ink-4 truncate">{String(p.participant_status ?? 'active')} · {String(p.user_role ?? 'user')}</div>
+                <div className="flex gap-1 mt-2">
+                  {(['active','blocked','removed'] as ParticipantStatus[]).map(status => (
+                    <button key={status} disabled={busy} onClick={() => setParticipant(p.id, status)} className="font-mono text-[8px] border border-hairline px-1.5 py-1 hover:bg-yellow">{status}</button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="p-4 border-r border-hairline">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display text-lg">PONTUACAO</h3>
+            <button onClick={recalcRanking} disabled={busy} className="font-mono text-[9px] underline">RECALCULAR</button>
+          </div>
+          <div className="space-y-1 max-h-64 overflow-auto">
+            {rules.map(rule => (
+              <div key={rule.id} className="flex items-center justify-between border-b border-hairline py-1">
+                <span className="font-mono text-[10px]">{rule.label}</span>
+                <span className="font-display text-lg">{rule.points}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="p-4 border-r border-hairline">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display text-lg">CONVITES</h3>
+            <button onClick={() => downloadCsv(`convites-${Date.now()}.csv`, invites as unknown as Array<Record<string, unknown>>)} className="font-mono text-[9px] underline">CSV</button>
+          </div>
+          <div className="flex gap-2 mb-3">
+            <input
+              value={inviteLabel}
+              onChange={e => setInviteLabel(e.target.value)}
+              className="min-w-0 flex-1 border border-hairline px-2 py-1 font-mono text-[10px] bg-paper-deep outline-none"
+              aria-label="Nome do convite"
+            />
+            <button disabled={busy} onClick={handleCreateInvite} className="btn-yellow text-[9px]">CRIAR</button>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-auto">
+            {invites.slice(0, 10).map(invite => {
+              const url = `${window.location.origin}${window.location.pathname}#/login?invite=${invite.code}`
+              return (
+                <div key={invite.id} className="border border-hairline p-2">
+                  <div className="font-mono text-[10px] font-bold">{invite.code}</div>
+                  <div className="font-mono text-[8px] text-ink-4 truncate">{invite.label} · {invite.usedCount}/{invite.maxUses ?? '∞'}</div>
+                  <button onClick={() => navigator.clipboard?.writeText(url)} className="font-mono text-[8px] underline mt-1">COPIAR LINK</button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display text-lg">AUDITORIA</h3>
+            <button onClick={() => downloadCsv(`audit-${Date.now()}.csv`, audit)} className="font-mono text-[9px] underline">CSV</button>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-auto">
+            {audit.map(log => (
+              <div key={String(log.id)} className="font-mono text-[9px] border-b border-hairline pb-2">
+                <div className="font-bold">{String(log.action)}</div>
+                <div className="text-ink-4">{String(log.entity_type)} · {String(log.created_at).slice(0, 16)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function Mini({ label, value }: { label: string; value: number | string }) {
+  return <div className="p-3 border-r border-hairline last:border-r-0"><div className="font-display text-2xl">{value}</div><div className="font-mono text-[8px] text-ink-4">{label.toUpperCase()}</div></div>
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function AdminScreen() {
@@ -527,6 +690,10 @@ function AdminMobile() {
           <KpiCard label="ENCERRADAS" value={kpis.matchesFinished} sub="com resultado" />
         </div>
       )}
+
+      <div className="px-4 pt-3">
+        <AdminOpsPanel />
+      </div>
 
       {/* Bulk actions */}
       <div className="px-4 pt-3 space-y-2">
@@ -650,6 +817,8 @@ function AdminDesktop() {
             <KpiCard label="ENCERRADAS" value={kpis.matchesFinished} sub="com resultado" />
           </div>
         )}
+
+        <AdminOpsPanel />
 
         <div className="grid grid-cols-[1.6fr_1fr] gap-5">
 

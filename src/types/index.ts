@@ -29,6 +29,11 @@ export interface AppUser {
   since: string
   isAdmin: boolean
   isMarketing: boolean
+  isOwner?: boolean
+  userRole?: UserRole
+  participantStatus?: ParticipantStatus
+  privacyHideEmail?: boolean
+  privacyHideProfile?: boolean
   createdAt: string
 }
 
@@ -217,6 +222,108 @@ export interface Boletim {
 }
 
 export type ImageFitMode = 'cover' | 'contain'
+
+export type ParticipantStatus = 'pending' | 'active' | 'blocked' | 'removed'
+export type UserRole = 'user' | 'marketing' | 'admin' | 'owner'
+export type StorageBucket = 'avatars' | 'banners' | 'bulletins'
+
+export type AuditAction =
+  | 'market_open'
+  | 'market_locked'
+  | 'market_closed'
+  | 'market_settled'
+  | 'match_settled'
+  | 'prediction_created'
+  | 'prediction_updated'
+  | 'profile_updated'
+  | 'bulletin_created'
+  | 'bulletin_updated'
+  | 'chat_delete'
+  | 'chat_important'
+  | 'participant_pending'
+  | 'participant_active'
+  | 'participant_blocked'
+  | 'participant_removed'
+  | 'ranking_refreshed'
+  | string
+
+export interface ScoringRule {
+  id: string
+  label: string
+  category: 'match' | 'general' | string
+  stage: 'group' | 'knockout' | 'all' | string
+  points: number
+  sortOrder: number
+  isActive: boolean
+  updatedAt?: string
+}
+
+export interface Notification {
+  id: string
+  userId?: string | null
+  channel: 'in_app' | 'email' | 'whatsapp' | 'push'
+  type: string
+  title: string
+  body: string
+  entityType?: string | null
+  entityId?: string | null
+  readAt?: string | null
+  createdAt: string
+}
+
+export interface Invite {
+  id: string
+  code: string
+  label: string
+  createdBy?: string | null
+  maxUses?: number | null
+  usedCount: number
+  expiresAt?: string | null
+  isActive: boolean
+  createdAt: string
+}
+
+export interface RankingBreakdown {
+  id: string
+  userId: string
+  sourceType: 'match' | 'general' | 'bonus' | 'adjustment'
+  sourceId: string
+  label: string
+  points: number
+  details: Record<string, unknown>
+  calculatedAt: string
+}
+
+export interface SystemHealthStatus {
+  usersTotal: number
+  usersPending: number
+  predictionsTotal: number
+  chatMessagesTotal: number
+  bulletinsTotal: number
+  marketsOpen: number
+  marketsLocked: number
+  matchesWithoutKickoff: number
+  lastRankingRefresh?: string | null
+}
+
+export interface PredictionSaveResult {
+  ok: boolean
+  error?: string
+  prediction?: Prediction
+}
+
+export interface BracketLock {
+  round: BracketRound
+  lockedAt: string
+  lockedBy?: string | null
+  reason?: string | null
+}
+
+export interface RankingComputationResult {
+  ok: boolean
+  refreshedAt?: string
+  error?: string
+}
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
 

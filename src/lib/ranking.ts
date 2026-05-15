@@ -1,13 +1,13 @@
 import { supabase, isMockMode } from '@/lib/supabase'
-import { MOCK_RANKING } from '@/data/mock'
 import type { RankingEntry, Mov } from '@/types'
 
 export async function fetchRanking(myUserId?: string): Promise<RankingEntry[]> {
-  if (isMockMode) return MOCK_RANKING
+  if (isMockMode) return []
 
   const { data: users } = await supabase
     .from('users')
-    .select('id, first_name, last_name, dept, initials, color, avatar_url')
+    .select('id, first_name, last_name, dept, initials, color, avatar_url, participant_status, privacy_hide_profile')
+    .eq('participant_status', 'active')
     .order('created_at', { ascending: true })
 
   if (!users?.length) return []
@@ -29,6 +29,7 @@ export async function fetchRanking(myUserId?: string): Promise<RankingEntry[]> {
   }
 
   const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values())
+    .filter(u => !u.privacy_hide_profile || u.id === myUserId)
 
   return uniqueUsers
     .map(u => ({

@@ -9,7 +9,10 @@ const NAV_ITEMS = [
   { id: 'home',       label: 'HOME',     path: '/home' },
   { id: 'boletim',   label: 'BOLETIM',  path: '/boletim' },
   { id: 'prediction',label: 'PALPITAR', path: '/prediction' },
+  { id: 'mine',      label: 'MEUS',     path: '/meus-palpites' },
   { id: 'ranking',   label: 'RANKING',  path: '/ranking' },
+  { id: 'rules',     label: 'REGRAS',   path: '/regulamento' },
+  { id: 'alerts',    label: 'AVISOS',   path: '/notificacoes' },
   { id: 'resenha',   label: 'RESENHA',  path: '/resenha' },
 ]
 

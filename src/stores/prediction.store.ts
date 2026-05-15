@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type { Prediction } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { WC2026_MATCHES } from '@/data/wc2026'
@@ -41,7 +40,6 @@ interface PredictionState {
 }
 
 export const usePredictionStore = create<PredictionState>()(
-  persist(
     (set, get) => ({
       predictions: {},
       drafts: {},
@@ -63,10 +61,8 @@ export const usePredictionStore = create<PredictionState>()(
           .eq('user_id', userId)
           .not('match_code', 'is', null)
 
-        if (!data?.length) return
-
-        const predictions: Record<string, Prediction> = { ...get().predictions }
-        for (const row of data) {
+        const predictions: Record<string, Prediction> = {}
+        for (const row of data ?? []) {
           if (!row.match_code) continue
           predictions[row.match_code] = {
             id:           row.id,
@@ -89,9 +85,9 @@ export const usePredictionStore = create<PredictionState>()(
 
         if (user) {
           set({
-            championPick: user.champion_pick ?? get().championPick,
-            vicePick:     user.vice_pick     ?? get().vicePick,
-            scorerPick:   user.scorer_pick   ?? get().scorerPick,
+            championPick: user.champion_pick ?? null,
+            vicePick:     user.vice_pick     ?? null,
+            scorerPick:   user.scorer_pick   ?? null,
           })
         }
       },
@@ -207,7 +203,5 @@ export const usePredictionStore = create<PredictionState>()(
             .then(({ error }) => { if (error) console.error('[Predictions] scorer_pick:', error.message) })
         }
       },
-    }),
-    { name: 'bolao-predictions' }
-  )
+    })
 )

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { ChatMessage } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
+import { sanitizeText } from '@/services/product'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ interface MessageRow {
   id: string; user_id: string; channel_id: string | null
   text: string | null; type: string | null; gif_url: string | null
   poll_data: Record<string, unknown> | null; reaction: string | null; created_at: string
+  deleted_at?: string | null; is_important?: boolean | null
   users?: UserRow | null
 }
 
@@ -69,7 +71,7 @@ function mapRow(row: MessageRow, myUserId?: string): ChatMessage {
     color:     u?.color    ?? '#777',
     avatarUrl: u?.avatarUrl,
     time:      new Date(row.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    text:      row.text     ?? '',
+    text:      row.deleted_at ? '[mensagem removida pela administracao]' : (row.text ?? ''),
     type:      (row.type as ChatMessage['type']) ?? 'text',
     gifUrl:    row.gif_url  ?? undefined,
     poll:      row.poll_data as ChatMessage['poll'],
@@ -98,49 +100,8 @@ function isRateLimited(): boolean {
 }
 
 // ─── Local fallback persistence ──────────────────────────────────────────────
-// GitHub Pages/dev builds often run without Supabase env vars. In that mode,
-// the chat still needs to behave like a real chat for demos: messages, GIFs,
-// polls and pins survive refresh in localStorage.
-
-const LOCAL_CHAT_KEY = 'bolao-resenha-messages-v1'
-const LOCAL_PIN_KEY = 'bolao-resenha-pinned-v1'
-
-function loadLocalMessages(myUserId?: string): ChatMessage[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const raw = window.localStorage.getItem(LOCAL_CHAT_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as ChatMessage[]
-    return parsed
-      .filter(Boolean)
-      .map(m => ({
-        ...m,
-        isYou: m.userId === myUserId,
-        time: m.createdAt
-          ? new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-          : m.time,
-      }))
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-  } catch {
-    return []
-  }
-}
-
-function saveLocalMessages(messages: ChatMessage[]) {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(LOCAL_CHAT_KEY, JSON.stringify(messages.map(m => ({ ...m, isYou: false }))))
-}
-
-function loadLocalPin(): string | null {
-  if (typeof window === 'undefined') return null
-  return window.localStorage.getItem(LOCAL_PIN_KEY)
-}
-
-function saveLocalPin(id: string | null) {
-  if (typeof window === 'undefined') return
-  if (id) window.localStorage.setItem(LOCAL_PIN_KEY, id)
-  else window.localStorage.removeItem(LOCAL_PIN_KEY)
-}
+// GitHub Pages/dev builds can run without Supabase env vars. In that mode,
+// the chat shows an explicit configuration error instead of simulating product data.
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
@@ -177,9 +138,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
     if (isMockMode) {
       set({
-        messages: loadLocalMessages(myUserId),
-        pinnedId: loadLocalPin(),
+        messages: [],
+        pinnedId: null,
         isLoaded: true,
+        lastError: 'Supabase nao esta configurado. A Resenha exige persistencia real para funcionar.',
       })
       return
     }
@@ -188,7 +150,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     const { data: rows } = await supabase
       .from('chat_messages')
       .select(`
-        id, user_id, channel_id, text, type, gif_url, poll_data, reaction, created_at,
+        id, user_id, channel_id, text, type, gif_url, poll_data, reaction, created_at, deleted_at, is_important,
         users ( id, first_name, last_name, dept, initials, color, avatar_url )
       `)
       .eq('channel_id', 'geral')
@@ -302,14 +264,22 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       set({ lastError: 'Calma aí: muitas mensagens em sequência.' })
       return
     }
+    const cleanText = sanitizeText(msg.text ?? '', 1000)
+    if (msg.type === 'text' && !cleanText) {
+      set({ lastError: 'Mensagem vazia ou invalida.' })
+      return
+    }
+    msg = { ...msg, text: cleanText }
+
+    if (isMockMode) {
+      set({ lastError: 'Supabase nao esta configurado. Mensagens nao sao salvas em modo local.' })
+      return
+    }
 
     set(s => {
       const messages = [...s.messages, msg]
-      if (isMockMode) saveLocalMessages(messages)
       return { messages }
     })
-
-    if (isMockMode) return
 
     if (msg.userId && !_userCache.has(msg.userId)) {
       _userCache.set(msg.userId, {
@@ -348,12 +318,11 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
   setPinned: async (id) => {
     const myUserId = get()._myUserId
-    set({ pinnedId: id })
-
     if (isMockMode) {
-      saveLocalPin(id)
+      set({ lastError: 'Supabase nao esta configurado. Fixar mensagens exige persistencia real.' })
       return
     }
+    set({ pinnedId: id })
 
     if (id === null) {
       await supabase.from('channel_pins').delete().eq('channel_id', 'geral')
@@ -368,6 +337,11 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   // ── voteOnPoll (persisted) ────────────────────────────────────────────────
 
   voteOnPoll: async (msgId, userId, optionId) => {
+    if (isMockMode) {
+      set({ lastError: 'Supabase nao esta configurado. Votos nao sao salvos em modo local.' })
+      return
+    }
+
     // Optimistic update
     set(s => ({
       messages: s.messages.map(m => {
@@ -375,11 +349,6 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         return { ...m, poll: { ...m.poll, votes: { ...m.poll.votes, [userId]: optionId } } }
       }),
     }))
-
-    if (isMockMode) {
-      saveLocalMessages(get().messages)
-      return
-    }
 
     const { error } = await supabase.from('poll_votes').upsert(
       { message_id: msgId, user_id: userId, option_id: optionId, voted_at: new Date().toISOString() },
@@ -403,21 +372,22 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   // ── deleteMessage (admin + own) ───────────────────────────────────────────
 
   deleteMessage: async (id) => {
+    if (isMockMode) {
+      set({ lastError: 'Supabase nao esta configurado. Moderacao exige persistencia real.' })
+      return
+    }
+
     // Optimistic remove
     set(s => {
       const messages = s.messages.filter(m => m.id !== id)
-      if (isMockMode) saveLocalMessages(messages)
       return { messages }
     })
     // If this was the pinned message, unpin it
     if (get().pinnedId === id) {
       set({ pinnedId: null })
-      if (isMockMode) saveLocalPin(null)
     }
 
-    if (isMockMode) return
-
-    const { error } = await supabase.from('chat_messages').delete().eq('id', id)
+    const { error } = await supabase.rpc('moderate_chat_message', { p_message_id: id, p_action: 'delete' })
     if (error) {
       console.error('[Chat] Erro ao deletar mensagem:', error.message)
       set(s => ({ lastError: 'Erro ao deletar mensagem.' }))

@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/auth.store'
 import { useBoletimStore } from '@/stores/boletim.store'
-import { uploadFile, isMockMode } from '@/lib/supabase'
-import { USER_MEDIA_MAX_BYTES, validateUserMediaImage } from '@/lib/storage'
+import { isMockMode } from '@/lib/supabase'
+import { USER_MEDIA_MAX_BYTES, validateUserMediaImage, uploadBulletinImage } from '@/lib/storage'
 import { SafeImage } from '@/components/shared/SafeImage'
 import type { Boletim, ImageFitMode } from '@/types'
 
@@ -199,7 +199,7 @@ function CreateModal({
     setImagePreview(URL.createObjectURL(file))
     if (isMockMode || !user?.id) return
     setUploading(true)
-    const url = await uploadFile(user.id, `boletim-${Date.now()}`, file)
+    const url = await uploadBulletinImage(user.id, file)
     setUploading(false)
     if (url) {
       setImageUrl(url)
