@@ -10,8 +10,11 @@ Bolao Suprema e um app interno para palpites da Copa, com auth via Supabase, per
 - `VITE_SUPABASE_ANON_KEY`: anon/publishable key do Supabase.
 - `VITE_TENOR_KEY`: opcional para GIFs.
 - `VITE_PEXELS_API_KEY`, `VITE_FNEWS_URL`, `VITE_FNEWS_KEY`, `VITE_FNEWS_HOST`: opcionais para conteudo externo.
+- `VITE_MOCK_AUTH=true`: opcional apenas para teste local explicito.
 
 Nunca use service role no frontend e nunca commite `.env`.
+
+Sem `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`, login e acoes persistentes devem falhar de forma clara; isso nao deve ser usado para validar producao.
 
 ## Supabase
 
@@ -78,6 +81,14 @@ Checklist:
 
 Migrations ficam em `supabase/migrations`.
 
+Aplicadas nesta onda:
+
+- `20260515143000_internal_product_governance.sql`
+- `20260515144500_harden_storage_listing.sql`
+- `20260515150000_harden_rpc_permissions.sql`
+- `20260515151000_index_new_foreign_keys.sql`
+- `20260515162000_harden_user_profile_privacy.sql`
+
 Antes de aplicar em producao:
 
 1. Gerar snapshot/auditoria.
@@ -100,10 +111,12 @@ Nunca apagar tabelas/buckets antigos sem confirmacao. Para rollback rapido, reve
 - Admin bloqueia/desbloqueia mercados e apura resultados.
 - Marketing publica boletins.
 - Admin modera Resenha e consulta auditoria/exportacoes.
+- Admin cria links de convite no painel operacional; usuario entra pendente ate aprovacao.
+- Avisos internos aparecem em `/#/notificacoes`.
 
 ## LGPD e privacidade
 
-O app salva dados de perfil, palpites, mensagens, uploads e logs de auditoria. Ranking/chat nao devem expor e-mail. Perfil tem opcoes de privacidade. Dados administrativos ficam protegidos por RLS/RPC.
+O app salva dados de perfil, palpites, mensagens, uploads e logs de auditoria. Ranking/chat nao devem expor e-mail. Perfil tem opcoes de privacidade. `privacy_hide_profile` e aplicado na UI e na RLS de `users`: o proprio usuario e admins leem o perfil, usuarios comuns nao leem perfis marcados como privados. Dados administrativos ficam protegidos por RLS/RPC.
 
 ## Limitacoes conhecidas
 

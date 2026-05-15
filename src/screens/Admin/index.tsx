@@ -11,8 +11,8 @@ import { supabase, isMockMode } from '@/lib/supabase'
 import { calculatePoints } from '@/lib/scoring'
 import { cn } from '@/lib/utils'
 import { formatMatchDateTime } from '@/lib/matchTime'
-import { fetchAuditLogs, fetchParticipants, fetchScoringRules, fetchSystemHealth, refreshRanking, updateParticipantStatus, downloadCsv, setMarketStatus, settleMatchResult } from '@/services/product'
-import type { MarketStatus, MatchStatus, MatchStage, ParticipantStatus, ScoringRule, SystemHealthStatus } from '@/types'
+import { createInvite, fetchAuditLogs, fetchInvites, fetchParticipants, fetchScoringRules, fetchSystemHealth, refreshRanking, updateParticipantStatus, downloadCsv, setMarketStatus, settleMatchResult } from '@/services/product'
+import type { Invite, MarketStatus, MatchStatus, MatchStage, ParticipantStatus, ScoringRule, SystemHealthStatus } from '@/types'
 
 function marketStatusFor(status: MatchStatus): MarketStatus {
   if (status === 'locked') return 'locked'
@@ -460,21 +460,25 @@ function AdminOpsPanel() {
   const [participants, setParticipants] = useState<Array<Record<string, unknown>>>([])
   const [rules, setRules] = useState<ScoringRule[]>([])
   const [audit, setAudit] = useState<Array<Record<string, unknown>>>([])
+  const [invites, setInvites] = useState<Invite[]>([])
+  const [inviteLabel, setInviteLabel] = useState('Convite interno')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const [h, p, r, a] = await Promise.all([
+    const [h, p, r, a, i] = await Promise.all([
       fetchSystemHealth(),
       fetchParticipants(),
       fetchScoringRules(),
       fetchAuditLogs(20),
+      fetchInvites(),
     ])
     setHealth(h.data)
     setParticipants((p.data ?? []) as Array<Record<string, unknown>>)
     setRules(r.data ?? [])
     setAudit((a.data ?? []) as Array<Record<string, unknown>>)
-    setError(h.error ?? p.error ?? r.error ?? a.error)
+    setInvites(i.data ?? [])
+    setError(h.error ?? p.error ?? r.error ?? a.error ?? i.error)
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -496,6 +500,14 @@ function AdminOpsPanel() {
     await load()
   }
 
+  async function handleCreateInvite() {
+    setBusy(true)
+    const res = await createInvite(inviteLabel || 'Convite interno')
+    setBusy(false)
+    if (res.error) setError(res.error)
+    await load()
+  }
+
   return (
     <section className="border-2 border-ink mb-6">
       <div className="px-4 py-3 bg-ink text-paper flex items-center justify-between gap-3">
@@ -512,7 +524,7 @@ function AdminOpsPanel() {
         <Mini label="palpites" value={health?.predictionsTotal ?? '—'} />
         <Mini label="mercados abertos" value={health?.marketsOpen ?? '—'} />
       </div>
-      <div className="grid lg:grid-cols-3 gap-0">
+      <div className="grid lg:grid-cols-4 gap-0">
         <div className="p-4 border-r border-hairline">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display text-lg">PARTICIPANTES</h3>
@@ -544,6 +556,33 @@ function AdminOpsPanel() {
                 <span className="font-display text-lg">{rule.points}</span>
               </div>
             ))}
+          </div>
+        </div>
+        <div className="p-4 border-r border-hairline">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display text-lg">CONVITES</h3>
+            <button onClick={() => downloadCsv(`convites-${Date.now()}.csv`, invites as unknown as Array<Record<string, unknown>>)} className="font-mono text-[9px] underline">CSV</button>
+          </div>
+          <div className="flex gap-2 mb-3">
+            <input
+              value={inviteLabel}
+              onChange={e => setInviteLabel(e.target.value)}
+              className="min-w-0 flex-1 border border-hairline px-2 py-1 font-mono text-[10px] bg-paper-deep outline-none"
+              aria-label="Nome do convite"
+            />
+            <button disabled={busy} onClick={handleCreateInvite} className="btn-yellow text-[9px]">CRIAR</button>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-auto">
+            {invites.slice(0, 10).map(invite => {
+              const url = `${window.location.origin}${window.location.pathname}#/login?invite=${invite.code}`
+              return (
+                <div key={invite.id} className="border border-hairline p-2">
+                  <div className="font-mono text-[10px] font-bold">{invite.code}</div>
+                  <div className="font-mono text-[8px] text-ink-4 truncate">{invite.label} · {invite.usedCount}/{invite.maxUses ?? '∞'}</div>
+                  <button onClick={() => navigator.clipboard?.writeText(url)} className="font-mono text-[8px] underline mt-1">COPIAR LINK</button>
+                </div>
+              )
+            })}
           </div>
         </div>
         <div className="p-4">

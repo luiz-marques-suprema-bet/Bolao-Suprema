@@ -74,8 +74,9 @@ The applied migrations are additive and are also committed as:
 - `supabase/migrations/20260515144500_harden_storage_listing.sql`
 - `supabase/migrations/20260515150000_harden_rpc_permissions.sql`
 - `supabase/migrations/20260515151000_index_new_foreign_keys.sql`
+- `supabase/migrations/20260515162000_harden_user_profile_privacy.sql`
 
-They do not drop tables, buckets, columns or legacy storage objects. They keep `user-media` renderable for old URLs, add new buckets for future uploads, remove broad storage listing policies, restrict RPC execution grants, and add indexes for the new foreign keys.
+They do not drop tables, buckets, columns or legacy storage objects. They keep `user-media` renderable for old URLs, add new buckets for future uploads, remove broad storage listing policies, restrict RPC execution grants, add indexes for the new foreign keys, and replace the broad `users_select_all` policy with profile privacy enforcement.
 
 ## Final advisor notes after migration
 

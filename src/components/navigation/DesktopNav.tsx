@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { id: 'mine',      label: 'MEUS',     path: '/meus-palpites' },
   { id: 'ranking',   label: 'RANKING',  path: '/ranking' },
   { id: 'rules',     label: 'REGRAS',   path: '/regulamento' },
+  { id: 'alerts',    label: 'AVISOS',   path: '/notificacoes' },
   { id: 'resenha',   label: 'RESENHA',  path: '/resenha' },
 ]
 

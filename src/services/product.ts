@@ -252,6 +252,17 @@ export async function fetchNotifications(userId: string): Promise<ServiceResult<
   })))
 }
 
+export async function markNotificationRead(notificationId: string) {
+  const blocked = requireSupabase()
+  if (blocked) return fail(blocked)
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('id', notificationId)
+  if (error) return fail(error.message)
+  return ok(true)
+}
+
 export function downloadCsv(filename: string, rows: Array<Record<string, unknown>>) {
   const headers = Array.from(rows.reduce((set, row) => {
     Object.keys(row).forEach(key => set.add(key))

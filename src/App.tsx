@@ -21,6 +21,7 @@ import { BoletimScreen } from '@/screens/Boletim'
 import { UserProfileScreen } from '@/screens/UserProfile'
 import { RegulamentoScreen } from '@/screens/Regulamento'
 import { MyPredictionsScreen } from '@/screens/MyPredictions'
+import { NotificationsScreen } from '@/screens/Notifications'
 
 // ─── Root redirect — onboarding for first visit ───────────────────────────────
 
@@ -179,6 +180,7 @@ const router = createHashRouter([
         children: [
           { path: '/home', element: <HomeScreen /> },
           { path: '/regulamento', element: <RegulamentoScreen /> },
+          { path: '/notificacoes', element: <NotificationsScreen /> },
           { path: '/meus-palpites', element: <MyPredictionsScreen /> },
           { path: '/boletim', element: <BoletimScreen /> },
           { path: '/bracket', element: <Navigate to="/prediction" state={{ tab: 'knockout' }} replace /> },

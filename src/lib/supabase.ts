@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+const explicitMockMode = import.meta.env.VITE_MOCK_AUTH === 'true'
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('[Supabase] Environment variables not set. Persistent product features are unavailable.')
@@ -19,8 +20,9 @@ export const supabase = createClient(
   }
 )
 
-export const isMockMode =
-  import.meta.env.VITE_MOCK_AUTH === 'true' || !supabaseUrl || !supabaseAnonKey
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+export const isExplicitMockMode = explicitMockMode
+export const isMockMode = explicitMockMode || !isSupabaseConfigured
 
 export async function uploadFile(
   userId: string,

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { AppUser } from '@/types'
-import { supabase, isMockMode, uploadFile } from '@/lib/supabase'
+import { supabase, isExplicitMockMode, isSupabaseConfigured, uploadFile } from '@/lib/supabase'
 import { MOCK_ME } from '@/data/mock'
 import { getInitials } from '@/lib/utils'
 import { usePredictionStore } from './prediction.store'
@@ -105,7 +105,8 @@ export const useAuthStore = create<AuthState>()(
         if (!normalized.endsWith('@suprema.group')) {
           return { error: 'Use seu e-mail corporativo @suprema.group' }
         }
-        if (isMockMode) return {}
+        if (isExplicitMockMode) return {}
+        if (!isSupabaseConfigured) return { error: 'Supabase nao esta configurado. Login real indisponivel.' }
         const { error } = await supabase.auth.signInWithOtp({
           email: normalized,
           options: { shouldCreateUser: true },
@@ -121,11 +122,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       verifyOtp: async (email, token) => {
-        if (isMockMode) {
+        if (isExplicitMockMode) {
           set({ user: MOCK_ME, isAuthenticated: true, profileComplete: true, isLoading: false })
           syncUserStores(MOCK_ME.id)
           return {}
         }
+        if (!isSupabaseConfigured) return { error: 'Supabase nao esta configurado. Login real indisponivel.' }
 
         const { data, error } = await supabase.auth.verifyOtp({
           email: email.trim().toLowerCase(),
@@ -178,7 +180,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       signOut: async () => {
-        if (!isMockMode) await supabase.auth.signOut()
+        if (isSupabaseConfigured) await supabase.auth.signOut()
         usePredictionStore.getState().clearAllPredictions()
         usePredictionStore.getState().setUserId(undefined)
         useBracketStore.getState().setUserId(undefined)
@@ -186,7 +188,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loadSession: async () => {
-        if (isMockMode) {
+        if (isExplicitMockMode) {
           const stored = get().user
           set({
             user: stored,
@@ -194,6 +196,10 @@ export const useAuthStore = create<AuthState>()(
             profileComplete: !!(stored?.firstName && stored?.dept),
             isLoading: false,
           })
+          return
+        }
+        if (!isSupabaseConfigured) {
+          set({ user: null, isAuthenticated: false, profileComplete: false, isLoading: false })
           return
         }
         const { data } = await supabase.auth.getSession()
@@ -228,7 +234,7 @@ export const useAuthStore = create<AuthState>()(
 
       refreshProfile: async () => {
         const uid = get().user?.id
-        if (!uid || isMockMode) return
+        if (!uid || isExplicitMockMode || !isSupabaseConfigured) return
         const { data } = await supabase.from('users').select('*').eq('id', uid).single()
         if (data) set({ user: mapUser(data as UserRow) })
       },
@@ -240,9 +246,11 @@ export const useAuthStore = create<AuthState>()(
         let avatarUrl = current.avatarUrl
         let bannerUrl = current.bannerUrl
 
-        if (!isMockMode) {
+        if (isSupabaseConfigured) {
           if (photoFile) avatarUrl = (await uploadFile(current.id, 'avatar', photoFile)) ?? avatarUrl
           if (bannerFile) bannerUrl = (await uploadFile(current.id, 'banner', bannerFile)) ?? bannerUrl
+        } else if (!isExplicitMockMode) {
+          throw new Error('Supabase nao esta configurado. Perfil nao pode ser salvo.')
         }
 
         const updated: AppUser = { ...current, ...data, avatarUrl, bannerUrl }
@@ -254,7 +262,7 @@ export const useAuthStore = create<AuthState>()(
           profileComplete: !!(updated.firstName && updated.dept),
         })
 
-        if (!isMockMode) {
+        if (isSupabaseConfigured) {
           const { error } = await supabase.from('users').upsert({
             id: current.id,
             email: current.email,
