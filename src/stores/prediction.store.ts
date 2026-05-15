@@ -2,6 +2,15 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Prediction } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
+import { WC2026_MATCHES } from '@/data/wc2026'
+import { isBetOpen } from '@/lib/markets'
+import { validateChampionVice } from '@/lib/tournamentValidation'
+import { useMatchStore } from '@/stores/match.store'
+
+interface PredictionResult {
+  ok: boolean
+  error?: string
+}
 
 interface PredictionState {
   predictions: Record<string, Prediction> // matchId → Prediction
@@ -12,6 +21,7 @@ interface PredictionState {
   vicePick: string | null      // vice-campeão — 15 pts
   scorerPick: string | null    // artilheiro (nome do jogador) — 10 pts + desempate
 
+  lastError: string | null
   _userId: string | undefined
 
   setUserId: (id: string | undefined) => void
@@ -19,9 +29,10 @@ interface PredictionState {
 
   setDraft: (matchId: string, home: number, away: number) => void
   clearDraft: (matchId: string) => void
-  confirmPrediction: (prediction: Prediction) => void
+  confirmPrediction: (prediction: Prediction) => PredictionResult
   removePrediction: (matchId: string) => void
   clearAllPredictions: () => void
+  clearError: () => void
   getPrediction: (matchId: string) => Prediction | undefined
   getDraft: (matchId: string) => { home: number; away: number } | undefined
   setChampionPick: (teamCode: string) => void
@@ -37,6 +48,7 @@ export const usePredictionStore = create<PredictionState>()(
       championPick: null,
       vicePick: null,
       scorerPick: null,
+      lastError: null,
       _userId: undefined,
 
       setUserId: (id) => set({ _userId: id }),
@@ -99,11 +111,20 @@ export const usePredictionStore = create<PredictionState>()(
       // ── confirmPrediction: local + Supabase upsert ──────────────────────────
 
       confirmPrediction: (prediction) => {
+        const baseMatch = WC2026_MATCHES.find(m => m.id === prediction.matchId)
+        const override = useMatchStore.getState().getOverride(prediction.matchId)
+        const match = baseMatch ? { ...baseMatch, ...override } : null
+        if (match && !isBetOpen(match)) {
+          const error = 'Mercado fechado ou bloqueado. Este palpite nao foi salvo.'
+          set({ lastError: error })
+          return { ok: false, error }
+        }
+
         set((s) => {
           const predictions = { ...s.predictions, [prediction.matchId]: prediction }
           const drafts = { ...s.drafts }
           delete drafts[prediction.matchId]
-          return { predictions, drafts }
+          return { predictions, drafts, lastError: null }
         })
 
         const userId = get()._userId
@@ -118,9 +139,17 @@ export const usePredictionStore = create<PredictionState>()(
             },
             { onConflict: 'user_id,match_code' }
           ).then(({ error }) => {
-            if (error) console.error('[Predictions] Upsert error:', error.message)
+            if (error) {
+              console.error('[Predictions] Upsert error:', error.message)
+              set((s) => {
+                const predictions = { ...s.predictions }
+                delete predictions[prediction.matchId]
+                return { predictions, lastError: error.message }
+              })
+            }
           })
         }
+        return { ok: true }
       },
 
       removePrediction: (matchId) =>
@@ -131,7 +160,9 @@ export const usePredictionStore = create<PredictionState>()(
         }),
 
       clearAllPredictions: () =>
-        set({ predictions: {}, drafts: {}, championPick: null, vicePick: null, scorerPick: null }),
+        set({ predictions: {}, drafts: {}, championPick: null, vicePick: null, scorerPick: null, lastError: null }),
+
+      clearError: () => set({ lastError: null }),
 
       getPrediction: (matchId) => get().predictions[matchId],
       getDraft: (matchId) => get().drafts[matchId],
@@ -139,25 +170,37 @@ export const usePredictionStore = create<PredictionState>()(
       // ── General picks: local + sync to users table ──────────────────────────
 
       setChampionPick: (teamCode) => {
-        set({ championPick: teamCode })
+        const value = teamCode || null
+        const validation = validateChampionVice(value, get().vicePick)
+        if (!validation.valid) {
+          set({ lastError: validation.error })
+          return
+        }
+        set({ championPick: value, lastError: null })
         const uid = get()._userId
         if (!isMockMode && uid) {
-          supabase.from('users').update({ champion_pick: teamCode }).eq('id', uid)
-            .then(({ error }) => { if (error) console.error('[Predictions] champion_pick:', error.message) })
+          supabase.from('users').update({ champion_pick: value }).eq('id', uid)
+            .then(({ error }) => { if (error) set({ lastError: error.message }) })
         }
       },
 
       setVicePick: (teamCode) => {
-        set({ vicePick: teamCode })
+        const value = teamCode || null
+        const validation = validateChampionVice(get().championPick, value)
+        if (!validation.valid) {
+          set({ lastError: validation.error })
+          return
+        }
+        set({ vicePick: value, lastError: null })
         const uid = get()._userId
         if (!isMockMode && uid) {
-          supabase.from('users').update({ vice_pick: teamCode }).eq('id', uid)
-            .then(({ error }) => { if (error) console.error('[Predictions] vice_pick:', error.message) })
+          supabase.from('users').update({ vice_pick: value }).eq('id', uid)
+            .then(({ error }) => { if (error) set({ lastError: error.message }) })
         }
       },
 
       setScorerPick: (playerName) => {
-        set({ scorerPick: playerName })
+        set({ scorerPick: playerName, lastError: null })
         const uid = get()._userId
         if (!isMockMode && uid) {
           supabase.from('users').update({ scorer_pick: playerName }).eq('id', uid)

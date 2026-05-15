@@ -35,6 +35,7 @@ export interface AppUser {
 // ─── Match ───────────────────────────────────────────────────────────────────
 
 export type MatchStatus = 'scheduled' | 'open' | 'live' | 'finished' | 'locked'
+export type MarketStatus = 'open' | 'locked' | 'closed' | 'settled'
 
 // Status de aposta derivado do match status (para UX)
 export type BettingStatus = 'not_open' | 'open' | 'closing_soon' | 'locked' | 'settled'
@@ -43,10 +44,19 @@ export type BettingStatus = 'not_open' | 'open' | 'closing_soon' | 'locked' | 's
 export interface MatchStatusOverride {
   matchCode: string
   status: MatchStatus
+  marketStatus?: MarketStatus | null
   homeScore: number | null
   awayScore: number | null
   liveMinute?: string | null
   winner?: string | null
+  lockedAt?: string | null
+  lockedBy?: string | null
+  lockReason?: string | null
+  unlockedAt?: string | null
+  settledAt?: string | null
+  kickoffUtc?: string | null
+  date?: string | null
+  time?: string | null
 }
 export type MatchStage =
   | 'group'
@@ -71,8 +81,14 @@ export interface Match {
   kickoffUtc: string  // ISO 8601 UTC for deadline and auto-close logic
   venue: string
   status: MatchStatus
+  marketStatus?: MarketStatus | null
   liveMinute?: string // e.g. "68'"
   winner?: TeamCode | 'draw'
+  lockedAt?: string | null
+  lockedBy?: string | null
+  lockReason?: string | null
+  unlockedAt?: string | null
+  settledAt?: string | null
 }
 
 // ─── Prediction ───────────────────────────────────────────────────────────────
@@ -193,11 +209,14 @@ export interface Boletim {
   subtitle?: string
   body: string
   imageUrl?: string
+  imageFitMode?: ImageFitMode
   authorId: string
   authorName: string
   createdAt: string
   isPinned?: boolean
 }
+
+export type ImageFitMode = 'cover' | 'contain'
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
 

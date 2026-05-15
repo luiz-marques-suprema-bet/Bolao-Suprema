@@ -4,11 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Flag } from '@/components/shared/Flag'
 import { usePredictionStore } from '@/stores/prediction.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
-import { WC2026_MATCHES, WC2026_GROUPS, isBettingOpen } from '@/data/wc2026'
+import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
 import { clamp, cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
+import { formatMatchDate, formatMatchDateTime, getBettingDeadline } from '@/lib/matchTime'
+import { isBetOpen } from '@/lib/markets'
+import { getGroupOfTeam } from '@/lib/tournamentValidation'
 import type { Match } from '@/types'
 
 type PredTab = 'groups' | 'knockout' | 'champion'
@@ -128,7 +131,7 @@ function MatchRow({ match, onScoreChange }: { match: Match; onScoreChange?: () =
   const [home, setHome] = useState(draft?.home ?? existing?.homeScore ?? 0)
   const [away, setAway] = useState(draft?.away ?? existing?.awayScore ?? 0)
 
-  const isPickable = isBettingOpen(match)
+  const isPickable = isBetOpen(match)
   const isLocked = match.status === 'locked' || (!isPickable && (match.status === 'open' || match.status === 'scheduled'))
   const isLive = match.status === 'live'
   const isDone = match.status === 'finished'
@@ -138,7 +141,7 @@ function MatchRow({ match, onScoreChange }: { match: Match; onScoreChange?: () =
   const handleAwayChange = (v: number) => { setAway(v); onScoreChange?.() }
 
   const handleConfirm = () => {
-    confirmPrediction({
+    const result = confirmPrediction({
       id: `pred-${match.id}`,
       userId,
       matchId: match.id,
@@ -146,6 +149,7 @@ function MatchRow({ match, onScoreChange }: { match: Match; onScoreChange?: () =
       awayScore: away,
       submittedAt: new Date().toISOString(),
     })
+    if (!result.ok) return
     setExpanded(false)
     onScoreChange?.()
   }
@@ -211,7 +215,7 @@ function MatchRow({ match, onScoreChange }: { match: Match; onScoreChange?: () =
           )}
           {!isLive && !isDone && !isLocked && !hasPick && (
             <span className="font-mono text-[9px] text-ink-3 whitespace-nowrap">
-              {match.date.split(' ').slice(1).join(' ')} · {match.time} BRT
+              {formatMatchDate(match)} · {match.time} BRT
             </span>
           )}
         </div>
@@ -243,7 +247,7 @@ function MatchRow({ match, onScoreChange }: { match: Match; onScoreChange?: () =
                 PALPITE · PLACAR EXATO
               </p>
               <p className="font-mono text-[8px] text-ink-4 mb-1 text-center">{match.venue}</p>
-              <p className="font-mono text-[8px] text-ink-4 mb-4 text-center">{match.date} · {match.time} · Horário de Brasília</p>
+              <p className="font-mono text-[8px] text-ink-4 mb-4 text-center">{formatMatchDateTime(match)}</p>
               <div className="flex items-center justify-center gap-5">
                 <div className="flex flex-col items-center gap-2 min-w-0">
                   <Flag team={match.home} size={40} />
@@ -364,7 +368,7 @@ function MiniStandings({ standings, totalMatches, filledMatches }: {
 
 function GroupsTab() {
   const [selectedGroup, setSelectedGroup] = useState<string>('A')
-  const { predictions } = usePredictionStore()
+  const { predictions, lastError, clearError } = usePredictionStore()
   const [tick, setTick] = useState(0)
   const allMatches = useMatchesWithStatus(WC2026_MATCHES)
 
@@ -439,6 +443,15 @@ function GroupsTab() {
           })}
         </div>
       </div>
+
+      {lastError && (
+        <div className="mx-4 mt-4 border border-red/30 bg-red/5 px-3 py-2 flex items-center justify-between gap-3">
+          <p className="font-mono text-[10px] text-red">{lastError}</p>
+          <button onClick={clearError} className="font-mono text-[10px] text-red underline">
+            OK
+          </button>
+        </div>
+      )}
 
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -683,7 +696,7 @@ function KoMatchRow({
   const hasPick = !!existing && !isTBD
 
   const handleConfirm = () => {
-    confirmPrediction({
+    const result = confirmPrediction({
       id: `pred-${slotId}`,
       userId,
       matchId: slotId,
@@ -691,6 +704,7 @@ function KoMatchRow({
       awayScore,
       submittedAt: new Date().toISOString(),
     })
+    if (!result.ok) return
     setExpanded(false)
   }
 
@@ -801,7 +815,7 @@ function KoMatchRow({
 
 function KnockoutTab() {
   const [activeRound, setActiveRound] = useState<KoRound>('r32')
-  const { predictions } = usePredictionStore()
+  const { predictions, lastError, clearError } = usePredictionStore()
   const allMatches = useMatchesWithStatus(WC2026_MATCHES)
 
   const groupPredMap = useMemo(() => {
@@ -911,6 +925,15 @@ function KnockoutTab() {
       </div>
 
       {/* Matches */}
+      {lastError && (
+        <div className="mx-4 mt-4 md:mx-8 border border-red/30 bg-red/5 px-3 py-2 flex items-center justify-between gap-3">
+          <p className="font-mono text-[10px] text-red">{lastError}</p>
+          <button onClick={clearError} className="font-mono text-[10px] text-red underline">
+            OK
+          </button>
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
         <motion.div
           key={activeRound}
@@ -973,13 +996,6 @@ function KnockoutTab() {
 }
 
 // ─── General picks validation ─────────────────────────────────────────────────
-
-function getGroupOfTeam(code: string): string | null {
-  for (const g of WC2026_GROUPS) {
-    if (g.teams.includes(code)) return g.id
-  }
-  return null
-}
 
 export function validateGeneralPicks(
   champion: string | null,
@@ -1066,10 +1082,10 @@ function TeamPickerGrid({
 
 // ─── Champion tab ─────────────────────────────────────────────────────────────
 
-const GENERAL_DEADLINE = new Date('2026-06-11T19:00:00Z')
+const GENERAL_DEADLINE = getBettingDeadline(WC2026_MATCHES[0])
 
 function ChampionTab() {
-  const { championPick, vicePick, scorerPick, setChampionPick, setVicePick, setScorerPick } = usePredictionStore()
+  const { championPick, vicePick, scorerPick, setChampionPick, setVicePick, setScorerPick, lastError, clearError } = usePredictionStore()
   const [scorerInput, setScorerInput] = useState(scorerPick ?? '')
   const [section, setSection] = useState<'champion' | 'vice' | 'scorer'>('champion')
 
@@ -1102,7 +1118,7 @@ function ChampionTab() {
   const isDeadlinePassed = now >= GENERAL_DEADLINE
   const allSet = championPick && vicePick && scorerPick
 
-  const deadlineStr = '11 Jun · 16:00 · Horário de Brasília'
+  const deadlineStr = formatMatchDateTime(WC2026_MATCHES[0])
 
   return (
     <div className="px-4 py-6 pb-24">
@@ -1150,6 +1166,15 @@ function ChampionTab() {
           <p className="font-mono text-[10px] text-red">
             Apostas gerais encerradas. As apostas travaram no início da competição.
           </p>
+        </div>
+      )}
+
+      {lastError && (
+        <div className="mb-5 border border-red/30 bg-red/5 px-3 py-2 flex items-center justify-between gap-3">
+          <p className="font-mono text-[10px] text-red">{lastError}</p>
+          <button onClick={clearError} className="font-mono text-[10px] text-red underline">
+            OK
+          </button>
         </div>
       )}
 

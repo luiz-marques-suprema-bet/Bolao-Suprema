@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Boletim } from '@/types'
+import type { Boletim, ImageFitMode } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
 
 // ─── DB row → Boletim ────────────────────────────────────────────────────────
@@ -11,6 +11,7 @@ interface BoletimRow {
   subtitle: string | null
   body: string
   image_url: string | null
+  image_fit_mode: ImageFitMode | null
   author_id: string
   author_name: string
   is_pinned: boolean
@@ -25,6 +26,7 @@ function mapRow(row: BoletimRow): Boletim {
     subtitle:   row.subtitle ?? undefined,
     body:       row.body,
     imageUrl:   row.image_url ?? undefined,
+    imageFitMode: row.image_fit_mode ?? 'contain',
     authorId:   row.author_id,
     authorName: row.author_name,
     isPinned:   row.is_pinned,
@@ -117,6 +119,7 @@ export const useBoletimStore = create<BoletimState>()((set, get) => ({
         subtitle:    b.subtitle ?? null,
         body:        b.body,
         image_url:   b.imageUrl ?? null,
+        image_fit_mode: b.imageFitMode ?? 'contain',
         author_id:   b.authorId,
         author_name: b.authorName,
         is_pinned:   b.isPinned ?? false,

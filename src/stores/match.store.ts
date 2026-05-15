@@ -7,10 +7,39 @@ import { supabase, isMockMode } from '@/lib/supabase'
 interface MatchRow {
   match_code: string
   status: string
+  market_status: string | null
   home_score: number | null
   away_score: number | null
   live_minute: string | null
   winner: string | null
+  locked_at: string | null
+  locked_by: string | null
+  lock_reason: string | null
+  unlocked_at: string | null
+  settled_at: string | null
+  kickoff_utc: string | null
+  match_date: string | null
+  match_time: string | null
+}
+
+function mapMatchRow(row: MatchRow): MatchStatusOverride {
+  return {
+    matchCode:    row.match_code,
+    status:       row.status as MatchStatusOverride['status'],
+    marketStatus: row.market_status as MatchStatusOverride['marketStatus'],
+    homeScore:    row.home_score ?? null,
+    awayScore:    row.away_score ?? null,
+    liveMinute:   row.live_minute ?? null,
+    winner:       row.winner ?? null,
+    lockedAt:     row.locked_at ?? null,
+    lockedBy:     row.locked_by ?? null,
+    lockReason:   row.lock_reason ?? null,
+    unlockedAt:   row.unlocked_at ?? null,
+    settledAt:    row.settled_at ?? null,
+    kickoffUtc:   row.kickoff_utc ?? null,
+    date:         row.match_date ?? null,
+    time:         row.match_time ?? null,
+  }
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -40,21 +69,14 @@ export const useMatchStore = create<MatchStoreState>()((set, get) => ({
 
     const { data } = await supabase
       .from('matches')
-      .select('match_code, status, home_score, away_score, live_minute, winner')
+      .select('match_code, status, market_status, home_score, away_score, live_minute, winner, locked_at, locked_by, lock_reason, unlocked_at, settled_at, kickoff_utc, match_date, match_time')
       .not('match_code', 'is', null)
 
     if (data) {
       const overrides: Record<string, MatchStatusOverride> = {}
       for (const row of data as MatchRow[]) {
         if (!row.match_code) continue
-        overrides[row.match_code] = {
-          matchCode:   row.match_code,
-          status:      row.status as MatchStatusOverride['status'],
-          homeScore:   row.home_score ?? null,
-          awayScore:   row.away_score ?? null,
-          liveMinute:  row.live_minute ?? null,
-          winner:      row.winner ?? null,
-        }
+        overrides[row.match_code] = mapMatchRow(row)
       }
       set({ overrides, isLoaded: true })
     } else {
@@ -69,14 +91,7 @@ export const useMatchStore = create<MatchStoreState>()((set, get) => ({
         (payload) => {
           const row = payload.new as MatchRow
           if (!row.match_code) return
-          const override: MatchStatusOverride = {
-            matchCode:  row.match_code,
-            status:     row.status as MatchStatusOverride['status'],
-            homeScore:  row.home_score ?? null,
-            awayScore:  row.away_score ?? null,
-            liveMinute: row.live_minute ?? null,
-            winner:     row.winner ?? null,
-          }
+          const override = mapMatchRow(row)
           set(s => ({ overrides: { ...s.overrides, [row.match_code]: override } }))
         })
       .subscribe()

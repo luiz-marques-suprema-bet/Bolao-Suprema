@@ -16,6 +16,9 @@ import { fetchFeaturedVideos } from '@/lib/scorebat'
 import type { ScorebatVideo } from '@/lib/scorebat'
 import { fetchFootballImages, FOOTBALL_FALLBACKS } from '@/lib/footballimages'
 import type { FootballImage } from '@/lib/footballimages'
+import { SafeImage } from '@/components/shared/SafeImage'
+import { formatMatchDate, formatMatchTime, getBettingDeadline } from '@/lib/matchTime'
+import { getEffectiveMarketStatus } from '@/lib/markets'
 import { fetchWC26News, isConfigured as newsConfigured } from '@/lib/footballnews'
 import type { FootballNewsItem } from '@/lib/footballnews'
 import type { RankingEntry, Match } from '@/types'
@@ -429,7 +432,7 @@ function RotatingHero({ days, children }: { days: number; children?: React.React
           className="absolute inset-0"
         >
           {bgImage
-            ? <img src={bgImage.url} alt={bgImage.alt} className="w-full h-full object-cover" />
+            ? <SafeImage src={bgImage.url} alt={bgImage.alt} className="w-full h-full" />
             : <div className="w-full h-full bg-ink" />
           }
         </motion.div>
@@ -494,7 +497,7 @@ function RotatingHero({ days, children }: { days: number; children?: React.React
   )
 }
 
-const TOURNAMENT_START = new Date('2026-06-11T19:00:00Z') // 16:00 BRT = 19:00 UTC
+const TOURNAMENT_START = getBettingDeadline(WC2026_MATCHES[0])
 
 function daysUntil(target: Date): number {
   const now = new Date()
@@ -517,9 +520,9 @@ function useHomeData() {
     ? WC2026_MATCHES
         .map((m): Match => {
           const ov = overrides[m.id]
-          return ov ? { ...m, status: ov.status, homeScore: ov.homeScore, awayScore: ov.awayScore } : m
+          return ov ? { ...m, ...ov } : m
         })
-        .filter(m => m.status === 'scheduled' || m.status === 'open')
+        .filter(m => getEffectiveMarketStatus(m) === 'open')
         .slice(0, 8)
     : WC2026_MATCHES.filter(m => m.status === 'scheduled').slice(0, 8)
 
@@ -559,7 +562,7 @@ function RotatingHeroDesktop({ days, onCta }: { days: number; onCta: () => void 
           className="absolute inset-0"
         >
           {bgImage
-            ? <img src={bgImage.url} alt={bgImage.alt} className="w-full h-full object-cover" />
+            ? <SafeImage src={bgImage.url} alt={bgImage.alt} className="w-full h-full" />
             : <div className="w-full h-full bg-ink" />
           }
         </motion.div>
@@ -933,8 +936,8 @@ function HomeDesktop() {
                       </div>
                     </div>
                     <div className="text-center flex-shrink-0 px-2">
-                      <div className="font-mono text-[9px] text-ink-4 tracking-eyebrow">{match.date}</div>
-                      <div className="font-display text-lg leading-none">{match.time}</div>
+                      <div className="font-mono text-[9px] text-ink-4 tracking-eyebrow">{formatMatchDate(match)}</div>
+                      <div className="font-display text-lg leading-none">{formatMatchTime(match)}</div>
                     </div>
                     <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                       <div className="min-w-0 text-right">

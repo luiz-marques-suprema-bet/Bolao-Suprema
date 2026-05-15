@@ -25,12 +25,23 @@ export const isMockMode =
 // Both 'user-media' (new) and 'avatars' (legacy) are public buckets.
 // New uploads go to 'user-media'; 'avatars' bucket kept for backwards compat.
 const MEDIA_BUCKET = 'user-media'
+const USER_MEDIA_MAX_BYTES = 5 * 1024 * 1024
+const USER_MEDIA_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export async function uploadFile(
   userId:   string,
   filename: string,
   file:     File,
 ): Promise<string | null> {
+  if (file.size > USER_MEDIA_MAX_BYTES) {
+    console.error('[Storage] Imagem acima de 5 MB.')
+    return null
+  }
+  if (!USER_MEDIA_IMAGE_TYPES.includes(file.type)) {
+    console.error('[Storage] Use JPG, PNG, WEBP ou GIF.')
+    return null
+  }
+
   const ext  = file.name.split('.').pop() ?? 'jpg'
   const path = `${userId}/${filename}.${ext}`
   const { error } = await supabase.storage

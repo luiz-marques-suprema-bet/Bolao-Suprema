@@ -10,7 +10,15 @@ import { POINT_RULES } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { calculatePoints } from '@/lib/scoring'
 import { cn } from '@/lib/utils'
-import type { MatchStatus, MatchStage } from '@/types'
+import { formatMatchDateTime } from '@/lib/matchTime'
+import type { MarketStatus, MatchStatus, MatchStage } from '@/types'
+
+function marketStatusFor(status: MatchStatus): MarketStatus {
+  if (status === 'locked') return 'locked'
+  if (status === 'finished') return 'settled'
+  if (status === 'live') return 'closed'
+  return 'open'
+}
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
@@ -58,9 +66,23 @@ async function fetchKpis(): Promise<KpiData> {
 async function updateMatchStatus(
   matchCode: string,
   status: MatchStatus,
-  extra?: { homeScore?: number; awayScore?: number; liveMinute?: string; winner?: string }
+  extra?: { homeScore?: number; awayScore?: number; liveMinute?: string; winner?: string; lockReason?: string }
 ) {
   const payload: Record<string, unknown> = { status }
+  payload.market_status = marketStatusFor(status)
+  if (status === 'locked') {
+    payload.locked_at = new Date().toISOString()
+    payload.lock_reason = extra?.lockReason ?? 'admin_lock'
+  }
+  if (status === 'open') {
+    payload.unlocked_at = new Date().toISOString()
+    payload.locked_at = null
+    payload.lock_reason = null
+    payload.settled_at = null
+  }
+  if (status === 'finished') {
+    payload.settled_at = new Date().toISOString()
+  }
   if (extra?.homeScore !== undefined) payload.home_score = extra.homeScore
   if (extra?.awayScore !== undefined) payload.away_score = extra.awayScore
   if (extra?.liveMinute !== undefined) payload.live_minute = extra.liveMinute
@@ -191,7 +213,7 @@ function MatchRowAdmin({
     if (err) {
       onAction(`Erro: ${err.message}`, false)
     } else {
-      applyOverride({ matchCode, status: newStatus, homeScore: currentHomeScore, awayScore: currentAwayScore })
+      applyOverride({ matchCode, status: newStatus, marketStatus: marketStatusFor(newStatus), homeScore: currentHomeScore, awayScore: currentAwayScore })
       onAction(`✓ Partida ${matchCode} → ${newStatus.toUpperCase()}`, true)
     }
     setBusy(false)
@@ -204,7 +226,7 @@ function MatchRowAdmin({
     if (error) {
       onAction(`Erro: ${error}`, false)
     } else {
-      applyOverride({ matchCode, status: 'finished', homeScore: homeGoals, awayScore: awayGoals })
+      applyOverride({ matchCode, status: 'finished', marketStatus: 'settled', homeScore: homeGoals, awayScore: awayGoals })
       onAction(`✓ Resultado registrado · ${scored} palpites pontuados`, true)
       setEditResult(false)
     }
@@ -353,7 +375,7 @@ async function openGroupMatches(groupCode: string, onAction: (msg: string, ok: b
 
   const { error } = await supabase
     .from('matches')
-    .update({ status: 'open' })
+    .update({ status: 'open', market_status: 'open', unlocked_at: new Date().toISOString(), locked_at: null, lock_reason: null, settled_at: null })
     .in('match_code', matchCodes)
     .eq('status', 'scheduled')
 
@@ -365,7 +387,7 @@ async function lockAllOpenMatches(onAction: (msg: string, ok: boolean) => void) 
   if (isMockMode) { onAction('Mock mode: ação não persiste', false); return }
   const { error, count } = await supabase
     .from('matches')
-    .update({ status: 'locked' })
+    .update({ status: 'locked', market_status: 'locked', locked_at: new Date().toISOString(), lock_reason: 'bulk_admin_lock' })
     .eq('status', 'open')
     .select('id', { count: 'exact', head: true })
 
@@ -565,7 +587,7 @@ function AdminMobile() {
               matchCode={m.id}
               homeCode={m.home.code}
               awayCode={m.away.code}
-              dateStr={m.date}
+              dateStr={formatMatchDateTime(m)}
               group={m.group}
               currentStatus={m.status}
               currentHomeScore={m.homeScore}
@@ -681,7 +703,7 @@ function AdminDesktop() {
                       matchCode={m.id}
                       homeCode={m.home.code}
                       awayCode={m.away.code}
-                      dateStr={m.date}
+                      dateStr={formatMatchDateTime(m)}
                       group={m.group}
                       currentStatus={m.status}
                       currentHomeScore={m.homeScore}

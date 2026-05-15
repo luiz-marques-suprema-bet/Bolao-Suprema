@@ -1,5 +1,7 @@
 import { TEAMS } from './teams'
 import type { Match, MatchStatus } from '@/types'
+import { formatMatchDateTime } from '@/lib/matchTime'
+import { isBetOpen } from '@/lib/markets'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -229,13 +231,12 @@ export function resolveMatch(r: RawMatch): Match {
 // Helper: returns true if bets are still open for this match
 // (kickoff is in the future — bets close at kickoff time)
 export function isBettingOpen(match: Match): boolean {
-  if (match.status !== 'open' && match.status !== 'scheduled') return false
-  return new Date(match.kickoffUtc) > new Date()
+  return isBetOpen(match)
 }
 
 // Helper: formats the BRT time as a display string with timezone label
 export function fmtKickoffBRT(match: Match): string {
-  return `${match.time} (Horário de Brasília)`
+  return formatMatchDateTime(match)
 }
 
 // ─── Resolved exports ─────────────────────────────────────────────────────────

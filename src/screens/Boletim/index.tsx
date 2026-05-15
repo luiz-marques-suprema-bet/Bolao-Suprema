@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/auth.store'
 import { useBoletimStore } from '@/stores/boletim.store'
 import { uploadFile, isMockMode } from '@/lib/supabase'
-import type { Boletim } from '@/types'
+import { USER_MEDIA_MAX_BYTES, validateUserMediaImage } from '@/lib/storage'
+import { SafeImage } from '@/components/shared/SafeImage'
+import type { Boletim, ImageFitMode } from '@/types'
 
 // ─── Label colour map ─────────────────────────────────────────────────────────
 
@@ -79,7 +81,7 @@ function BoletimCard({
 
         {b.imageUrl && (
           <div className="w-full overflow-hidden mb-4 opacity-90" style={{ paddingBottom: '56.25%', position: 'relative' }}>
-            <img src={b.imageUrl} alt={b.title} className="absolute inset-0 w-full h-full object-contain bg-ink/20" />
+            <SafeImage src={b.imageUrl} alt={b.title} fit={b.imageFitMode ?? 'contain'} className="absolute inset-0 w-full h-full bg-ink/20" />
           </div>
         )}
 
@@ -131,7 +133,7 @@ function BoletimCard({
             <div className="px-4 pb-4 border-t border-hairline pt-3">
               {b.imageUrl && (
                 <div className="w-full overflow-hidden mb-3" style={{ paddingBottom: '56.25%', position: 'relative' }}>
-                  <img src={b.imageUrl} alt={b.title} className="absolute inset-0 w-full h-full object-contain bg-paper-deep" />
+                  <SafeImage src={b.imageUrl} alt={b.title} fit={b.imageFitMode ?? 'contain'} className="absolute inset-0 w-full h-full bg-paper-deep" />
                 </div>
               )}
               <p className="font-sans text-[13px] text-ink-2 leading-relaxed">{b.body}</p>
@@ -179,6 +181,7 @@ function CreateModal({
   const [body, setBody] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageFitMode, setImageFitMode] = useState<ImageFitMode>('contain')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -188,12 +191,9 @@ function CreateModal({
 
   async function handleImageFile(file: File) {
     setUploadError(null)
-    if (file.size > 8 * 1024 * 1024) {
-      setUploadError('Imagem muito grande. Máximo: 8 MB.')
-      return
-    }
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Arquivo inválido. Use JPG, PNG ou WEBP.')
+    const validation = validateUserMediaImage(file)
+    if (validation) {
+      setUploadError(validation)
       return
     }
     setImagePreview(URL.createObjectURL(file))
@@ -217,6 +217,7 @@ function CreateModal({
       subtitle:   subtitle.trim() || undefined,
       body:       body.trim(),
       imageUrl:   imageUrl || undefined,
+      imageFitMode,
       authorId:   user?.id   ?? 'admin',
       authorName: user ? `${user.firstName} ${user.lastName}` : 'Admin',
       isPinned:   false,
@@ -290,8 +291,23 @@ function CreateModal({
           {/* Image upload */}
           <div>
             <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-1.5">
-              IMAGEM (opcional) — proporção ideal 16:9 · máx. 8 MB
+              IMAGEM (opcional) — proporção ideal 16:9 · máx. {USER_MEDIA_MAX_BYTES / 1024 / 1024} MB
             </p>
+            <div className="flex gap-1.5 mb-2">
+              {(['contain', 'cover'] as const).map(mode => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setImageFitMode(mode)}
+                  className={[
+                    'font-mono text-[9px] px-2.5 py-1 border-2 transition-colors',
+                    imageFitMode === mode ? 'bg-ink border-ink text-paper' : 'border-hairline hover:border-ink',
+                  ].join(' ')}
+                >
+                  {mode === 'contain' ? 'CONTER' : 'COBRIR'}
+                </button>
+              ))}
+            </div>
 
             {imagePreview ? (
               <div className="relative">
@@ -300,7 +316,8 @@ function CreateModal({
                   <img
                     src={imagePreview}
                     alt="preview"
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full"
+                    style={{ objectFit: imageFitMode }}
                   />
                   {uploading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-ink/40">
@@ -332,7 +349,7 @@ function CreateModal({
               >
                 <span className="font-mono text-[20px] text-ink-4">↑</span>
                 <span className="font-mono text-[10px] text-ink-3">Clique para selecionar imagem</span>
-                <span className="font-mono text-[8px] text-ink-4">JPG · PNG · WEBP · máx. 8 MB</span>
+                <span className="font-mono text-[8px] text-ink-4">JPG · PNG · WEBP · GIF · máx. {USER_MEDIA_MAX_BYTES / 1024 / 1024} MB</span>
               </button>
             )}
 

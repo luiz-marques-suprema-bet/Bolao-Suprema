@@ -23,10 +23,19 @@ export function useMatchesWithStatus(staticMatches: Match[]): Match[] {
       return {
         ...m,
         status:      override.status,
+        marketStatus: override.marketStatus,
         homeScore:   override.homeScore,
         awayScore:   override.awayScore,
         liveMinute:  override.liveMinute ?? undefined,
         winner:      override.winner ?? undefined,
+        lockedAt:    override.lockedAt ?? null,
+        lockedBy:    override.lockedBy ?? null,
+        lockReason:  override.lockReason ?? null,
+        unlockedAt:  override.unlockedAt ?? null,
+        settledAt:   override.settledAt ?? null,
+        kickoffUtc:  override.kickoffUtc ?? m.kickoffUtc,
+        date:        override.date ?? m.date,
+        time:        override.time ?? m.time,
       }
     })
   }, [staticMatches, overrides, isLoaded])
@@ -47,10 +56,19 @@ export function useMatchWithStatus(match: Match): Match {
     return {
       ...match,
       status:     override.status,
+      marketStatus: override.marketStatus,
       homeScore:  override.homeScore,
       awayScore:  override.awayScore,
       liveMinute: override.liveMinute ?? undefined,
       winner:     override.winner ?? undefined,
+      lockedAt:   override.lockedAt ?? null,
+      lockedBy:   override.lockedBy ?? null,
+      lockReason: override.lockReason ?? null,
+      unlockedAt: override.unlockedAt ?? null,
+      settledAt:  override.settledAt ?? null,
+      kickoffUtc: override.kickoffUtc ?? match.kickoffUtc,
+      date:       override.date ?? match.date,
+      time:       override.time ?? match.time,
     }
   }, [match, overrides, isLoaded])
 }

@@ -28,7 +28,9 @@ export async function fetchRanking(myUserId?: string): Promise<RankingEntry[]> {
     if (p >= 10) exactMap[row.user_id]  = (exactMap[row.user_id]   ?? 0) + 1
   }
 
-  return users
+  const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values())
+
+  return uniqueUsers
     .map(u => ({
       userId:   u.id,
       name:     `${u.first_name} ${u.last_name}`.trim(),

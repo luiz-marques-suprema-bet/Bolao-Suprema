@@ -62,8 +62,15 @@ create table if not exists public.matches (
   away_score  int,
   match_date  text not null,   -- display string: 'QUI 11 JUN'
   match_time  text not null,   -- BRT display: '17:00'
+  kickoff_utc timestamptz,
   venue       text not null,
   status      text not null default 'scheduled' check (status in ('scheduled','open','live','finished','locked')),
+  market_status text not null default 'open' check (market_status in ('open','locked','closed','settled')),
+  locked_at   timestamptz,
+  locked_by   uuid references public.users(id) on delete set null,
+  lock_reason text,
+  unlocked_at timestamptz,
+  settled_at  timestamptz,
   live_minute text,
   winner      text,
   created_at  timestamptz not null default now(),
@@ -121,6 +128,7 @@ create table if not exists public.bulletins (
   subtitle    text,
   body        text not null,
   image_url   text,
+  image_fit_mode text not null default 'contain' check (image_fit_mode in ('cover','contain')),
   author_id   uuid not null references public.users(id) on delete cascade,
   author_name text not null,
   is_pinned   boolean not null default false,
@@ -165,7 +173,7 @@ create table if not exists public.ranking_snapshots (
   user_id    uuid not null references public.users(id) on delete cascade,
   pts        int not null default 0,
   correct    int not null default 0,
-  exact      int not null default 0,
+  exact_score int not null default 0,
   rank       int,
   snapshot_at timestamptz not null default now()
 );
@@ -185,6 +193,7 @@ create index if not exists idx_ranking_user_id          on public.ranking_snapsh
 create index if not exists idx_bulletins_pinned         on public.bulletins(is_pinned, created_at desc);
 create index if not exists idx_matches_status           on public.matches(status);
 create index if not exists idx_matches_group            on public.matches(group_code, matchday);
+create index if not exists idx_matches_locked_by        on public.matches(locked_by);
 
 -- ══════════════════════════════════════════════════════════════
 -- ROW LEVEL SECURITY
