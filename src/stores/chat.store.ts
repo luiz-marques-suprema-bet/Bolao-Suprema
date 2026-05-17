@@ -153,7 +153,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     const { data: rows, error: fetchError } = await supabase
       .from('chat_messages')
       .select(`
-        id, user_id, channel_id, text, type, gif_url, poll_data, reaction, created_at,
+        id, user_id, channel_id, text, type, gif_url, image_url, audio_url, audio_duration, poll_data, reaction, created_at,
         users!user_id ( id, first_name, last_name, dept, initials, color, avatar_url )
       `)
       .eq('channel_id', 'geral')

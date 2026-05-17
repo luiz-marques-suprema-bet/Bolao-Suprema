@@ -149,7 +149,9 @@ function LoginMobile() {
       </div>
 
       <div className="relative flex-1 flex flex-col justify-end p-5 pb-10">
-        <Logo height={56} className="mb-8 brightness-0 invert" />
+        <div className="mb-8 bg-white/90 rounded-xl px-4 py-2 self-start">
+          <Logo height={44} />
+        </div>
 
         <AnimatePresence mode="wait">
           {f.step === 'email' ? (
