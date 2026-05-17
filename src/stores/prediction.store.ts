@@ -109,7 +109,20 @@ export const usePredictionStore = create<PredictionState>()(
       confirmPrediction: (prediction) => {
         const baseMatch = WC2026_MATCHES.find(m => m.id === prediction.matchId)
         const override = useMatchStore.getState().getOverride(prediction.matchId)
-        const match = baseMatch ? { ...baseMatch, ...override } : null
+        // Merge with null-coalescing so a null kickoffUtc in the DB override
+        // never overwrites the static kickoff — same logic as useMatchesWithStatus.
+        const match = baseMatch
+          ? override
+              ? {
+                  ...baseMatch,
+                  status:      override.status,
+                  marketStatus: override.marketStatus ?? undefined,
+                  lockedAt:    override.lockedAt ?? null,
+                  settledAt:   override.settledAt ?? null,
+                  kickoffUtc:  override.kickoffUtc ?? baseMatch.kickoffUtc,
+                }
+              : baseMatch
+          : null
         if (match && !isBetOpen(match)) {
           const error = 'Mercado fechado ou bloqueado. Este palpite nao foi salvo.'
           set({ lastError: error })

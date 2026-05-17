@@ -150,6 +150,7 @@ function MatchRow({ match }: { match: Match }) {
   const [expanded, setExpanded] = useState(false)
   const [home, setHome] = useState(existing?.homeScore ?? 0)
   const [away, setAway] = useState(existing?.awayScore ?? 0)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const isPickable = isBetOpen(match)
   const isLocked = match.status === 'locked' || (!isPickable && (match.status === 'open' || match.status === 'scheduled'))
@@ -158,6 +159,7 @@ function MatchRow({ match }: { match: Match }) {
   const hasPick = !!existing
 
   const handleConfirm = () => {
+    setSaveError(null)
     const result = confirmPrediction({
       id: `pred-${match.id}`,
       userId,
@@ -166,7 +168,10 @@ function MatchRow({ match }: { match: Match }) {
       awayScore: away,
       submittedAt: new Date().toISOString(),
     })
-    if (!result.ok) return
+    if (!result.ok) {
+      setSaveError(result.error ?? 'Erro ao salvar palpite.')
+      return
+    }
     setExpanded(false)
   }
 
@@ -288,9 +293,15 @@ function MatchRow({ match }: { match: Match }) {
                 </div>
               </div>
 
+              {saveError && (
+                <p className="font-mono text-[10px] text-red text-center mt-3 border border-red/30 bg-red/5 px-2 py-1.5">
+                  {saveError}
+                </p>
+              )}
+
               <button
                 onClick={handleConfirm}
-                className="btn-yellow w-full text-[11px] py-3 mt-5 tracking-eyebrow font-bold"
+                className="btn-yellow w-full text-[11px] py-3 mt-3 tracking-eyebrow font-bold"
               >
                 {hasPick ? 'ATUALIZAR PALPITE ✓' : 'CONFIRMAR PALPITE ✓'}
               </button>
@@ -721,6 +732,7 @@ function KoMatchRow({ slotId, label, home, away }: {
   const [expanded, setExpanded] = useState(false)
   const [homeScore, setHomeScore] = useState(existing?.homeScore ?? 0)
   const [awayScore, setAwayScore] = useState(existing?.awayScore ?? 0)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const homeTeam = home ? TEAMS[home] : null
   const awayTeam = away ? TEAMS[away] : null
@@ -728,6 +740,7 @@ function KoMatchRow({ slotId, label, home, away }: {
   const hasPick = !!existing && !isTBD
 
   const handleConfirm = () => {
+    setSaveError(null)
     const result = confirmPrediction({
       id: `pred-${slotId}`,
       userId,
@@ -736,7 +749,10 @@ function KoMatchRow({ slotId, label, home, away }: {
       awayScore,
       submittedAt: new Date().toISOString(),
     })
-    if (!result.ok) return
+    if (!result.ok) {
+      setSaveError(result.error ?? 'Erro ao salvar palpite.')
+      return
+    }
     setExpanded(false)
   }
 
@@ -851,7 +867,13 @@ function KoMatchRow({ slotId, label, home, away }: {
                 </div>
               </div>
 
-              <button onClick={handleConfirm} className="btn-yellow w-full text-[11px] py-3 mt-5 tracking-eyebrow font-bold">
+              {saveError && (
+                <p className="font-mono text-[10px] text-red text-center mt-3 border border-red/30 bg-red/5 px-2 py-1.5">
+                  {saveError}
+                </p>
+              )}
+
+              <button onClick={handleConfirm} className="btn-yellow w-full text-[11px] py-3 mt-3 tracking-eyebrow font-bold">
                 {hasPick ? 'ATUALIZAR PALPITE ✓' : 'CONFIRMAR PALPITE ✓'}
               </button>
             </div>
