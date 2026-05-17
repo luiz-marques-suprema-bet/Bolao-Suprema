@@ -586,13 +586,13 @@ function HomeMobile() {
 
         {/* Progresso + CTA */}
         <div className="border-2 border-ink overflow-hidden">
-          <div className="bg-ink text-paper px-4 py-3">
-            <div className="font-mono text-[9px] tracking-eyebrow text-paper/40">
+          <div className="px-4 pt-4 pb-3 border-b border-hairline">
+            <div className="font-mono text-[9px] tracking-eyebrow text-ink-4">
               OLÁ{user?.firstName ? `, ${user.firstName.toUpperCase()}` : ''}
             </div>
             <div className="flex items-baseline gap-2 mt-0.5">
               <span className="font-display text-4xl leading-none">{totalPreds}</span>
-              <span className="font-mono text-[10px] text-paper/50">de {totalMatches} palpites feitos</span>
+              <span className="font-mono text-[10px] text-ink-3">de {totalMatches} palpites feitos</span>
             </div>
           </div>
           <div className="px-4 py-3 space-y-3">
@@ -748,30 +748,30 @@ function HomeDesktop() {
           <RotatingHeroDesktop days={days} onCta={() => navigate('/prediction')} />
 
           {/* Progress card */}
-          <div className="border-2 border-ink bg-ink text-paper flex flex-col overflow-hidden">
-            <div className="px-6 pt-6 pb-4 border-b border-paper/10">
-              <div className="font-mono text-[9px] tracking-eyebrow text-paper/40 mb-1">
+          <div className="border-2 border-ink bg-paper text-ink flex flex-col overflow-hidden">
+            <div className="px-6 pt-6 pb-4 border-b border-hairline">
+              <div className="font-mono text-[9px] tracking-eyebrow text-ink-4 mb-1">
                 OLÁ{user?.firstName ? `, ${user.firstName.toUpperCase()}` : ''}
               </div>
               <div className="font-display text-5xl leading-none">{totalPreds}</div>
-              <div className="font-mono text-[10px] text-paper/50 mt-1">de {totalMatches} palpites feitos</div>
+              <div className="font-mono text-[10px] text-ink-3 mt-1">de {totalMatches} palpites feitos</div>
             </div>
             <div className="px-6 py-4 space-y-4 flex-1">
               <div>
                 <div className="flex justify-between mb-1.5">
-                  <span className="font-mono text-[9px] text-paper/40 tracking-eyebrow">FASE DE GRUPOS</span>
-                  <span className="font-mono text-[9px] text-paper/60">{totalPreds}/{totalMatches}</span>
+                  <span className="font-mono text-[9px] text-ink-4 tracking-eyebrow">FASE DE GRUPOS</span>
+                  <span className="font-mono text-[9px] text-ink-3">{totalPreds}/{totalMatches}</span>
                 </div>
-                <div className="h-1.5 bg-paper/10 overflow-hidden rounded-full">
+                <div className="h-1.5 bg-hairline overflow-hidden">
                   <div className="h-full bg-yellow transition-all duration-700" style={{ width: `${totalMatches > 0 ? (totalPreds / totalMatches) * 100 : 0}%` }} />
                 </div>
               </div>
               <div>
                 <div className="flex justify-between mb-1.5">
-                  <span className="font-mono text-[9px] text-paper/40 tracking-eyebrow">APOSTAS GERAIS</span>
-                  <span className="font-mono text-[9px] text-paper/60">{apostasFeitas}/3</span>
+                  <span className="font-mono text-[9px] text-ink-4 tracking-eyebrow">APOSTAS GERAIS</span>
+                  <span className="font-mono text-[9px] text-ink-3">{apostasFeitas}/3</span>
                 </div>
-                <div className="h-1.5 bg-paper/10 overflow-hidden rounded-full">
+                <div className="h-1.5 bg-hairline overflow-hidden">
                   <div className="h-full bg-green transition-all duration-700" style={{ width: `${(apostasFeitas / 3) * 100}%` }} />
                 </div>
               </div>
@@ -782,8 +782,8 @@ function HomeDesktop() {
               </button>
               {apostasFeitas < 3 && (
                 <button onClick={() => navigate('/prediction', { state: { tab: 'champion' } })}
-                  className="w-full border border-yellow/30 py-2 text-center hover:bg-yellow/10 transition-colors">
-                  <span className="font-mono text-[9px] text-yellow tracking-eyebrow">⚠ APOSTAS GERAIS PENDENTES</span>
+                  className="w-full border border-ink py-2 text-center hover:bg-yellow/10 transition-colors">
+                  <span className="font-mono text-[9px] text-ink tracking-eyebrow">⚠ APOSTAS GERAIS PENDENTES</span>
                 </button>
               )}
             </div>
