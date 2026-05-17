@@ -138,25 +138,47 @@ export const usePredictionStore = create<PredictionState>()(
 
         const userId = get()._userId
         if (!isMockMode && userId) {
-          supabase.from('predictions').upsert(
-            {
-              user_id:   userId,
-              match_code: prediction.matchId,
-              home_score: prediction.homeScore,
-              away_score: prediction.awayScore,
-              submitted_at: prediction.submittedAt,
-            },
-            { onConflict: 'user_id,match_code' }
-          ).then(({ error }) => {
-            if (error) {
-              console.error('[Predictions] Upsert error:', error.message)
-              set((s) => {
-                const predictions = { ...s.predictions }
-                delete predictions[prediction.matchId]
-                return { predictions, lastError: error.message }
-              })
-            }
-          })
+          const matchId = prediction.matchId
+          // onConflict upsert fails with partial indexes — use select→update/insert instead
+          supabase
+            .from('predictions')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('match_code', matchId)
+            .maybeSingle()
+            .then(async ({ data: existing }) => {
+              let saveError: string | null = null
+              if (existing?.id) {
+                const { error } = await supabase
+                  .from('predictions')
+                  .update({
+                    home_score:   prediction.homeScore,
+                    away_score:   prediction.awayScore,
+                    submitted_at: prediction.submittedAt,
+                  })
+                  .eq('id', existing.id)
+                saveError = error?.message ?? null
+              } else {
+                const { error } = await supabase
+                  .from('predictions')
+                  .insert({
+                    user_id:      userId,
+                    match_code:   matchId,
+                    home_score:   prediction.homeScore,
+                    away_score:   prediction.awayScore,
+                    submitted_at: prediction.submittedAt,
+                  })
+                saveError = error?.message ?? null
+              }
+              if (saveError) {
+                console.error('[Predictions] Save error:', saveError)
+                set((s) => {
+                  const predictions = { ...s.predictions }
+                  delete predictions[matchId]
+                  return { predictions, lastError: saveError }
+                })
+              }
+            })
         }
         return { ok: true }
       },
