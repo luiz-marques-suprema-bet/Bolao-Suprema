@@ -249,6 +249,8 @@ create policy "predictions_select_all"  on public.predictions for select to auth
 create policy "predictions_own_write"   on public.predictions for insert to authenticated with check (user_id = auth.uid());
 create policy "predictions_own_update"  on public.predictions for update to authenticated using (user_id = auth.uid());
 create policy "predictions_own_delete"  on public.predictions for delete to authenticated using (user_id = auth.uid());
+create policy "predictions_admin_delete" on public.predictions for delete to authenticated
+  using (exists (select 1 from public.users where id = (select auth.uid()) and is_admin = true));
 
 -- Bracket Picks
 create policy "bracket_select_all"  on public.bracket_picks for select to authenticated using (true);

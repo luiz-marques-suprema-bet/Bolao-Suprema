@@ -286,6 +286,9 @@ export const useAuthStore = create<AuthState>()(
             favorite_player:     updated.favoritePlayer,
             favorite_player_img: updated.favoritePlayerImg ?? null,
             since:               updated.since,
+            // Auto-approve on profile save — only upgrades pending→active, never unblocks
+            ...(current.participantStatus !== 'blocked' && current.participantStatus !== 'removed'
+              && { participant_status: 'active' }),
           })
           if (error) {
             console.error('[Profile] Erro ao salvar perfil:', error.message)

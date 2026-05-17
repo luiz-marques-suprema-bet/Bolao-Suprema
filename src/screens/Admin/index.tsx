@@ -11,8 +11,8 @@ import { supabase, isMockMode } from '@/lib/supabase'
 import { calculatePoints } from '@/lib/scoring'
 import { cn } from '@/lib/utils'
 import { formatMatchDateTime } from '@/lib/matchTime'
-import { createInvite, fetchAuditLogs, fetchInvites, fetchParticipants, fetchScoringRules, fetchSystemHealth, refreshRanking, updateParticipantStatus, downloadCsv, setMarketStatus, settleMatchResult } from '@/services/product'
-import type { Invite, MarketStatus, MatchStatus, MatchStage, ParticipantStatus, ScoringRule, SystemHealthStatus } from '@/types'
+import { downloadCsv, setMarketStatus, settleMatchResult } from '@/services/product'
+import type { MarketStatus, MatchStatus, MatchStage } from '@/types'
 
 function marketStatusFor(status: MatchStatus): MarketStatus {
   if (status === 'locked') return 'locked'
@@ -103,10 +103,6 @@ async function updateMatchStatus(
   return error
 }
 
-/**
- * Registra placar + dispara cálculo de pontos para todas as predictions da partida.
- * Retorna { scored, error }.
- */
 async function setMatchResult(
   matchCode: string,
   homeScore: number,
@@ -116,7 +112,6 @@ async function setMatchResult(
   const rpc = await settleMatchResult(matchCode, homeScore, awayScore)
   if (!rpc.error) return { scored: 0, error: null }
 
-  // 1. Atualizar o placar e status no banco
   const winner =
     homeScore > awayScore ? WC2026_MATCHES.find(m => m.id === matchCode)?.home.code :
     awayScore > homeScore ? WC2026_MATCHES.find(m => m.id === matchCode)?.away.code :
@@ -127,7 +122,6 @@ async function setMatchResult(
   })
   if (matchErr) return { scored: 0, error: matchErr.message }
 
-  // 2. Buscar todas as predictions desta partida
   const { data: preds, error: predsErr } = await supabase
     .from('predictions')
     .select('id, home_score, away_score')
@@ -136,7 +130,6 @@ async function setMatchResult(
   if (predsErr) return { scored: 0, error: predsErr.message }
   if (!preds?.length) return { scored: 0, error: null }
 
-  // 3. Calcular pontos para cada prediction
   const updates = preds.map(p => ({
     id: p.id,
     points_earned: calculatePoints(
@@ -146,7 +139,6 @@ async function setMatchResult(
     ),
   }))
 
-  // 4. Upsert em batch (Supabase não tem bulk update por PK diretamente; usamos Promise.all)
   const results = await Promise.all(
     updates.map(u =>
       supabase
@@ -188,7 +180,7 @@ function StatusBadge({ status }: { status: MatchStatus | 'scheduled' }) {
   )
 }
 
-// ─── Match result dialog (inline) ─────────────────────────────────────────────
+// ─── Match row ─────────────────────────────────────────────────────────────────
 
 interface MatchRowAdminProps {
   matchCode: string
@@ -246,7 +238,6 @@ function MatchRowAdmin({
   return (
     <div className="border-b border-hairline last:border-0">
       <div className="flex items-center gap-3 px-4 py-3">
-        {/* Match info */}
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <Flag team={homeTeam} size={18} />
           <span className="font-mono text-[11px] font-bold">{homeCode}</span>
@@ -254,118 +245,59 @@ function MatchRowAdmin({
           <span className="font-mono text-[11px] font-bold">{awayCode}</span>
           <Flag team={awayTeam} size={18} />
         </div>
-
-        {/* Group + date */}
         <div className="hidden sm:block text-right flex-shrink-0">
           {group && <div className="font-mono text-[9px] text-ink-4">GRUPO {group}</div>}
           <div className="font-mono text-[10px] text-ink-3">{dateStr}</div>
         </div>
-
-        {/* Score */}
         <div className="font-mono text-[13px] font-bold w-12 text-center flex-shrink-0">
           {currentStatus === 'finished' || currentStatus === 'live'
             ? `${currentHomeScore ?? 0}–${currentAwayScore ?? 0}`
             : '–'
           }
         </div>
-
-        {/* Status */}
         <StatusBadge status={currentStatus} />
-
-        {/* Actions */}
         {!busy && (
           <div className="flex gap-1 flex-shrink-0 flex-wrap">
             {currentStatus === 'scheduled' && (
-              <button
-                onClick={() => handleStatusChange('open')}
-                className="btn-ghost text-[9px] px-2 py-1"
-                title="Abrir apostas"
-              >
-                ABRIR
-              </button>
+              <button onClick={() => handleStatusChange('open')} className="btn-ghost text-[9px] px-2 py-1">ABRIR</button>
             )}
             {currentStatus === 'open' && (
-              <button
-                onClick={() => handleStatusChange('locked')}
-                className="btn-ghost text-[9px] px-2 py-1 border-yellow/60"
-                title="Bloquear apostas"
-              >
-                BLOQUEAR
-              </button>
+              <button onClick={() => handleStatusChange('locked')} className="btn-ghost text-[9px] px-2 py-1 border-yellow/60">BLOQUEAR</button>
             )}
             {currentStatus === 'locked' && (
-              <button
-                onClick={() => handleStatusChange('open')}
-                className="btn-ghost text-[9px] px-2 py-1 border-green/60 text-green"
-                title="Reabrir apostas"
-              >
-                REABRIR
-              </button>
+              <button onClick={() => handleStatusChange('open')} className="btn-ghost text-[9px] px-2 py-1 border-green/60 text-green">REABRIR</button>
             )}
             {(currentStatus === 'locked' || currentStatus === 'live') && (
-              <button
-                onClick={() => setEditResult(v => !v)}
-                className="btn-yellow text-[9px] px-2 py-1"
-                title="Registrar resultado"
-              >
-                RESULTADO
-              </button>
+              <button onClick={() => setEditResult(v => !v)} className="btn-yellow text-[9px] px-2 py-1">RESULTADO</button>
             )}
             {currentStatus === 'finished' && (
-              <button
-                onClick={() => handleStatusChange('open')}
-                className="btn-ghost text-[9px] px-2 py-1 border-green/60 text-green"
-                title="Reabrir para correção"
-              >
-                REABRIR
-              </button>
+              <button onClick={() => handleStatusChange('open')} className="btn-ghost text-[9px] px-2 py-1 border-green/60 text-green">REABRIR</button>
             )}
             {currentStatus === 'finished' && (
-              <button
-                onClick={() => setEditResult(v => !v)}
-                className="btn-ghost text-[9px] px-2 py-1"
-                title="Corrigir resultado"
-              >
-                CORRIGIR
-              </button>
+              <button onClick={() => setEditResult(v => !v)} className="btn-ghost text-[9px] px-2 py-1">CORRIGIR</button>
             )}
           </div>
         )}
-        {busy && (
-          <span className="font-mono text-[9px] text-ink-4 animate-pulse">...</span>
-        )}
+        {busy && <span className="font-mono text-[9px] text-ink-4 animate-pulse">...</span>}
       </div>
 
-      {/* Inline result editor */}
       {editResult && (
         <div className="px-4 pb-3 bg-paper-deep border-t border-hairline flex items-center gap-3 flex-wrap">
           <span className="font-mono text-[9px] tracking-eyebrow text-ink-3">PLACAR FINAL:</span>
           <div className="flex items-center gap-2">
             <span className="font-mono text-[11px] font-bold">{homeCode}</span>
-            <input
-              type="number" min={0} max={20}
-              value={homeGoals}
+            <input type="number" min={0} max={20} value={homeGoals}
               onChange={e => setHomeGoals(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-12 border-2 border-ink text-center font-mono text-[14px] font-bold px-1 py-1 bg-yellow outline-none"
-            />
+              className="w-12 border-2 border-ink text-center font-mono text-[14px] font-bold px-1 py-1 bg-yellow outline-none" />
             <span className="font-mono text-ink-4">×</span>
-            <input
-              type="number" min={0} max={20}
-              value={awayGoals}
+            <input type="number" min={0} max={20} value={awayGoals}
               onChange={e => setAwayGoals(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-12 border-2 border-ink text-center font-mono text-[14px] font-bold px-1 py-1 bg-yellow outline-none"
-            />
+              className="w-12 border-2 border-ink text-center font-mono text-[14px] font-bold px-1 py-1 bg-yellow outline-none" />
             <span className="font-mono text-[11px] font-bold">{awayCode}</span>
           </div>
           <div className="flex gap-2 ml-auto">
-            <button onClick={() => setEditResult(false)} className="btn-ghost text-[9px] px-2 py-1">
-              CANCELAR
-            </button>
-            <button
-              onClick={handleSetResult}
-              disabled={busy}
-              className="btn-yellow text-[9px] px-3 py-1 disabled:opacity-40"
-            >
+            <button onClick={() => setEditResult(false)} className="btn-ghost text-[9px] px-2 py-1">CANCELAR</button>
+            <button onClick={handleSetResult} disabled={busy} className="btn-yellow text-[9px] px-3 py-1 disabled:opacity-40">
               CONFIRMAR + PONTUAR →
             </button>
           </div>
@@ -379,18 +311,14 @@ function MatchRowAdmin({
 
 async function openGroupMatches(groupCode: string, onAction: (msg: string, ok: boolean) => void) {
   if (isMockMode) { onAction('Mock mode: ação não persiste', false); return }
-  const matchCodes = WC2026_MATCHES
-    .filter(m => m.group === groupCode)
-    .map(m => m.id)
-
+  const matchCodes = WC2026_MATCHES.filter(m => m.group === groupCode).map(m => m.id)
   const { error } = await supabase
     .from('matches')
     .update({ status: 'open', market_status: 'open', unlocked_at: new Date().toISOString(), locked_at: null, lock_reason: null, settled_at: null })
     .in('match_code', matchCodes)
     .eq('status', 'scheduled')
-
   if (error) onAction(`Erro: ${error.message}`, false)
-  else onAction(`✓ Partidas do Grupo ${groupCode} abertas para apostas`, true)
+  else onAction(`✓ Partidas do Grupo ${groupCode} abertas`, true)
 }
 
 async function lockAllOpenMatches(onAction: (msg: string, ok: boolean) => void) {
@@ -400,39 +328,24 @@ async function lockAllOpenMatches(onAction: (msg: string, ok: boolean) => void) 
     .update({ status: 'locked', market_status: 'locked', locked_at: new Date().toISOString(), lock_reason: 'bulk_admin_lock' })
     .eq('status', 'open')
     .select('id', { count: 'exact', head: true })
-
   if (error) onAction(`Erro: ${error.message}`, false)
-  else onAction(`✓ ${count ?? 0} partidas abertas → BLOQUEADAS`, true)
+  else onAction(`✓ ${count ?? 0} partidas → BLOQUEADAS`, true)
 }
 
 // ─── Export CSV ───────────────────────────────────────────────────────────────
 
 async function exportRankingCsv() {
-  const { data: users } = await supabase
-    .from('users')
-    .select('id, first_name, last_name, dept, email')
-
-  const { data: pts } = await supabase
-    .from('predictions')
-    .select('user_id, points_earned')
-
+  const { data: users } = await supabase.from('users').select('id, first_name, last_name, dept, email')
+  const { data: pts } = await supabase.from('predictions').select('user_id, points_earned')
   if (!users || !pts) return
-
   const pointsMap: Record<string, number> = {}
   for (const p of pts) {
     pointsMap[p.user_id] = (pointsMap[p.user_id] ?? 0) + (p.points_earned ?? 0)
   }
-
   const rows = users
-    .map(u => ({
-      nome: `${u.first_name} ${u.last_name}`.trim(),
-      dept: u.dept,
-      email: u.email,
-      pontos: pointsMap[u.id] ?? 0,
-    }))
+    .map(u => ({ nome: `${u.first_name} ${u.last_name}`.trim(), dept: u.dept, email: u.email, pontos: pointsMap[u.id] ?? 0 }))
     .sort((a, b) => b.pontos - a.pontos)
     .map((r, i) => `${i + 1},${r.nome},${r.dept},${r.email},${r.pontos}`)
-
   const csv = ['#,Nome,Departamento,Email,Pontos', ...rows].join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
@@ -455,157 +368,188 @@ function KpiCard({ label, value, sub }: { label: string; value: number | string;
   )
 }
 
-function AdminOpsPanel() {
-  const [health, setHealth] = useState<SystemHealthStatus | null>(null)
-  const [participants, setParticipants] = useState<Array<Record<string, unknown>>>([])
-  const [rules, setRules] = useState<ScoringRule[]>([])
-  const [audit, setAudit] = useState<Array<Record<string, unknown>>>([])
-  const [invites, setInvites] = useState<Invite[]>([])
-  const [inviteLabel, setInviteLabel] = useState('Convite interno')
+// ─── Participants Panel ────────────────────────────────────────────────────────
+
+interface ParticipantRow {
+  id: string
+  first_name: string | null
+  last_name: string | null
+  dept: string | null
+  email: string
+  participant_status: string | null
+}
+
+interface PredRow {
+  id: string
+  match_code: string
+  home_score: number | null
+  away_score: number | null
+  points_earned: number | null
+}
+
+function ParticipantsPanel({ onToast }: { onToast: (msg: string, ok: boolean) => void }) {
+  const [participants, setParticipants] = useState<ParticipantRow[]>([])
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [preds, setPreds] = useState<PredRow[]>([])
+  const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const [h, p, r, a, i] = await Promise.all([
-      fetchSystemHealth(),
-      fetchParticipants(),
-      fetchScoringRules(),
-      fetchAuditLogs(20),
-      fetchInvites(),
-    ])
-    setHealth(h.data)
-    setParticipants((p.data ?? []) as Array<Record<string, unknown>>)
-    setRules(r.data ?? [])
-    setAudit((a.data ?? []) as Array<Record<string, unknown>>)
-    setInvites(i.data ?? [])
-    setError(h.error ?? p.error ?? r.error ?? a.error ?? i.error)
-  }, [])
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('users')
+      .select('id,first_name,last_name,dept,email,participant_status')
+      .order('first_name', { ascending: true })
+    if (error) onToast(`Erro ao carregar participantes: ${error.message}`, false)
+    setParticipants((data ?? []) as ParticipantRow[])
+    setLoading(false)
+  }, [onToast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { if (!isMockMode) load() }, [load])
 
-  async function setParticipant(id: unknown, status: ParticipantStatus) {
-    if (typeof id !== 'string') return
+  async function toggleBlock(p: ParticipantRow) {
     setBusy(true)
-    const res = await updateParticipantStatus(id, status)
-    setBusy(false)
-    if (res.error) setError(res.error)
+    const newStatus = p.participant_status === 'blocked' ? 'active' : 'blocked'
+    const { error } = await supabase.rpc('update_participant_status', { p_user_id: p.id, p_status: newStatus })
+    if (error) {
+      // Fallback: direct update if RPC doesn't exist
+      const { error: directErr } = await supabase
+        .from('users')
+        .update({ participant_status: newStatus })
+        .eq('id', p.id)
+      if (directErr) { onToast(`Erro: ${directErr.message}`, false); setBusy(false); return }
+    }
+    const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email
+    onToast(`✓ ${name} → ${newStatus === 'blocked' ? 'BLOQUEADO' : 'DESBLOQUEADO'}`, true)
     await load()
+    setBusy(false)
   }
 
-  async function recalcRanking() {
-    setBusy(true)
-    const res = await refreshRanking()
-    setBusy(false)
-    if (res.error) setError(res.error)
-    await load()
+  async function loadPreds(userId: string) {
+    if (expanded === userId) { setExpanded(null); setPreds([]); return }
+    const { data } = await supabase
+      .from('predictions')
+      .select('id,match_code,home_score,away_score,points_earned')
+      .eq('user_id', userId)
+      .order('match_code')
+    setPreds((data ?? []) as PredRow[])
+    setExpanded(userId)
   }
 
-  async function handleCreateInvite() {
+  async function undoPred(predId: string) {
     setBusy(true)
-    const res = await createInvite(inviteLabel || 'Convite interno')
+    const { error } = await supabase.from('predictions').delete().eq('id', predId)
+    if (error) {
+      onToast(`Erro ao desfazer palpite: ${error.message}`, false)
+    } else {
+      onToast('✓ Palpite removido', true)
+      if (expanded) {
+        const { data } = await supabase
+          .from('predictions')
+          .select('id,match_code,home_score,away_score,points_earned')
+          .eq('user_id', expanded)
+          .order('match_code')
+        setPreds((data ?? []) as PredRow[])
+      }
+    }
     setBusy(false)
-    if (res.error) setError(res.error)
-    await load()
   }
+
+  const total = participants.length
+  const blocked = participants.filter(p => p.participant_status === 'blocked').length
 
   return (
     <section className="border-2 border-ink mb-6">
       <div className="px-4 py-3 bg-ink text-paper flex items-center justify-between gap-3">
         <div>
-          <div className="font-display text-xl">OPERACAO T.I.</div>
-          <div className="font-mono text-[9px] text-paper/50">saude, participantes, regras, auditoria e exportacoes</div>
+          <div className="font-display text-xl">PARTICIPANTES</div>
+          <div className="font-mono text-[9px] text-paper/50">{total} cadastrados · {blocked} bloqueados</div>
         </div>
-        <button disabled={busy} onClick={load} className="btn-yellow text-[10px]">ATUALIZAR</button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => downloadCsv(`participantes-${Date.now()}.csv`, participants as unknown as Array<Record<string, unknown>>)}
+            className="btn-ghost text-[9px]"
+          >
+            CSV ↓
+          </button>
+          <button disabled={busy || loading} onClick={load} className="btn-yellow text-[10px]">↺</button>
+        </div>
       </div>
-      {error && <div className="px-4 py-2 border-b border-red/30 bg-red/5 font-mono text-[10px] text-red">{error}</div>}
-      <div className="grid md:grid-cols-4 gap-0 border-b border-hairline">
-        <Mini label="usuarios" value={health?.usersTotal ?? '—'} />
-        <Mini label="pendentes" value={health?.usersPending ?? '—'} />
-        <Mini label="palpites" value={health?.predictionsTotal ?? '—'} />
-        <Mini label="mercados abertos" value={health?.marketsOpen ?? '—'} />
-      </div>
-      <div className="grid lg:grid-cols-4 gap-0">
-        <div className="p-4 border-r border-hairline">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display text-lg">PARTICIPANTES</h3>
-            <button onClick={() => downloadCsv(`participantes-${Date.now()}.csv`, participants)} className="font-mono text-[9px] underline">CSV</button>
-          </div>
-          <div className="space-y-2 max-h-64 overflow-auto">
-            {participants.slice(0, 12).map(p => (
-              <div key={String(p.id)} className="border border-hairline p-2">
-                <div className="font-mono text-[10px] font-bold truncate">{String(p.first_name ?? '')} {String(p.last_name ?? '')}</div>
-                <div className="font-mono text-[8px] text-ink-4 truncate">{String(p.participant_status ?? 'active')} · {String(p.user_role ?? 'user')}</div>
-                <div className="flex gap-1 mt-2">
-                  {(['active','blocked','removed'] as ParticipantStatus[]).map(status => (
-                    <button key={status} disabled={busy} onClick={() => setParticipant(p.id, status)} className="font-mono text-[8px] border border-hairline px-1.5 py-1 hover:bg-yellow">{status}</button>
-                  ))}
+
+      {loading && (
+        <div className="px-4 py-6 font-mono text-[11px] text-ink-4 text-center animate-pulse">CARREGANDO…</div>
+      )}
+
+      <div className="divide-y divide-hairline max-h-96 overflow-y-auto">
+        {participants.map(p => {
+          const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email
+          const isBlocked = p.participant_status === 'blocked'
+          const isOpen = expanded === p.id
+          return (
+            <div key={p.id}>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono text-[11px] font-bold truncate">{name}</div>
+                  <div className="font-mono text-[9px] text-ink-4 truncate">{p.dept || '—'}</div>
+                </div>
+                {isBlocked && (
+                  <span className="font-mono text-[8px] bg-red/10 text-red px-2 py-0.5 flex-shrink-0 border border-red/30">
+                    BLOQUEADO
+                  </span>
+                )}
+                <div className="flex gap-1 flex-shrink-0">
+                  <button
+                    disabled={busy}
+                    onClick={() => toggleBlock(p)}
+                    className={cn(
+                      'font-mono text-[8px] border px-2 py-1 transition-colors hover:bg-yellow',
+                      isBlocked ? 'border-green/60 text-green' : 'border-red/40 text-red/80'
+                    )}
+                  >
+                    {isBlocked ? 'DESBLOQUEAR' : 'BLOQUEAR'}
+                  </button>
+                  <button
+                    disabled={busy}
+                    onClick={() => loadPreds(p.id)}
+                    className="font-mono text-[8px] border border-hairline px-2 py-1 hover:bg-paper-deep transition-colors"
+                  >
+                    {isOpen ? '✕' : 'PALPITES'}
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-        <div className="p-4 border-r border-hairline">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display text-lg">PONTUACAO</h3>
-            <button onClick={recalcRanking} disabled={busy} className="font-mono text-[9px] underline">RECALCULAR</button>
-          </div>
-          <div className="space-y-1 max-h-64 overflow-auto">
-            {rules.map(rule => (
-              <div key={rule.id} className="flex items-center justify-between border-b border-hairline py-1">
-                <span className="font-mono text-[10px]">{rule.label}</span>
-                <span className="font-display text-lg">{rule.points}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="p-4 border-r border-hairline">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display text-lg">CONVITES</h3>
-            <button onClick={() => downloadCsv(`convites-${Date.now()}.csv`, invites as unknown as Array<Record<string, unknown>>)} className="font-mono text-[9px] underline">CSV</button>
-          </div>
-          <div className="flex gap-2 mb-3">
-            <input
-              value={inviteLabel}
-              onChange={e => setInviteLabel(e.target.value)}
-              className="min-w-0 flex-1 border border-hairline px-2 py-1 font-mono text-[10px] bg-paper-deep outline-none"
-              aria-label="Nome do convite"
-            />
-            <button disabled={busy} onClick={handleCreateInvite} className="btn-yellow text-[9px]">CRIAR</button>
-          </div>
-          <div className="space-y-2 max-h-64 overflow-auto">
-            {invites.slice(0, 10).map(invite => {
-              const url = `${window.location.origin}${window.location.pathname}#/login?invite=${invite.code}`
-              return (
-                <div key={invite.id} className="border border-hairline p-2">
-                  <div className="font-mono text-[10px] font-bold">{invite.code}</div>
-                  <div className="font-mono text-[8px] text-ink-4 truncate">{invite.label} · {invite.usedCount}/{invite.maxUses ?? '∞'}</div>
-                  <button onClick={() => navigator.clipboard?.writeText(url)} className="font-mono text-[8px] underline mt-1">COPIAR LINK</button>
+
+              {isOpen && (
+                <div className="bg-paper-deep px-4 py-3 border-t border-hairline space-y-1.5">
+                  {preds.length === 0 ? (
+                    <div className="font-mono text-[10px] text-ink-4">Nenhum palpite encontrado.</div>
+                  ) : (
+                    preds.map(pred => (
+                      <div key={pred.id} className="flex items-center justify-between gap-3">
+                        <span className="font-mono text-[10px]">
+                          <span className="font-bold">{pred.match_code}</span>
+                          {' '}· {pred.home_score ?? '?'}×{pred.away_score ?? '?'}
+                          {pred.points_earned != null && (
+                            <span className="text-green ml-1">+{pred.points_earned}pts</span>
+                          )}
+                        </span>
+                        <button
+                          disabled={busy}
+                          onClick={() => undoPred(pred.id)}
+                          className="font-mono text-[8px] text-red border border-red/30 px-2 py-0.5 hover:bg-red/10 transition-colors flex-shrink-0"
+                        >
+                          DESFAZER
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
-              )
-            })}
-          </div>
-        </div>
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display text-lg">AUDITORIA</h3>
-            <button onClick={() => downloadCsv(`audit-${Date.now()}.csv`, audit)} className="font-mono text-[9px] underline">CSV</button>
-          </div>
-          <div className="space-y-2 max-h-64 overflow-auto">
-            {audit.map(log => (
-              <div key={String(log.id)} className="font-mono text-[9px] border-b border-hairline pb-2">
-                <div className="font-bold">{String(log.action)}</div>
-                <div className="text-ink-4">{String(log.entity_type)} · {String(log.created_at).slice(0, 16)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </section>
   )
-}
-
-function Mini({ label, value }: { label: string; value: number | string }) {
-  return <div className="p-3 border-r border-hairline last:border-r-0"><div className="font-display text-2xl">{value}</div><div className="font-mono text-[8px] text-ink-4">{label.toUpperCase()}</div></div>
 }
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -640,7 +584,6 @@ function useAdminData() {
     if (!isMockMode) fetchKpis().then(setKpis)
   }, [])
 
-  // Merged list: static wc2026 + DB overrides
   const allMatches = WC2026_MATCHES.map(m => {
     const ov = overrides[m.id]
     if (!ov) return m
@@ -663,7 +606,6 @@ function AdminMobile() {
 
   return (
     <div className="min-h-dvh bg-paper pb-24">
-      {/* Header */}
       <div className="px-4 pt-5 pb-3 border-b border-line">
         <div className="flex items-center justify-between">
           <span className="font-display text-3xl">ADMIN</span>
@@ -671,7 +613,6 @@ function AdminMobile() {
         </div>
       </div>
 
-      {/* Toast */}
       {toast && (
         <div className={cn(
           'mx-4 mt-3 p-3 border-2 font-mono text-[11px]',
@@ -681,7 +622,6 @@ function AdminMobile() {
         </div>
       )}
 
-      {/* KPIs */}
       {kpis && (
         <div className="grid grid-cols-2 gap-2 px-4 pt-3">
           <KpiCard label="PARTICIPANTES" value={kpis.totalUsers} sub="cadastrados" />
@@ -692,20 +632,15 @@ function AdminMobile() {
       )}
 
       <div className="px-4 pt-3">
-        <AdminOpsPanel />
+        <ParticipantsPanel onToast={showToast} />
       </div>
 
-      {/* Bulk actions */}
       <div className="px-4 pt-3 space-y-2">
-        <button
-          onClick={() => lockAllOpenMatches(showToast)}
-          className="btn-ghost w-full justify-center text-[10px]"
-        >
+        <button onClick={() => lockAllOpenMatches(showToast)} className="btn-ghost w-full justify-center text-[10px]">
           BLOQUEAR TODAS AS APOSTAS ABERTAS
         </button>
       </div>
 
-      {/* Filters */}
       <div className="px-4 pt-3">
         <div className="flex gap-1.5 flex-wrap mb-2">
           {(['all', 'scheduled', 'open', 'locked', 'finished'] as const).map(f => (
@@ -740,7 +675,6 @@ function AdminMobile() {
         </div>
       </div>
 
-      {/* Match list */}
       <div className="border-2 border-ink mx-4 mt-3">
         <div className="px-3 py-2 border-b border-hairline font-mono text-[10px] tracking-eyebrow text-ink-3">
           PARTIDAS ({filtered.length})
@@ -778,26 +712,19 @@ function AdminDesktop() {
     <div className="min-h-dvh bg-paper">
       <div className="max-w-screen-xl mx-auto px-6 py-8">
 
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <Eyebrow>ADMIN · BOLÃO DA SUPREMA</Eyebrow>
             <h1 className="font-display text-4xl mt-1">PAINEL DE CONTROLE</h1>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => exportRankingCsv()} className="btn-ghost">
-              EXPORTAR CSV ↓
-            </button>
-            <button
-              onClick={() => lockAllOpenMatches(showToast)}
-              className="btn-ghost border-yellow/60"
-            >
+            <button onClick={() => exportRankingCsv()} className="btn-ghost">EXPORTAR CSV ↓</button>
+            <button onClick={() => lockAllOpenMatches(showToast)} className="btn-ghost border-yellow/60">
               BLOQUEAR TODAS APOSTAS
             </button>
           </div>
         </div>
 
-        {/* Toast */}
         {toast && (
           <div className={cn(
             'border-2 p-3 mb-4 font-mono text-[11px]',
@@ -807,25 +734,20 @@ function AdminDesktop() {
           </div>
         )}
 
-        {/* KPIs */}
         {kpis && (
-          <div className="grid grid-cols-5 gap-3 mb-6">
+          <div className="grid grid-cols-4 gap-3 mb-6">
             <KpiCard label="PARTICIPANTES" value={kpis.totalUsers} sub="cadastrados" />
             <KpiCard label="PALPITES" value={kpis.totalPredictions} sub={`~${kpis.avgPredictionsPerUser}/usuário`} />
             <KpiCard label="ABERTAS" value={kpis.matchesOpen} sub="para apostas" />
-            <KpiCard label="BLOQUEADAS" value={filtered.filter(m => m.status === 'locked').length} sub="aguardando resultado" />
             <KpiCard label="ENCERRADAS" value={kpis.matchesFinished} sub="com resultado" />
           </div>
         )}
 
-        <AdminOpsPanel />
+        <ParticipantsPanel onToast={showToast} />
 
         <div className="grid grid-cols-[1.6fr_1fr] gap-5">
 
-          {/* Left: match control */}
           <div className="space-y-4">
-
-            {/* Filters */}
             <div className="border-2 border-ink">
               <div className="px-4 py-3 border-b border-hairline flex items-center gap-3 flex-wrap">
                 <span className="font-mono text-[10px] tracking-eyebrow text-ink-3">FILTRAR:</span>
@@ -886,10 +808,7 @@ function AdminDesktop() {
             </div>
           </div>
 
-          {/* Right sidebar */}
           <div className="space-y-4">
-
-            {/* Bulk group actions */}
             <div className="border-2 border-ink p-4">
               <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">AÇÕES POR GRUPO</p>
               <div className="grid grid-cols-3 gap-1.5 mb-3">
@@ -911,7 +830,6 @@ function AdminDesktop() {
               </button>
             </div>
 
-            {/* Tournament dates */}
             <div className="border-2 border-ink p-4">
               <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">DATAS-CHAVE</p>
               <div className="space-y-2">
@@ -932,7 +850,6 @@ function AdminDesktop() {
               </div>
             </div>
 
-            {/* Scoring rules */}
             <div className="border-2 border-ink p-4">
               <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">TABELA DE PONTUAÇÃO</p>
               <div className="space-y-1.5">
@@ -944,7 +861,6 @@ function AdminDesktop() {
                 ))}
               </div>
             </div>
-
           </div>
         </div>
       </div>
