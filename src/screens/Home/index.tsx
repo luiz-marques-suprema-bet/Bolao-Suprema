@@ -108,16 +108,12 @@ function VideoCard({
 function VideoHighlights() {
   const [videos, setVideos] = useState<ScorebatVideo[]>([])
   const [active, setActive] = useState<ScorebatVideo | null>(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchFeaturedVideos().then(v => {
-      setVideos(v.slice(0, 11))
-      setLoading(false)
-    })
+    fetchFeaturedVideos().then(v => setVideos(v.slice(0, 11)))
   }, [])
 
-  if (!loading && videos.length === 0) return null
+  if (videos.length === 0) return null
 
   const [featured, ...rest] = videos
   const iframeSrc = active ? extractIframeSrc(active.embed) : ''
@@ -144,85 +140,75 @@ function VideoHighlights() {
         </a>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-2 gap-0 sm:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-paper-deep animate-pulse border-r border-b border-hairline" style={{ paddingBottom: '56.25%' }} />
-          ))}
-        </div>
-      ) : (
-        <>
-          {/* Active player — expands inline with animation */}
-          <AnimatePresence>
-            {active && iframeSrc && (
-              <motion.div
-                key={active.matchviewUrl}
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="overflow-hidden border-b-2 border-yellow"
-              >
-                <div className="relative bg-ink" style={{ paddingBottom: '56.25%' }}>
-                  <iframe
-                    src={iframeSrc}
-                    className="absolute inset-0 w-full h-full"
-                    frameBorder="0"
-                    allowFullScreen
-                    allow="autoplay; fullscreen"
-                  />
-                </div>
-                {/* Info bar below player */}
-                <div className="px-4 py-2.5 bg-ink flex items-center justify-between">
-                  <div>
-                    <div className="font-display text-base text-paper leading-tight">{active.title}</div>
-                    <div className="font-mono text-[9px] text-paper/40 tracking-eyebrow mt-0.5">
-                      {compLabel(active.competition)}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setActive(null)}
-                    className="w-8 h-8 rounded-full border border-paper/20 flex items-center justify-center text-paper/50 hover:text-paper hover:border-paper/60 transition-colors font-mono text-[11px]"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Featured video — full width */}
-          {featured && (
-            <div className="border-b border-hairline">
-              <VideoCard
-                video={featured}
-                isActive={active?.matchviewUrl === featured.matchviewUrl}
-                onClick={() => toggle(featured)}
+      {/* Active player — expands inline with animation */}
+      <AnimatePresence>
+        {active && iframeSrc && (
+          <motion.div
+            key={active.matchviewUrl}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="overflow-hidden border-b-2 border-yellow"
+          >
+            <div className="relative bg-ink" style={{ paddingBottom: '56.25%' }}>
+              <iframe
+                src={iframeSrc}
+                className="absolute inset-0 w-full h-full"
+                frameBorder="0"
+                allowFullScreen
+                allow="autoplay; fullscreen"
               />
             </div>
-          )}
-
-          {/* Grid of remaining videos */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {rest.map((v, i) => (
-              <div
-                key={v.matchviewUrl}
-                className={cn(
-                  'border-hairline',
-                  i % 2 === 0 ? 'border-r' : '',
-                  Math.floor(i / 2) < Math.floor((rest.length - 1) / 2) ? 'border-b' : ''
-                )}
-              >
-                <VideoCard
-                  video={v}
-                  isActive={active?.matchviewUrl === v.matchviewUrl}
-                  onClick={() => toggle(v)}
-                />
+            {/* Info bar below player */}
+            <div className="px-4 py-2.5 bg-ink flex items-center justify-between">
+              <div>
+                <div className="font-display text-base text-paper leading-tight">{active.title}</div>
+                <div className="font-mono text-[9px] text-paper/40 tracking-eyebrow mt-0.5">
+                  {compLabel(active.competition)}
+                </div>
               </div>
-            ))}
-          </div>
-        </>
+              <button
+                onClick={() => setActive(null)}
+                className="w-8 h-8 rounded-full border border-paper/20 flex items-center justify-center text-paper/50 hover:text-paper hover:border-paper/60 transition-colors font-mono text-[11px]"
+              >
+                ✕
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Featured video — full width */}
+      {featured && (
+        <div className="border-b border-hairline">
+          <VideoCard
+            video={featured}
+            isActive={active?.matchviewUrl === featured.matchviewUrl}
+            onClick={() => toggle(featured)}
+          />
+        </div>
       )}
+
+      {/* Grid of remaining videos */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        {rest.map((v, i) => (
+          <div
+            key={v.matchviewUrl}
+            className={cn(
+              'border-hairline',
+              i % 2 === 0 ? 'border-r' : '',
+              Math.floor(i / 2) < Math.floor((rest.length - 1) / 2) ? 'border-b' : ''
+            )}
+          >
+            <VideoCard
+              video={v}
+              isActive={active?.matchviewUrl === v.matchviewUrl}
+              onClick={() => toggle(v)}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
