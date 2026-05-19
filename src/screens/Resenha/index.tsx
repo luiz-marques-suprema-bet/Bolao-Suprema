@@ -281,18 +281,6 @@ function UserAvatar({ m, onOpen }: { m: ChatMessage; onOpen?: () => void }) {
   )
 }
 
-function MsgHeader({ m, onOpen }: { m: ChatMessage; onOpen: () => void }) {
-  return (
-    <button
-      onClick={onOpen}
-      className="font-mono text-[10px] text-ink-3 hover:text-ink transition-colors text-left leading-none mb-1.5"
-    >
-      <span className="font-bold text-ink">{m.who}</span>
-      {m.dept && <span className="text-ink-4"> · {m.dept}</span>}
-      <span className="text-ink-4"> · {m.time}</span>
-    </button>
-  )
-}
 
 // ─── Chat Profile Panel (WhatsApp-style side panel) ──────────────────────────
 
@@ -436,55 +424,62 @@ function ChatProfilePanel({ m, onClose }: { m: ChatMessage; onClose: () => void 
 
 function TextBubble({ m, grouped, onOpenProfile, menu }: { m: ChatMessage; grouped: boolean; onOpenProfile: (m: ChatMessage) => void; menu: BubbleMenuProps }) {
   return (
-    <div className={cn('flex gap-2.5 items-start', m.isYou ? 'flex-row-reverse' : '')}>
+    <div className={cn('group/message flex gap-2 items-end', m.isYou ? 'flex-row-reverse' : '')}>
       {!m.isYou && (
         grouped
-          ? <div className="w-[32px] flex-shrink-0" />
+          ? <div className="w-8 flex-shrink-0" />
           : <UserAvatar m={m} onOpen={() => onOpenProfile(m)} />
       )}
-      <div className={cn('max-w-[78%] md:max-w-[65%] flex flex-col gap-0.5', m.isYou ? 'items-end' : 'items-start')}>
-        {!m.isYou && !grouped && <MsgHeader m={m} onOpen={() => onOpenProfile(m)} />}
-        <div className={cn(
-          'relative px-3.5 py-2.5 text-[13px] leading-[1.45] break-words whitespace-pre-wrap shadow-sm',
-          m.isYou
-            ? 'bg-yellow text-ink rounded-[16px_4px_16px_16px]'
-            : 'bg-paper-deep text-ink rounded-[4px_16px_16px_16px]',
-        )}>
-          {m.replyTo && <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />}
-          {m.text}
-          <InBubbleMenu menu={menu} />
-        </div>
-        {m.isYou && <span className="font-mono text-[9px] text-ink-4 mt-0.5">{m.time}</span>}
+      <div className={cn(
+        'relative max-w-[82%] md:max-w-[62%] px-3.5 py-2.5 shadow-sm break-words whitespace-pre-wrap',
+        m.isYou
+          ? 'bg-yellow text-ink rounded-2xl rounded-br-sm'
+          : 'bg-paper-deep text-ink border border-line rounded-2xl rounded-bl-sm',
+      )}>
+        {!m.isYou && !grouped && (
+          <button
+            onClick={() => onOpenProfile(m)}
+            className="block font-mono text-[9px] font-bold text-ink hover:underline mb-1 text-left w-full leading-none"
+          >
+            {m.who}{m.dept && <span className="font-normal text-ink-4"> · {m.dept}</span>}
+          </button>
+        )}
+        {m.replyTo && <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />}
+        <span className="font-sans text-[14px] leading-relaxed pr-6">{m.text}</span>
+        <div className={cn('font-mono text-[9px] mt-1 text-right', m.isYou ? 'text-ink/40' : 'text-ink-4')}>{m.time}</div>
+        <InBubbleMenu menu={menu} />
       </div>
-      {m.isYou && <div className="w-[32px] flex-shrink-0" />}
     </div>
   )
 }
 
 function GifBubble({ m, grouped, onOpenProfile, menu }: { m: ChatMessage; grouped: boolean; onOpenProfile: (m: ChatMessage) => void; menu: BubbleMenuProps }) {
   return (
-    <div className={cn('flex gap-2.5 items-start', m.isYou ? 'flex-row-reverse' : '')}>
+    <div className={cn('group/message flex gap-2 items-end', m.isYou ? 'flex-row-reverse' : '')}>
       {!m.isYou && (
         grouped
-          ? <div className="w-[32px] flex-shrink-0" />
+          ? <div className="w-8 flex-shrink-0" />
           : <UserAvatar m={m} onOpen={() => onOpenProfile(m)} />
       )}
-      <div className={cn('max-w-[60%] flex flex-col gap-0.5', m.isYou ? 'items-end' : 'items-start')}>
-        {!m.isYou && !grouped && <MsgHeader m={m} onOpen={() => onOpenProfile(m)} />}
-        <div className="relative">
-          {m.replyTo && (
-            <div className={cn('w-full px-2 pt-2 pb-0', m.isYou ? 'bg-yellow rounded-[16px_4px_0_0]' : 'bg-paper-deep rounded-[4px_16px_0_0]')}>
-              <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />
-            </div>
-          )}
-          <div className={cn('overflow-hidden shadow-sm', m.isYou ? 'rounded-[16px_4px_16px_16px]' : 'rounded-[4px_16px_16px_16px]')}>
-            {isSafeHttpUrl(m.gifUrl) && <img src={m.gifUrl} alt="GIF" className="max-w-full max-h-52 object-contain block" loading="lazy" />}
-          </div>
-          <InBubbleMenu menu={menu} />
-        </div>
-        {m.isYou && <span className="font-mono text-[9px] text-ink-4 mt-0.5">{m.time}</span>}
+      <div className={cn(
+        'relative max-w-[65%] md:max-w-[50%] overflow-hidden shadow-sm',
+        m.isYou
+          ? 'rounded-2xl rounded-br-sm bg-yellow'
+          : 'rounded-2xl rounded-bl-sm bg-paper-deep border border-line',
+      )}>
+        {!m.isYou && !grouped && (
+          <button
+            onClick={() => onOpenProfile(m)}
+            className="block font-mono text-[9px] font-bold text-ink hover:underline px-2.5 pt-2 pb-1 text-left w-full leading-none"
+          >
+            {m.who}{m.dept && <span className="font-normal text-ink-4"> · {m.dept}</span>}
+          </button>
+        )}
+        {m.replyTo && <div className="px-2.5 pt-2"><ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} /></div>}
+        {isSafeHttpUrl(m.gifUrl) && <img src={m.gifUrl} alt="GIF" className="w-full max-h-52 object-contain block" loading="lazy" />}
+        <div className={cn('font-mono text-[9px] px-2.5 py-1 text-right', m.isYou ? 'text-ink/40' : 'text-ink-4')}>{m.time}</div>
+        <InBubbleMenu menu={menu} />
       </div>
-      {m.isYou && <div className="w-[32px] flex-shrink-0" />}
     </div>
   )
 }
@@ -493,31 +488,36 @@ function ImageBubble({ m, grouped, onOpenProfile, menu }: { m: ChatMessage; grou
   const [open, setOpen] = useState(false)
   return (
     <>
-      <div className={cn('flex gap-2.5 items-start', m.isYou ? 'flex-row-reverse' : '')}>
+      <div className={cn('group/message flex gap-2 items-end', m.isYou ? 'flex-row-reverse' : '')}>
         {!m.isYou && (
           grouped
-            ? <div className="w-[32px] flex-shrink-0" />
+            ? <div className="w-8 flex-shrink-0" />
             : <UserAvatar m={m} onOpen={() => onOpenProfile(m)} />
         )}
-        <div className={cn('max-w-[65%] flex flex-col gap-0.5', m.isYou ? 'items-end' : 'items-start')}>
-          {!m.isYou && !grouped && <MsgHeader m={m} onOpen={() => onOpenProfile(m)} />}
-          <div className="relative">
-            {m.replyTo && (
-              <div className={cn('w-full px-2 pt-2 pb-0', m.isYou ? 'bg-yellow rounded-[16px_4px_0_0]' : 'bg-paper-deep rounded-[4px_16px_0_0]')}>
-                <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />
-              </div>
-            )}
+        <div className={cn(
+          'relative max-w-[65%] md:max-w-[50%] overflow-hidden shadow-sm',
+          m.isYou
+            ? 'rounded-2xl rounded-br-sm bg-yellow'
+            : 'rounded-2xl rounded-bl-sm bg-paper-deep border border-line',
+        )}>
+          {!m.isYou && !grouped && (
             <button
-              onClick={() => setOpen(true)}
-              className={cn('overflow-hidden shadow-sm hover:opacity-90 transition-opacity block', m.isYou ? 'rounded-[16px_4px_16px_16px]' : 'rounded-[4px_16px_16px_16px]')}
+              onClick={() => onOpenProfile(m)}
+              className="block font-mono text-[9px] font-bold text-ink hover:underline px-2.5 pt-2 pb-1 text-left w-full leading-none"
             >
-              {isSafeHttpUrl(m.imageUrl) && <img src={m.imageUrl} alt="Foto" className="max-w-full max-h-64 object-cover block" loading="lazy" />}
+              {m.who}{m.dept && <span className="font-normal text-ink-4"> · {m.dept}</span>}
             </button>
-            <InBubbleMenu menu={menu} />
-          </div>
-          {m.isYou && <span className="font-mono text-[9px] text-ink-4 mt-0.5">{m.time}</span>}
+          )}
+          {m.replyTo && <div className="px-2.5 pt-2"><ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} /></div>}
+          <button
+            onClick={() => setOpen(true)}
+            className="block w-full hover:opacity-90 transition-opacity"
+          >
+            {isSafeHttpUrl(m.imageUrl) && <img src={m.imageUrl} alt="Foto" className="w-full max-h-64 object-cover block" loading="lazy" />}
+          </button>
+          <div className={cn('font-mono text-[9px] px-2.5 py-1 text-right', m.isYou ? 'text-ink/40' : 'text-ink-4')}>{m.time}</div>
+          <InBubbleMenu menu={menu} />
         </div>
-        {m.isYou && <div className="w-[32px] flex-shrink-0" />}
       </div>
       <AnimatePresence>
         {open && (
@@ -551,62 +551,68 @@ function AudioBubble({ m, grouped, onOpenProfile, menu }: { m: ChatMessage; grou
   }
 
   return (
-    <div className={cn('flex gap-2.5 items-start', m.isYou ? 'flex-row-reverse' : '')}>
+    <div className={cn('group/message flex gap-2 items-end', m.isYou ? 'flex-row-reverse' : '')}>
       {!m.isYou && (
         grouped
-          ? <div className="w-[32px] flex-shrink-0" />
+          ? <div className="w-8 flex-shrink-0" />
           : <UserAvatar m={m} onOpen={() => onOpenProfile(m)} />
       )}
-      <div className={cn('flex flex-col gap-0.5', m.isYou ? 'items-end' : 'items-start')}>
-        {!m.isYou && !grouped && <MsgHeader m={m} onOpen={() => onOpenProfile(m)} />}
-        <div className={cn(
-          'relative flex flex-col shadow-sm min-w-[180px]',
-          m.isYou ? 'bg-yellow text-ink rounded-[16px_4px_16px_16px]' : 'bg-paper-deep text-ink rounded-[4px_16px_16px_16px]',
-        )}>
-          {m.replyTo && (
-            <div className="px-3.5 pt-2.5 pb-0">
-              <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />
-            </div>
-          )}
-          <div className="flex items-center gap-3 px-3.5 py-2.5">
-            <audio
-              ref={audioRef}
-              src={m.audioUrl}
-              onPlay={() => setPlaying(true)}
-              onPause={() => setPlaying(false)}
-              onEnded={() => { setPlaying(false); setProgress(0) }}
-              onTimeUpdate={e => {
-                const el = e.currentTarget
-                setProgress(el.duration > 0 ? el.currentTime / el.duration : 0)
-              }}
-              onLoadedMetadata={e => {
-                const d = e.currentTarget.duration
-                if (isFinite(d)) setDuration(Math.round(d))
-              }}
-            />
-            <button
-              onClick={toggle}
-              className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0 hover:opacity-70 transition-opacity"
-            >
-              <span className="text-[11px] ml-0.5">{playing ? '■' : '▶'}</span>
-            </button>
-            <div className="flex-1 min-w-0">
-              <div className={cn('h-1 rounded-full overflow-hidden', m.isYou ? 'bg-ink/20' : 'bg-ink/10')}>
-                <div
-                  className={cn('h-full rounded-full transition-none', m.isYou ? 'bg-ink/60' : 'bg-ink/40')}
-                  style={{ width: `${progress * 100}%` }}
-                />
-              </div>
-              <span className="font-mono text-[9px] opacity-60 mt-0.5 block">
-                {playing ? fmtDur(Math.round((audioRef.current?.currentTime ?? 0))) : fmtDur(duration)}
-              </span>
-            </div>
+      <div className={cn(
+        'relative shadow-sm min-w-[200px] max-w-[75%] md:max-w-[55%]',
+        m.isYou
+          ? 'bg-yellow text-ink rounded-2xl rounded-br-sm'
+          : 'bg-paper-deep text-ink border border-line rounded-2xl rounded-bl-sm',
+      )}>
+        {!m.isYou && !grouped && (
+          <button
+            onClick={() => onOpenProfile(m)}
+            className="block font-mono text-[9px] font-bold text-ink hover:underline px-3.5 pt-2.5 pb-0 text-left w-full leading-none"
+          >
+            {m.who}{m.dept && <span className="font-normal text-ink-4"> · {m.dept}</span>}
+          </button>
+        )}
+        {m.replyTo && (
+          <div className="px-3.5 pt-2.5 pb-0">
+            <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />
           </div>
-          <InBubbleMenu menu={menu} />
+        )}
+        <div className="flex items-center gap-3 px-3.5 py-2.5 pr-8">
+          <audio
+            ref={audioRef}
+            src={m.audioUrl}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onEnded={() => { setPlaying(false); setProgress(0) }}
+            onTimeUpdate={e => {
+              const el = e.currentTarget
+              setProgress(el.duration > 0 ? el.currentTime / el.duration : 0)
+            }}
+            onLoadedMetadata={e => {
+              const d = e.currentTarget.duration
+              if (isFinite(d)) setDuration(Math.round(d))
+            }}
+          />
+          <button
+            onClick={toggle}
+            className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0 hover:opacity-70 transition-opacity"
+          >
+            <span className="text-[11px] ml-0.5">{playing ? '■' : '▶'}</span>
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className={cn('h-1 rounded-full overflow-hidden', m.isYou ? 'bg-ink/20' : 'bg-ink/10')}>
+              <div
+                className={cn('h-full rounded-full transition-none', m.isYou ? 'bg-ink/60' : 'bg-ink/40')}
+                style={{ width: `${progress * 100}%` }}
+              />
+            </div>
+            <span className="font-mono text-[9px] opacity-60 mt-0.5 block">
+              {playing ? fmtDur(Math.round((audioRef.current?.currentTime ?? 0))) : fmtDur(duration)}
+            </span>
+          </div>
         </div>
-        {m.isYou && <span className="font-mono text-[9px] text-ink-4 mt-0.5">{m.time}</span>}
+        <div className={cn('font-mono text-[9px] px-3.5 pb-2 text-right', m.isYou ? 'text-ink/40' : 'text-ink-4')}>{m.time}</div>
+        <InBubbleMenu menu={menu} />
       </div>
-      {m.isYou && <div className="w-[32px] flex-shrink-0" />}
     </div>
   )
 }
@@ -621,7 +627,14 @@ function PollBubble({ m, userId, onVote, onOpenProfile }: { m: ChatMessage; user
     <div className="flex gap-2.5 items-start">
       <UserAvatar m={m} onOpen={() => onOpenProfile(m)} />
       <div className="flex-1 max-w-sm">
-        <MsgHeader m={m} onOpen={() => onOpenProfile(m)} />
+        <button
+          onClick={() => onOpenProfile(m)}
+          className="font-mono text-[10px] text-ink-3 hover:text-ink transition-colors text-left leading-none mb-1.5"
+        >
+          <span className="font-bold text-ink">{m.who}</span>
+          {m.dept && <span className="text-ink-4"> · {m.dept}</span>}
+          <span className="text-ink-4"> · {m.time}</span>
+        </button>
         <div className="border-2 border-ink bg-paper p-4">
           <p className="font-display text-[14px] leading-tight mb-4">{poll.question}</p>
           <div className="space-y-2">
@@ -913,7 +926,6 @@ function MsgMenuItem({
 // ─── Bubble menu (trigger button + dropdown, rendered INSIDE each bubble) ─────
 
 interface BubbleMenuProps {
-  showTrigger: boolean
   menuOpen: boolean
   onMenuToggle: (e: React.MouseEvent) => void
   onReply: () => void
@@ -927,14 +939,16 @@ interface BubbleMenuProps {
 function InBubbleMenu({ menu }: { menu: BubbleMenuProps }) {
   return (
     <>
-      {menu.showTrigger && (
-        <button
-          type="button"
-          aria-label="Opções da mensagem"
-          onClick={menu.onMenuToggle}
-          className="absolute top-1.5 right-1.5 z-10 w-5 h-5 flex items-center justify-center font-mono text-[11px] bg-black/10 hover:bg-black/20 rounded-sm transition-colors leading-none"
-        >⌄</button>
-      )}
+      <button
+        type="button"
+        aria-label="Opções da mensagem"
+        onClick={menu.onMenuToggle}
+        className={cn(
+          'absolute right-1 top-1 z-10 w-6 h-6 flex items-center justify-center font-mono text-[11px] rounded-full transition-all',
+          'opacity-0 group-hover/message:opacity-100 focus:opacity-100',
+          menu.menuOpen ? 'opacity-100 bg-black/15' : 'bg-black/0 hover:bg-black/15',
+        )}
+      >⌄</button>
       <AnimatePresence>
         {menu.menuOpen && (
           <motion.div
@@ -977,7 +991,6 @@ export function ResenhaScreen() {
 
   const [gifOpen,        setGifOpen]        = useState(false)
   const [pollOpen,       setPollOpen]       = useState(false)
-  const [hoveredId,      setHoveredId]      = useState<string | null>(null)
   const [menuOpenId,     setMenuOpenId]     = useState<string | null>(null)
   const [atBottom,       setAtBottom]       = useState(true)
   const [mediaErr,       setMediaErr]       = useState<string | null>(null)
@@ -1208,7 +1221,6 @@ export function ResenhaScreen() {
             (nextItem.kind === 'msg' && (nextItem.msg.userId !== m.userId || nextItem.msg.type === 'poll'))
 
           const menu: BubbleMenuProps = {
-            showTrigger: (hoveredId === m.id || menuOpenId === m.id) && m.type !== 'poll',
             menuOpen: menuOpenId === m.id,
             onMenuToggle: (e) => { e.stopPropagation(); setMenuOpenId(id => id === m.id ? null : m.id) },
             onReply: () => { setReplyingTo(m); setMenuOpenId(null) },
@@ -1223,8 +1235,6 @@ export function ResenhaScreen() {
             <div
               key={m.id}
               className={cn(grouped ? 'mt-1' : 'mt-5', isGroupEnd && 'mb-2')}
-              onMouseEnter={() => setHoveredId(m.id)}
-              onMouseLeave={() => { if (menuOpenId !== m.id) setHoveredId(null) }}
             >
               {m.type === 'poll' && m.poll
                 ? <PollBubble m={m} userId={me?.id} onVote={optId => vote(m.id, optId)} onOpenProfile={setProfileMsg} />

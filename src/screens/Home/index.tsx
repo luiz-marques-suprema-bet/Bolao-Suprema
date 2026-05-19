@@ -257,22 +257,21 @@ function useRotatingHero() {
 // Scrolling team strip — all 48 flags
 function TeamStrip() {
   const allCodes = Object.keys(TEAMS)
-  // Duplicate for seamless loop
   const doubled = [...allCodes, ...allCodes]
   return (
     <div className="overflow-hidden border-t border-paper/10 mt-auto">
       <motion.div
-        className="flex gap-3 py-2 px-3"
-        animate={{ x: [0, -(allCodes.length * 36)] }}
-        transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
+        className="flex gap-5 py-2.5 px-3"
+        animate={{ x: [0, -(allCodes.length * 48)] }}
+        transition={{ duration: 90, repeat: Infinity, ease: 'linear' }}
         style={{ width: 'max-content' }}
       >
         {doubled.map((code, i) => {
           const team = TEAMS[code]
           return team ? (
             <div key={`${code}-${i}`} className="flex items-center gap-1.5 flex-shrink-0">
-              <Flag team={team} size={16} className="opacity-80" />
-              <span className="font-mono text-[8px] text-paper/50">{code}</span>
+              <Flag team={team} size={20} className="opacity-90" />
+              <span className="font-mono text-[8px] font-bold text-paper/40 tracking-wide">{code}</span>
             </div>
           ) : null
         })}
@@ -281,26 +280,30 @@ function TeamStrip() {
   )
 }
 
-function RotatingHeroMobile({ days }: { days: number }) {
+function RotatingHeroMobile({ days, onCta }: { days: number; onCta: () => void }) {
   const { idx, setIdx, theme } = useRotatingHero()
   const team = TEAMS[theme.code]
 
   return (
-    <section className="relative overflow-hidden flex flex-col bg-ink" style={{ height: 280 }}>
+    <section className="relative overflow-hidden flex flex-col bg-ink" style={{ height: 300 }}>
       <AnimatePresence mode="wait">
         <motion.div key={`bg-${idx}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.7 }} className="absolute inset-0"
-          style={{ background: `linear-gradient(150deg, ${theme.c1} 0%, #0D0D0D 80%)` }} />
+          style={{ background: theme.c1 }} />
       </AnimatePresence>
-      <div className="absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-transparent pointer-events-none" />
+      {/* Subtle texture */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.08]"
+        style={{ backgroundImage: 'repeating-linear-gradient(45deg,#000 0,#000 1px,transparent 0,transparent 50%)', backgroundSize: '8px 8px' }} />
+      {/* Bottom darkening for text readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/15 to-black/55 pointer-events-none" />
 
       {/* Top row */}
       <div className="relative flex items-center justify-between px-5 pt-4">
-        <span className="font-mono text-[8px] tracking-eyebrow text-paper/50">COPA DO MUNDO 2026 · USA / CAN / MEX</span>
+        <span className="font-mono text-[8px] tracking-eyebrow text-paper/60">COPA DO MUNDO 2026 · USA / CAN / MEX</span>
         <AnimatePresence mode="wait">
           {team && (
             <motion.div key={`badge-${idx}`} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }} className="flex items-center gap-1.5 bg-ink/40 border border-paper/20 px-2.5 py-1">
+              transition={{ duration: 0.25 }} className="flex items-center gap-1.5 bg-black/30 border border-paper/20 px-2.5 py-1">
               <Flag team={team} size={13} />
               <span className="font-mono text-[8px] font-bold tracking-eyebrow text-paper">{theme.label}</span>
             </motion.div>
@@ -313,33 +316,37 @@ function RotatingHeroMobile({ days }: { days: number }) {
         <AnimatePresence mode="wait">
           <motion.span key={`name-${idx}`} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }}
             transition={{ duration: 0.35 }}
-            className="font-display leading-none tracking-display select-none text-paper"
+            className="font-display leading-none tracking-display select-none text-paper drop-shadow-sm"
             style={{ fontSize: heroFontSize(theme.label) }}>
             {theme.label}
           </motion.span>
         </AnimatePresence>
       </div>
 
-      {/* Countdown + dots */}
+      {/* Countdown + CTA + dots */}
       <div className="relative px-5 pb-3">
         <div className="flex items-end justify-between">
           <div className="flex items-baseline gap-2">
             <span className="font-display text-[52px] leading-none text-paper">{days}</span>
             <div>
-              <div className="font-mono text-[8px] tracking-eyebrow text-paper/50">DIAS</div>
+              <div className="font-mono text-[8px] tracking-eyebrow text-paper/60">DIAS</div>
               <div className="font-mono text-[8px] text-yellow">para a bola rolar</div>
               <div className="font-mono text-[7px] text-paper/40">11 Jun · 16:00 · Brasília</div>
             </div>
           </div>
-          {/* Dot indicators — 8 dots representing position in rotation */}
-          <div className="flex items-center gap-1 pb-0.5">
-            {Array.from({ length: 8 }, (_, i) => {
-              const themeIdx = idx % 8
-              return (
-                <button key={i} onClick={() => setIdx(Math.floor(idx / 8) * 8 + i)}
-                  className={cn('h-[3px] rounded-full transition-all duration-300', i === themeIdx ? 'w-4 bg-paper' : 'w-[3px] bg-paper/30')} />
-              )
-            })}
+          <div className="flex flex-col items-end gap-2 pb-0.5">
+            <button onClick={onCta} className="btn-yellow text-[10px] px-3 py-1.5 active:scale-95 transition-transform">
+              PALPITAR →
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: 8 }, (_, i) => {
+                const themeIdx = idx % 8
+                return (
+                  <button key={i} onClick={() => setIdx(Math.floor(idx / 8) * 8 + i)}
+                    className={cn('h-[3px] rounded-full transition-all duration-300', i === themeIdx ? 'w-4 bg-paper' : 'w-[3px] bg-paper/30')} />
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -359,9 +366,13 @@ function RotatingHeroDesktop({ days, onCta }: { days: number; onCta: () => void 
       <AnimatePresence mode="wait">
         <motion.div key={`dbg-${idx}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.7 }} className="absolute inset-0"
-          style={{ background: `linear-gradient(150deg, ${theme.c1} 0%, #0D0D0D 80%)` }} />
+          style={{ background: theme.c1 }} />
       </AnimatePresence>
-      <div className="absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-transparent pointer-events-none" />
+      {/* Subtle texture */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.08]"
+        style={{ backgroundImage: 'repeating-linear-gradient(45deg,#000 0,#000 1px,transparent 0,transparent 50%)', backgroundSize: '8px 8px' }} />
+      {/* Bottom darkening for text readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/15 to-black/55 pointer-events-none" />
 
       <div className="relative flex items-center justify-between px-6 pt-5">
         <span className="font-mono text-[9px] tracking-eyebrow text-paper/50">COPA DO MUNDO 2026 · USA / CAN / MEX</span>
@@ -580,7 +591,7 @@ function HomeMobile() {
     <div className="min-h-dvh bg-paper pb-24">
 
       {/* Hero */}
-      <RotatingHeroMobile days={days} />
+      <RotatingHeroMobile days={days} onCta={() => navigate('/prediction')} />
 
       <div className="px-4 space-y-4 pt-4">
 
