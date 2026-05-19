@@ -21,6 +21,7 @@ interface BracketState {
 
   setPick: (slotId: string, winner: TeamCode) => void
   clearPick: (slotId: string) => void
+  clearAllPicks: () => void
   lockRound: (round: BracketRound) => void
   isRoundLocked: (round: BracketRound) => boolean
   getPick: (slotId: string) => TeamCode | undefined
@@ -130,6 +131,10 @@ export const useBracketStore = create<BracketState>()(
               if (error) console.error('[Bracket] clearPick error:', error.message)
             })
         }
+      },
+
+      clearAllPicks: () => {
+        set({ picks: {} })
       },
 
       lockRound: (round) =>
