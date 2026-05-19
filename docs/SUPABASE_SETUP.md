@@ -31,6 +31,7 @@ Ordem de aplicação:
 7. `20260515162000_harden_user_profile_privacy.sql`
 8. `20260519090000_lock_user_privileged_columns.sql`
 9. `20260519091000_enforce_prediction_market_lock.sql`
+10. `20260519100000_lock_user_email_updates.sql`
 
 Execute cada arquivo individualmente. Verificar que não há erros antes de passar ao próximo.
 
