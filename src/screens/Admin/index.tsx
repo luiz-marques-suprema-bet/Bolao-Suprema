@@ -8,10 +8,15 @@ import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
 import { POINT_RULES } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
-import { calculatePoints } from '@/lib/scoring'
 import { cn } from '@/lib/utils'
 import { formatMatchDateTime } from '@/lib/matchTime'
-import { downloadCsv, setMarketStatus, settleMatchResult } from '@/services/product'
+import {
+  downloadCsv,
+  adminUpdateMatchStatus,
+  adminBulkMatchStatus,
+  adminSettleMatchResult,
+  adminDeletePrediction,
+} from '@/services/product'
 import type { MarketStatus, MatchStatus, MatchStage } from '@/types'
 
 function marketStatusFor(status: MatchStatus): MarketStatus {
@@ -69,36 +74,8 @@ async function updateMatchStatus(
   status: MatchStatus,
   extra?: { homeScore?: number; awayScore?: number; liveMinute?: string; winner?: string; lockReason?: string }
 ) {
-  const market = marketStatusFor(status)
-  const payload: Record<string, unknown> = { status, market_status: market }
-  if (status === 'locked') {
-    payload.locked_at = new Date().toISOString()
-    payload.lock_reason = extra?.lockReason ?? 'admin_lock'
-  }
-  if (status === 'open') {
-    payload.unlocked_at = new Date().toISOString()
-    payload.locked_at = null
-    payload.lock_reason = null
-    payload.settled_at = null
-  }
-  if (status === 'finished') {
-    payload.settled_at = new Date().toISOString()
-  }
-  if (extra?.homeScore !== undefined) payload.home_score = extra.homeScore
-  if (extra?.awayScore !== undefined) payload.away_score = extra.awayScore
-  if (extra?.liveMinute !== undefined) payload.live_minute = extra.liveMinute
-  if (extra?.winner !== undefined) payload.winner = extra.winner
-
-  const { error } = await supabase
-    .from('matches')
-    .update(payload)
-    .eq('match_code', matchCode)
-
-  if (!error) {
-    // Fire RPC in background — non-critical since direct update already succeeded
-    setMarketStatus(matchCode, market, extra?.lockReason).catch(() => {})
-  }
-  return error
+  const result = await adminUpdateMatchStatus(matchCode, status, extra)
+  return result.error ? new Error(result.error) : null
 }
 
 async function setMatchResult(
@@ -112,46 +89,9 @@ async function setMatchResult(
     awayScore > homeScore ? WC2026_MATCHES.find(m => m.id === matchCode)?.away.code :
     'draw'
 
-  const matchErr = await updateMatchStatus(matchCode, 'finished', {
-    homeScore, awayScore, winner: winner ?? undefined
-  })
-  if (matchErr) return { scored: 0, error: matchErr.message }
-
-  // Fire settle RPC in background — scoring is handled client-side below
-  settleMatchResult(matchCode, homeScore, awayScore).catch(() => {})
-
-  const { data: preds, error: predsErr } = await supabase
-    .from('predictions')
-    .select('id, home_score, away_score')
-    .eq('match_code', matchCode)
-
-  if (predsErr) return { scored: 0, error: predsErr.message }
-  if (!preds?.length) return { scored: 0, error: null }
-
-  const updates = preds.map(p => ({
-    id: p.id,
-    points_earned: calculatePoints(
-      { homeScore: p.home_score, awayScore: p.away_score },
-      { homeScore, awayScore },
-      stage
-    ),
-  }))
-
-  const results = await Promise.all(
-    updates.map(u =>
-      supabase
-        .from('predictions')
-        .update({ points_earned: u.points_earned })
-        .eq('id', u.id)
-    )
-  )
-
-  const errors = results.filter(r => r.error)
-  if (errors.length > 0) {
-    return { scored: updates.length - errors.length, error: `${errors.length} erros ao pontuar` }
-  }
-
-  return { scored: updates.length, error: null }
+  const result = await adminSettleMatchResult(matchCode, homeScore, awayScore, stage, winner ?? undefined)
+  if (result.error) return { scored: 0, error: result.error }
+  return { scored: result.data ?? 0, error: null }
 }
 
 // ─── Status badge ──────────────────────────────────────────────────────────────
@@ -310,35 +250,23 @@ function MatchRowAdmin({
 async function openGroupMatches(groupCode: string, onAction: (msg: string, ok: boolean) => void) {
   if (isMockMode) { onAction('Mock mode: ação não persiste', false); return }
   const matchCodes = WC2026_MATCHES.filter(m => m.group === groupCode).map(m => m.id)
-  const { error } = await supabase
-    .from('matches')
-    .update({ status: 'open', market_status: 'open', unlocked_at: new Date().toISOString(), locked_at: null, lock_reason: null, settled_at: null })
-    .in('match_code', matchCodes)
-    .eq('status', 'scheduled')
-  if (error) onAction(`Erro: ${error.message}`, false)
+  const result = await adminBulkMatchStatus('open', ['scheduled'], matchCodes)
+  if (result.error) onAction(`Erro: ${result.error}`, false)
   else onAction(`✓ Partidas do Grupo ${groupCode} abertas`, true)
 }
 
 async function lockAllOpenMatches(onAction: (msg: string, ok: boolean) => void) {
   if (isMockMode) { onAction('Mock mode: ação não persiste', false); return }
-  const { error, count } = await supabase
-    .from('matches')
-    .update({ status: 'locked', market_status: 'locked', locked_at: new Date().toISOString(), lock_reason: 'bulk_admin_lock' })
-    .eq('status', 'open')
-    .select('id', { count: 'exact', head: true })
-  if (error) onAction(`Erro: ${error.message}`, false)
-  else onAction(`✓ ${count ?? 0} partidas → BLOQUEADAS`, true)
+  const result = await adminBulkMatchStatus('locked', ['open'])
+  if (result.error) onAction(`Erro: ${result.error}`, false)
+  else onAction(`✓ ${result.data ?? 0} partidas → BLOQUEADAS`, true)
 }
 
 async function openAllMatches(onAction: (msg: string, ok: boolean) => void) {
   if (isMockMode) { onAction('Mock mode: ação não persiste', false); return }
-  const { error, count } = await supabase
-    .from('matches')
-    .update({ status: 'open', market_status: 'open', unlocked_at: new Date().toISOString(), locked_at: null, lock_reason: null, settled_at: null })
-    .in('status', ['scheduled', 'locked'])
-    .select('id', { count: 'exact', head: true })
-  if (error) onAction(`Erro: ${error.message}`, false)
-  else onAction(`✓ ${count ?? 0} partidas → ABERTAS`, true)
+  const result = await adminBulkMatchStatus('open', ['scheduled', 'locked'])
+  if (result.error) onAction(`Erro: ${result.error}`, false)
+  else onAction(`✓ ${result.data ?? 0} partidas → ABERTAS`, true)
 }
 
 // ─── Export CSV ───────────────────────────────────────────────────────────────
@@ -440,9 +368,9 @@ function ParticipantsPanel({ onToast }: { onToast: (msg: string, ok: boolean) =>
 
   async function undoPred(predId: string) {
     setBusy(true)
-    const { error } = await supabase.from('predictions').delete().eq('id', predId)
-    if (error) {
-      onToast(`Erro ao desfazer palpite: ${error.message}`, false)
+    const result = await adminDeletePrediction(predId)
+    if (result.error) {
+      onToast(`Erro ao desfazer palpite: ${result.error}`, false)
     } else {
       onToast('✓ Palpite removido', true)
       if (expanded) {

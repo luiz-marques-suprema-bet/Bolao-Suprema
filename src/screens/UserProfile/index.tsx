@@ -13,7 +13,7 @@ import type { AppUser } from '@/types'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapUser(row: any): AppUser {
   return {
-    id: row.id, email: row.email,
+    id: row.id, email: row.email ?? '',
     firstName: row.first_name ?? '', lastName: row.last_name ?? '',
     dept: row.dept ?? '', initials: row.initials ?? '',
     color: row.color ?? '#00A651',
@@ -54,7 +54,7 @@ export function UserProfileScreen() {
       return
     }
 
-    supabase.from('users').select('*').eq('id', userId).single()
+    supabase.from('public_profiles').select('*').eq('id', userId).single()
       .then(({ data }) => {
         const mapped = data ? mapUser(data) : null
         if (mapped?.privacyHideProfile && !me?.isAdmin && me?.id !== mapped.id) {

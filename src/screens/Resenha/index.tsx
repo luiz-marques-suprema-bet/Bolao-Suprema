@@ -315,7 +315,7 @@ function ChatProfilePanel({ m, onClose }: { m: ChatMessage; onClose: () => void 
     async function load() {
       try {
         const [{ data: uData }, { data: rData }] = await Promise.all([
-          supabase.from('users').select('bio,favorite_team').eq('id', m.userId).single(),
+          supabase.from('public_profiles').select('bio,favorite_team').eq('id', m.userId).single(),
           supabase
             .from('ranking_snapshots')
             .select('pts,rank,correct_predictions,exact_predictions')

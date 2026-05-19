@@ -73,6 +73,74 @@ export async function settleMatchResult(matchCode: string, homeScore: number, aw
   return ok(data)
 }
 
+export async function adminUpdateMatchStatus(
+  matchCode: string,
+  status: string,
+  opts?: { homeScore?: number; awayScore?: number; liveMinute?: string; winner?: string; lockReason?: string }
+) {
+  const blocked = requireSupabase()
+  if (blocked) return fail(blocked)
+  const { error } = await supabase.rpc('admin_update_match_status', {
+    p_match_code:  matchCode,
+    p_status:      status,
+    p_home_score:  opts?.homeScore  ?? null,
+    p_away_score:  opts?.awayScore  ?? null,
+    p_live_minute: opts?.liveMinute ?? null,
+    p_winner:      opts?.winner     ?? null,
+    p_lock_reason: opts?.lockReason ?? null,
+  })
+  if (error) return fail(error.message)
+  return ok(null)
+}
+
+export async function adminBulkMatchStatus(
+  status: string,
+  fromStatuses: string[],
+  matchCodes?: string[],
+  lockReason?: string
+) {
+  const blocked = requireSupabase()
+  if (blocked) return fail(blocked)
+  const { data, error } = await supabase.rpc('admin_bulk_match_status', {
+    p_status:        status,
+    p_from_statuses: fromStatuses,
+    p_match_codes:   matchCodes ?? null,
+    p_lock_reason:   lockReason ?? null,
+  })
+  if (error) return fail(error.message)
+  return ok(data as number)
+}
+
+export async function adminSettleMatchResult(
+  matchCode: string,
+  homeScore: number,
+  awayScore: number,
+  stage: string,
+  winner?: string
+) {
+  const blocked = requireSupabase()
+  if (blocked) return fail(blocked)
+  const { data, error } = await supabase.rpc('admin_settle_match_result', {
+    p_match_code:  matchCode,
+    p_home_score:  homeScore,
+    p_away_score:  awayScore,
+    p_stage:       stage,
+    p_winner:      winner ?? null,
+  })
+  if (error) return fail(error.message)
+  return ok(data as number)
+}
+
+export async function adminDeletePrediction(predictionId: string) {
+  const blocked = requireSupabase()
+  if (blocked) return fail(blocked)
+  const { error } = await supabase.rpc('admin_delete_prediction', {
+    p_prediction_id: predictionId,
+  })
+  if (error) return fail(error.message)
+  return ok(null)
+}
+
 export async function updateParticipantStatus(userId: string, status: ParticipantStatus) {
   const blocked = requireSupabase()
   if (blocked) return fail<AppUser>(blocked)
