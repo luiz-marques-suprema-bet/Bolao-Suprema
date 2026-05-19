@@ -122,100 +122,105 @@ export function ResenhaScreen() {
           : 'calc(100dvh - 5.5rem - env(safe-area-inset-bottom, 0px))',
       }}
     >
-      {/* Profile panel */}
+      {/* Profile panel (fixed overlay) */}
       <AnimatePresence>
         {profileMsg && <ChatProfilePanel m={profileMsg} onClose={() => setProfileMsg(null)} />}
       </AnimatePresence>
 
-      {/* Header */}
+      {/* Header — full width */}
       <ResenhaHeader
         messageCount={messages.length}
         isAdmin={isAdmin}
         onCreatePoll={() => setPollOpen(true)}
       />
 
-      {/* Pinned */}
-      <AnimatePresence>
-        {pinnedMsg && (
-          <PinnedMessage
-            key="pinned"
-            msg={pinnedMsg}
-            isAdmin={isAdmin}
-            onUnpin={() => void setPinned(null)}
-          />
-        )}
-      </AnimatePresence>
+      {/* Centered content column */}
+      <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl">
 
-      {/* Messages */}
-      <MessageList
-        messages={messages}
-        isLoaded={isLoaded}
-        currentUserId={user?.id}
-        pinnedId={pinnedId}
-        menuOpenId={menuOpenId}
-        isAdmin={isAdmin}
-        scrollRef={scrollRef}
-        bottomRef={bottomRef}
-        onScroll={handleScroll}
-        onOpenMenu={setMenuOpenId}
-        onReply={setReplyingTo}
-        onPin={togglePin}
-        onDeleteRequest={setDeleteConfirmId}
-        onVote={vote}
-        onOpenProfile={setProfileMsg}
-      />
+        {/* Pinned */}
+        <AnimatePresence>
+          {pinnedMsg && (
+            <PinnedMessage
+              key="pinned"
+              msg={pinnedMsg}
+              isAdmin={isAdmin}
+              onUnpin={() => void setPinned(null)}
+            />
+          )}
+        </AnimatePresence>
 
-      {/* Scroll-to-bottom */}
-      <AnimatePresence>
-        {!atBottom && (
-          <motion.div
-            initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.15 }}
-            className="flex justify-center py-1.5 flex-shrink-0 border-t border-hairline bg-paper"
-          >
-            <button
-              onClick={scrollToBottom}
-              className="bg-ink text-paper font-mono text-[10px] px-3 py-1.5 shadow-card active:scale-95 transition-transform"
+        {/* Messages */}
+        <MessageList
+          messages={messages}
+          isLoaded={isLoaded}
+          currentUserId={user?.id}
+          pinnedId={pinnedId}
+          menuOpenId={menuOpenId}
+          isAdmin={isAdmin}
+          scrollRef={scrollRef}
+          bottomRef={bottomRef}
+          onScroll={handleScroll}
+          onOpenMenu={setMenuOpenId}
+          onReply={setReplyingTo}
+          onPin={togglePin}
+          onDeleteRequest={setDeleteConfirmId}
+          onVote={vote}
+          onOpenProfile={setProfileMsg}
+        />
+
+        {/* Scroll-to-bottom */}
+        <AnimatePresence>
+          {!atBottom && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.15 }}
+              className="flex justify-center py-1.5 flex-shrink-0 border-t border-hairline bg-paper"
             >
-              ↓ VER NOVAS MSGS
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Error banner */}
-      <AnimatePresence>
-        {combinedError && (
-          <motion.div
-            initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
-            className="overflow-hidden flex-shrink-0"
-          >
-            <div className="flex items-center justify-between px-4 py-2 bg-red/8 border-t border-red/20">
-              <span className="font-mono text-[10px] text-red">{combinedError}</span>
               <button
-                onClick={() => { clearError(); setMediaErr(null) }}
-                className="font-mono text-[10px] text-red/60 hover:text-red ml-3"
-              >✕</button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                onClick={scrollToBottom}
+                className="bg-ink text-paper font-mono text-[10px] px-3 py-1.5 shadow-card active:scale-95 transition-transform"
+              >
+                ↓ VER NOVAS MSGS
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* GIF picker */}
-      <AnimatePresence>
-        {gifOpen && <GifPicker onSelect={sendGif} onClose={() => setGifOpen(false)} />}
-      </AnimatePresence>
+        {/* Error banner */}
+        <AnimatePresence>
+          {combinedError && (
+            <motion.div
+              initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
+              className="overflow-hidden flex-shrink-0"
+            >
+              <div className="flex items-center justify-between px-4 py-2 bg-red/8 border-t border-red/20">
+                <span className="font-mono text-[10px] text-red">{combinedError}</span>
+                <button
+                  onClick={() => { clearError(); setMediaErr(null) }}
+                  className="font-mono text-[10px] text-red/60 hover:text-red ml-3"
+                >✕</button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Composer */}
-      <ChatComposer
-        replyingTo={replyingTo}
-        onCancelReply={() => setReplyingTo(null)}
-        onSendText={sendText}
-        onToggleGif={() => setGifOpen(v => !v)}
-        gifActive={gifOpen}
-        onSendImage={sendImage}
-        onSendAudio={sendAudio}
-      />
+        {/* GIF picker */}
+        <AnimatePresence>
+          {gifOpen && <GifPicker onSelect={sendGif} onClose={() => setGifOpen(false)} />}
+        </AnimatePresence>
+
+        {/* Composer */}
+        <ChatComposer
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
+          onSendText={sendText}
+          onToggleGif={() => setGifOpen(v => !v)}
+          gifActive={gifOpen}
+          onSendImage={sendImage}
+          onSendAudio={sendAudio}
+        />
+
+      </div>
 
       {/* Poll modal */}
       <AnimatePresence>

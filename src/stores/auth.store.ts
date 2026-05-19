@@ -273,7 +273,6 @@ export const useAuthStore = create<AuthState>()(
         if (isSupabaseConfigured) {
           const { error } = await supabase.from('users').upsert({
             id: current.id,
-            email: current.email,
             first_name: updated.firstName,
             last_name: updated.lastName,
             dept: updated.dept,
@@ -286,8 +285,6 @@ export const useAuthStore = create<AuthState>()(
             favorite_player:     updated.favoritePlayer,
             favorite_player_img: updated.favoritePlayerImg ?? null,
             since:               updated.since,
-            // Auto-promote to active on profile save — never unblocks admin-blocked users
-            ...(current.participantStatus !== 'blocked' && { participant_status: 'active' }),
           })
           if (error) {
             console.error('[Profile] Erro ao salvar perfil:', error.message)

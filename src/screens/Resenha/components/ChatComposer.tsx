@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { formatDuration } from '../utils/chatFormat'
 import { useAudioRecorder } from '../hooks/useAudioRecorder'
+import { ReplyPreview } from './ReplyPreview'
 import type { ChatMessage } from '@/types'
 
 const MAX_CHARS = 1000
@@ -91,24 +92,7 @@ export function ChatComposer({
   return (
     <div className="border-t border-hairline bg-paper flex-shrink-0">
       {/* Reply preview */}
-      {replyingTo && (
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-hairline bg-paper-deep">
-          <div className="flex-1 min-w-0">
-            <span className="font-mono text-[9px] text-ink-4 tracking-eyebrow">RESPONDENDO A </span>
-            <span className="font-mono text-[9px] font-bold text-ink">{replyingTo.who}</span>
-            <p className="font-sans text-[11px] text-ink-3 truncate mt-0.5">
-              {replyingTo.type === 'gif' ? '🖼 GIF' :
-               replyingTo.type === 'image' ? '📷 Foto' :
-               replyingTo.type === 'audio' ? '🎤 Áudio' :
-               replyingTo.text}
-            </p>
-          </div>
-          <button
-            onClick={onCancelReply}
-            className="font-mono text-[11px] text-ink-4 hover:text-red transition-colors flex-shrink-0 px-1"
-          >✕</button>
-        </div>
-      )}
+      {replyingTo && <ReplyPreview replyingTo={replyingTo} onCancel={onCancelReply} />}
 
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImage} />
 
