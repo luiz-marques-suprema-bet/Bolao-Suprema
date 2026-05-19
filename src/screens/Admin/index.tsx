@@ -16,6 +16,7 @@ import {
   adminUpdateMatchStatus,
   adminBulkMatchStatus,
   adminDeletePrediction,
+  adminSetUserRole,
 } from '@/services/product'
 import type { MarketStatus, MatchStatus, MatchStage } from '@/types'
 
@@ -587,6 +588,146 @@ function NoticesPanel({ onToast }: { onToast: (msg: string, ok: boolean) => void
   )
 }
 
+// ─── Roles Panel ─────────────────────────────────────────────────────────────
+
+interface RoleUserRow {
+  id: string
+  first_name: string | null
+  last_name: string | null
+  email: string
+  is_admin: boolean
+  is_marketing: boolean
+  is_owner: boolean
+  user_role: string | null
+  participant_status: string | null
+}
+
+function AdminRolesPanel({ onToast }: { onToast: (msg: string, ok: boolean) => void }) {
+  const currentUser = useAuthStore(s => s.user)
+  const isOwner = currentUser?.isOwner ?? false
+
+  const [users, setUsers] = useState<RoleUserRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('users')
+      .select('id,first_name,last_name,email,is_admin,is_marketing,is_owner,user_role,participant_status')
+      .order('first_name', { ascending: true })
+    if (error) onToast(`Erro ao carregar usuários: ${error.message}`, false)
+    setUsers((data ?? []) as RoleUserRow[])
+    setLoading(false)
+  }, [onToast])
+
+  useEffect(() => { if (!isMockMode) load() }, [load])
+
+  async function toggle(user: RoleUserRow, field: 'is_admin' | 'is_marketing') {
+    if (!isOwner) { onToast('Apenas o proprietário pode alterar papéis.', false); return }
+    setBusy(`${user.id}-${field}`)
+    const newVal = !user[field]
+    const patch = field === 'is_admin'
+      ? { isAdmin: newVal }
+      : { isMarketing: newVal }
+    const result = await adminSetUserRole(user.id, patch)
+    if (result.error) {
+      onToast(`Erro: ${result.error}`, false)
+    } else {
+      const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email
+      const label = field === 'is_admin' ? 'ADMIN' : 'MARKETING'
+      onToast(`✓ ${name} → ${newVal ? label + ' CONCEDIDO' : label + ' REVOGADO'}`, true)
+      await load()
+    }
+    setBusy(null)
+  }
+
+  const roleLabel = (u: RoleUserRow) => {
+    if (u.is_owner)     return { text: 'OWNER',     cls: 'bg-yellow/30 text-ink border-yellow/50' }
+    if (u.is_admin)     return { text: 'ADMIN',     cls: 'bg-red/10 text-red border-red/30' }
+    if (u.is_marketing) return { text: 'MARKETING', cls: 'bg-green/10 text-green border-green/30' }
+    return { text: 'USER', cls: 'bg-paper-deep text-ink-4 border-hairline' }
+  }
+
+  return (
+    <section className="border-2 border-ink mb-6">
+      <div className="px-4 py-3 bg-ink text-paper flex items-center justify-between gap-3">
+        <div>
+          <div className="font-display text-xl">ATRIBUIÇÃO DE PAPÉIS</div>
+          <div className="font-mono text-[9px] text-paper/50">
+            {isOwner ? 'Clique em ADMIN ou MKT para conceder/revogar' : 'Somente o proprietário pode alterar papéis'}
+          </div>
+        </div>
+        <button disabled={loading} onClick={load} className="btn-yellow text-[10px]">↺</button>
+      </div>
+
+      {loading ? (
+        <div className="px-4 py-6 font-mono text-[11px] text-ink-4 text-center animate-pulse">CARREGANDO…</div>
+      ) : (
+        <div className="divide-y divide-hairline max-h-96 overflow-y-auto">
+          {users.map(u => {
+            const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email
+            const role = roleLabel(u)
+            const isSelf = u.id === currentUser?.id
+            const isProtected = u.is_owner || isSelf
+
+            return (
+              <div key={u.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono text-[11px] font-bold truncate">
+                    {name}
+                    {isSelf && <span className="ml-1.5 text-ink-4 font-normal">(você)</span>}
+                  </div>
+                  <div className="font-mono text-[9px] text-ink-4 truncate">{u.email}</div>
+                </div>
+
+                <span className={cn('font-mono text-[8px] px-2 py-0.5 border flex-shrink-0', role.cls)}>
+                  {role.text}
+                </span>
+
+                {!isProtected && isOwner && (
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button
+                      disabled={busy !== null}
+                      onClick={() => toggle(u, 'is_admin')}
+                      className={cn(
+                        'font-mono text-[8px] border px-2 py-1 transition-colors',
+                        u.is_admin
+                          ? 'border-red/40 text-red/80 hover:bg-red/10'
+                          : 'border-ink-4/40 text-ink-3 hover:bg-yellow'
+                      )}
+                    >
+                      {busy === `${u.id}-is_admin` ? '…' : u.is_admin ? '− ADMIN' : '+ ADMIN'}
+                    </button>
+                    <button
+                      disabled={busy !== null}
+                      onClick={() => toggle(u, 'is_marketing')}
+                      className={cn(
+                        'font-mono text-[8px] border px-2 py-1 transition-colors',
+                        u.is_marketing
+                          ? 'border-green/40 text-green hover:bg-green/10'
+                          : 'border-ink-4/40 text-ink-3 hover:bg-yellow'
+                      )}
+                    >
+                      {busy === `${u.id}-is_marketing` ? '…' : u.is_marketing ? '− MKT' : '+ MKT'}
+                    </button>
+                  </div>
+                )}
+
+                {isProtected && (
+                  <span className="font-mono text-[8px] text-ink-4 flex-shrink-0">
+                    {u.is_owner ? 'proprietário' : 'você'}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function AdminScreen() {
@@ -669,6 +810,7 @@ function AdminMobile() {
       <div className="px-4 pt-3">
         <NoticesPanel onToast={showToast} />
         <ParticipantsPanel onToast={showToast} />
+        <AdminRolesPanel onToast={showToast} />
       </div>
 
       <div className="px-4 pt-3 space-y-2">
@@ -787,6 +929,7 @@ function AdminDesktop() {
 
         <NoticesPanel onToast={showToast} />
         <ParticipantsPanel onToast={showToast} />
+        <AdminRolesPanel onToast={showToast} />
 
         <div className="grid grid-cols-[1.6fr_1fr] gap-5">
 

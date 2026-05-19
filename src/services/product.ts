@@ -335,3 +335,18 @@ export type RolePatch = Partial<{
   is_marketing: boolean
   is_owner: boolean
 }>
+
+export async function adminSetUserRole(
+  userId: string,
+  patch: { isAdmin?: boolean; isMarketing?: boolean }
+) {
+  const blocked = requireSupabase()
+  if (blocked) return fail(blocked)
+  const { error } = await supabase.rpc('admin_set_user_role', {
+    p_user_id:      userId,
+    p_is_admin:     patch.isAdmin     ?? null,
+    p_is_marketing: patch.isMarketing ?? null,
+  })
+  if (error) return fail(error.message)
+  return ok(null)
+}
