@@ -943,7 +943,7 @@ function InBubbleMenu({ menu }: { menu: BubbleMenuProps }) {
             exit={{ opacity: 0, scale: 0.95, y: -4 }}
             transition={{ type: 'spring', damping: 24, stiffness: 420 }}
             onClick={e => e.stopPropagation()}
-            className="absolute top-7 right-0 z-20 bg-paper border-2 border-ink shadow-card min-w-[160px]"
+            className="absolute top-7 right-0 z-50 w-44 overflow-hidden bg-paper border-2 border-ink shadow-[4px_4px_0_#0D0D0D]"
           >
             <MsgMenuItem icon="↩" label="RESPONDER" onClick={menu.onReply} />
             {menu.isAdmin && (

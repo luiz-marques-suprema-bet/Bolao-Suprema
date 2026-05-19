@@ -1,6 +1,6 @@
 import { BRAZIL_TIME_LABEL, formatMatchDateTime } from '@/lib/matchTime'
 import { WC2026_MATCHES } from '@/data/wc2026'
-import { Tooltip } from '@/components/shared/Tooltip'
+import { FloatingTooltip } from '@/components/shared/FloatingTooltip'
 
 const GROUP_RULES = [
   { pts: 10, label: 'Placar exato',                 detail: 'ex: colocou 2×1 e foi 2×1',            accent: 'bg-green' },
@@ -161,11 +161,11 @@ function RulesBlock({ title, rules }: { title: string; rules: { pts: number; lab
               <span className="font-display text-3xl leading-none">{r.pts}</span>
             </div>
             <div className="flex flex-col justify-center min-w-0">
-              <Tooltip content={r.detail} side="top" maxWidth={260}>
+              <FloatingTooltip label={r.detail}>
                 <div className="font-mono text-[12px] font-bold leading-tight cursor-default underline decoration-dotted decoration-ink-4 underline-offset-2 w-fit">
                   {r.label}
                 </div>
-              </Tooltip>
+              </FloatingTooltip>
               <div className="font-mono text-[10px] text-ink-4 mt-0.5">{r.detail}</div>
             </div>
           </div>

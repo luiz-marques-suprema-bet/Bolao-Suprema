@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Avatar } from '@/components/shared/Avatar'
 import { Eyebrow } from '@/components/shared/Eyebrow'
-import { Tooltip } from '@/components/shared/Tooltip'
+import { FloatingTooltip } from '@/components/shared/FloatingTooltip'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/stores/auth.store'
 import { fmtPts, cn } from '@/lib/utils'
@@ -150,11 +150,11 @@ function ScoringRulesBox({ rules: _rules }: { rules: ScoringRule[] }) {
               {section.rules.map(r => (
                 <div key={r.label} className="flex items-center gap-2">
                   <span className="font-display text-xl text-green w-8 flex-shrink-0">+{r.pts}</span>
-                  <Tooltip content={r.tip} side="top" maxWidth={260}>
+                  <FloatingTooltip label={r.tip}>
                     <span className="font-mono text-[11px] text-ink-3 cursor-default underline decoration-dotted decoration-ink-4 underline-offset-2">
                       {r.label}
                     </span>
-                  </Tooltip>
+                  </FloatingTooltip>
                 </div>
               ))}
             </div>
