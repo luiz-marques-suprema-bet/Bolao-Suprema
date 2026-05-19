@@ -9,18 +9,19 @@ interface TooltipProps {
   maxWidth?: number
 }
 
-const GAP = 10 // px entre o elemento e o tooltip
+const GAP = 12
 
 export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: TooltipProps) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState({ x: 0, y: 0, arrowX: 0, actualSide: side as 'top' | 'bottom' })
   const wrapperRef = useRef<HTMLSpanElement>(null)
 
-  const compute = useCallback((mx: number) => {
+  const handleEnter = useCallback((e: React.MouseEvent) => {
     if (!wrapperRef.current) return
     const r = wrapperRef.current.getBoundingClientRect()
+    const mx = e.clientX
+    const my = e.clientY
 
-    // Y is anchored to the element — tooltip never overlaps the trigger
     const actualSide: 'top' | 'bottom' =
       side === 'top'    && r.top < 80                         ? 'bottom' :
       side === 'bottom' && window.innerHeight - r.bottom < 80 ? 'top'    :
@@ -29,20 +30,17 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
     const tooltipLeft = Math.max(8, Math.min(window.innerWidth - maxWidth - 8, mx - maxWidth / 2))
     const arrowX = Math.min(maxWidth - 16, Math.max(10, mx - tooltipLeft - 6))
 
-    setCoords({
-      x: tooltipLeft,
-      y: actualSide === 'top' ? r.top - GAP : r.bottom + GAP,
-      arrowX,
-      actualSide,
-    })
+    // Y is above the cursor AND above the element — whichever gives more clearance.
+    // With transform:translateY(-100%) the value we pass as `top` becomes the
+    // tooltip's BOTTOM edge, so smaller = higher on screen = more clearance.
+    const yAbove = Math.min(my - GAP, r.top - GAP)
+    const yBelow = Math.max(my + GAP, r.bottom + GAP)
+
+    setCoords({ x: tooltipLeft, y: actualSide === 'top' ? yAbove : yBelow, arrowX, actualSide })
+    setOpen(true)
   }, [side, maxWidth])
 
-  const handleEnter = useCallback((e: React.MouseEvent) => {
-    compute(e.clientX)
-    setOpen(true)
-  }, [compute])
-
-  // Arrow tracks cursor as mouse moves across the element
+  // Keep Y frozen; only slide arrow X as cursor moves across the element
   const handleMove = useCallback((e: React.MouseEvent) => {
     if (!open) return
     const mx = e.clientX
@@ -94,33 +92,20 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
                 )}
 
                 {coords.actualSide === 'top' && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      bottom: -6,
-                      left: coords.arrowX,
-                      width: 0,
-                      height: 0,
-                      borderLeft: '6px solid transparent',
-                      borderRight: '6px solid transparent',
-                      borderTop: '6px solid #0D0D0D',
-                    }}
-                  />
+                  <div style={{
+                    position: 'absolute', bottom: -6, left: coords.arrowX,
+                    width: 0, height: 0,
+                    borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
+                    borderTop: '6px solid #0D0D0D',
+                  }} />
                 )}
-
                 {coords.actualSide === 'bottom' && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: -6,
-                      left: coords.arrowX,
-                      width: 0,
-                      height: 0,
-                      borderLeft: '6px solid transparent',
-                      borderRight: '6px solid transparent',
-                      borderBottom: '6px solid #0D0D0D',
-                    }}
-                  />
+                  <div style={{
+                    position: 'absolute', top: -6, left: coords.arrowX,
+                    width: 0, height: 0,
+                    borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
+                    borderBottom: '6px solid #0D0D0D',
+                  }} />
                 )}
               </div>
             </motion.div>
