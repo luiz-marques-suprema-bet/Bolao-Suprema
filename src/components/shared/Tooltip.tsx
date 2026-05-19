@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 
@@ -12,22 +12,21 @@ interface TooltipProps {
 export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: TooltipProps) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState({ x: 0, y: 0, arrowX: 0, actualSide: side as 'top' | 'bottom' })
-  const wrapperRef = useRef<HTMLSpanElement>(null)
 
-  const handleEnter = useCallback(() => {
-    if (!wrapperRef.current) return
-    const r = wrapperRef.current.getBoundingClientRect()
-    const triggerCenterX = r.left + r.width / 2
-    const tooltipLeft = Math.max(8, Math.min(window.innerWidth - maxWidth - 8, triggerCenterX - maxWidth / 2))
-    const arrowX = Math.min(maxWidth - 16, Math.max(10, triggerCenterX - tooltipLeft - 6))
+  const handleEnter = useCallback((e: React.MouseEvent) => {
+    const mx = e.clientX
+    const my = e.clientY
     const actualSide: 'top' | 'bottom' =
-      side === 'top' && r.top < 80 ? 'bottom' :
-      side === 'bottom' && window.innerHeight - r.bottom < 80 ? 'top' :
+      side === 'top'    && my < 80                        ? 'bottom' :
+      side === 'bottom' && window.innerHeight - my < 80   ? 'top'    :
       side
+
+    const tooltipLeft = Math.max(8, Math.min(window.innerWidth - maxWidth - 8, mx - maxWidth / 2))
+    const arrowX = Math.min(maxWidth - 16, Math.max(10, mx - tooltipLeft - 6))
 
     setCoords({
       x: tooltipLeft,
-      y: actualSide === 'top' ? r.top - 10 : r.bottom + 10,
+      y: actualSide === 'top' ? my - 10 : my + 10,
       arrowX,
       actualSide,
     })
@@ -42,7 +41,7 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
 
   return (
     <>
-      <span ref={wrapperRef} onMouseEnter={handleEnter} onMouseLeave={handleLeave} className="inline-flex">
+      <span onMouseEnter={handleEnter} onMouseLeave={handleLeave} className="inline-flex">
         {children}
       </span>
       {createPortal(
@@ -63,7 +62,6 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
                 pointerEvents: 'none',
               }}
             >
-              {/* Body */}
               <div className="bg-ink text-paper px-3 py-2.5 border border-white/[0.08] shadow-2xl relative">
                 {typeof content === 'string' ? (
                   <p className="font-mono text-[10px] leading-relaxed text-paper/90">{content}</p>
@@ -71,7 +69,6 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
                   content
                 )}
 
-                {/* Arrow pointing down (tooltip is above) */}
                 {coords.actualSide === 'top' && (
                   <div
                     style={{
@@ -87,7 +84,6 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
                   />
                 )}
 
-                {/* Arrow pointing up (tooltip is below) */}
                 {coords.actualSide === 'bottom' && (
                   <div
                     style={{

@@ -450,6 +450,7 @@ function TextBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: bo
             ? 'bg-yellow text-ink rounded-[16px_4px_16px_16px]'
             : 'bg-paper-deep text-ink rounded-[4px_16px_16px_16px]',
         )}>
+          {m.replyTo && <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />}
           {m.text}
         </div>
         {m.isYou && <span className="font-mono text-[9px] text-ink-4 mt-0.5">{m.time}</span>}
@@ -469,6 +470,11 @@ function GifBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: boo
       )}
       <div className={cn('max-w-[60%] flex flex-col gap-0.5', m.isYou ? 'items-end' : 'items-start')}>
         {!m.isYou && !grouped && <MsgHeader m={m} onOpen={() => onOpenProfile(m)} />}
+        {m.replyTo && (
+          <div className={cn('w-full px-2 pt-2 pb-0', m.isYou ? 'bg-yellow rounded-[16px_4px_0_0]' : 'bg-paper-deep rounded-[4px_16px_0_0]')}>
+            <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />
+          </div>
+        )}
         <div className={cn('overflow-hidden shadow-sm', m.isYou ? 'rounded-[16px_4px_16px_16px]' : 'rounded-[4px_16px_16px_16px]')}>
           {isSafeHttpUrl(m.gifUrl) && <img src={m.gifUrl} alt="GIF" className="max-w-full max-h-52 object-contain block" loading="lazy" />}
         </div>
@@ -491,6 +497,11 @@ function ImageBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: b
         )}
         <div className={cn('max-w-[65%] flex flex-col gap-0.5', m.isYou ? 'items-end' : 'items-start')}>
           {!m.isYou && !grouped && <MsgHeader m={m} onOpen={() => onOpenProfile(m)} />}
+          {m.replyTo && (
+            <div className={cn('w-full px-2 pt-2 pb-0', m.isYou ? 'bg-yellow rounded-[16px_4px_0_0]' : 'bg-paper-deep rounded-[4px_16px_0_0]')}>
+              <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />
+            </div>
+          )}
           <button
             onClick={() => setOpen(true)}
             className={cn('overflow-hidden shadow-sm hover:opacity-90 transition-opacity', m.isYou ? 'rounded-[16px_4px_16px_16px]' : 'rounded-[4px_16px_16px_16px]')}
@@ -542,40 +553,47 @@ function AudioBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: b
       <div className={cn('flex flex-col gap-0.5', m.isYou ? 'items-end' : 'items-start')}>
         {!m.isYou && !grouped && <MsgHeader m={m} onOpen={() => onOpenProfile(m)} />}
         <div className={cn(
-          'flex items-center gap-3 px-3.5 py-2.5 shadow-sm min-w-[180px]',
+          'flex flex-col shadow-sm min-w-[180px]',
           m.isYou ? 'bg-yellow text-ink rounded-[16px_4px_16px_16px]' : 'bg-paper-deep text-ink rounded-[4px_16px_16px_16px]',
         )}>
-          <audio
-            ref={audioRef}
-            src={m.audioUrl}
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
-            onEnded={() => { setPlaying(false); setProgress(0) }}
-            onTimeUpdate={e => {
-              const el = e.currentTarget
-              setProgress(el.duration > 0 ? el.currentTime / el.duration : 0)
-            }}
-            onLoadedMetadata={e => {
-              const d = e.currentTarget.duration
-              if (isFinite(d)) setDuration(Math.round(d))
-            }}
-          />
-          <button
-            onClick={toggle}
-            className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0 hover:opacity-70 transition-opacity"
-          >
-            <span className="text-[11px] ml-0.5">{playing ? '■' : '▶'}</span>
-          </button>
-          <div className="flex-1 min-w-0">
-            <div className={cn('h-1 rounded-full overflow-hidden', m.isYou ? 'bg-ink/20' : 'bg-ink/10')}>
-              <div
-                className={cn('h-full rounded-full transition-none', m.isYou ? 'bg-ink/60' : 'bg-ink/40')}
-                style={{ width: `${progress * 100}%` }}
-              />
+          {m.replyTo && (
+            <div className="px-3.5 pt-2.5 pb-0">
+              <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />
             </div>
-            <span className="font-mono text-[9px] opacity-60 mt-0.5 block">
-              {playing ? fmtDur(Math.round((audioRef.current?.currentTime ?? 0))) : fmtDur(duration)}
-            </span>
+          )}
+          <div className="flex items-center gap-3 px-3.5 py-2.5">
+            <audio
+              ref={audioRef}
+              src={m.audioUrl}
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onEnded={() => { setPlaying(false); setProgress(0) }}
+              onTimeUpdate={e => {
+                const el = e.currentTarget
+                setProgress(el.duration > 0 ? el.currentTime / el.duration : 0)
+              }}
+              onLoadedMetadata={e => {
+                const d = e.currentTarget.duration
+                if (isFinite(d)) setDuration(Math.round(d))
+              }}
+            />
+            <button
+              onClick={toggle}
+              className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0 hover:opacity-70 transition-opacity"
+            >
+              <span className="text-[11px] ml-0.5">{playing ? '■' : '▶'}</span>
+            </button>
+            <div className="flex-1 min-w-0">
+              <div className={cn('h-1 rounded-full overflow-hidden', m.isYou ? 'bg-ink/20' : 'bg-ink/10')}>
+                <div
+                  className={cn('h-full rounded-full transition-none', m.isYou ? 'bg-ink/60' : 'bg-ink/40')}
+                  style={{ width: `${progress * 100}%` }}
+                />
+              </div>
+              <span className="font-mono text-[9px] opacity-60 mt-0.5 block">
+                {playing ? fmtDur(Math.round((audioRef.current?.currentTime ?? 0))) : fmtDur(duration)}
+              </span>
+            </div>
           </div>
         </div>
         {m.isYou && <span className="font-mono text-[9px] text-ink-4 mt-0.5">{m.time}</span>}
@@ -637,6 +655,26 @@ function PollBubble({ m, userId, onVote, onOpenProfile }: { m: ChatMessage; user
   )
 }
 
+// ─── Reply Quote ─────────────────────────────────────────────────────────────
+
+function ReplyQuote({ r, isYou }: { r: NonNullable<ChatMessage['replyTo']>; isYou: boolean }) {
+  const preview =
+    r.type === 'gif'   ? '🖼 GIF'    :
+    r.type === 'image' ? '📷 Foto'   :
+    r.type === 'audio' ? '🎤 Áudio'  :
+    r.text
+
+  return (
+    <div className={cn(
+      'flex flex-col gap-0.5 mb-1.5 px-2.5 py-1.5 border-l-2 rounded-sm text-[11px] max-w-full overflow-hidden',
+      isYou ? 'bg-ink/10 border-ink/50' : 'bg-ink/6 border-ink/30',
+    )}>
+      <span className="font-mono text-[9px] font-bold text-ink-2 truncate">↩ {r.who}</span>
+      <span className="font-sans text-[11px] text-ink-3 truncate">{preview}</span>
+    </div>
+  )
+}
+
 function DateSeparator({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3 py-2">
@@ -661,13 +699,15 @@ function dayLabel(iso: string): string {
 const MAX_CHARS = 1000
 
 function ChatInput({
-  onSend, onGifToggle, gifActive, onImageSend, onAudioSend,
+  onSend, onGifToggle, gifActive, onImageSend, onAudioSend, replyingTo, onCancelReply,
 }: {
   onSend: (text: string) => void
   onGifToggle: () => void
   gifActive: boolean
   onImageSend: (file: File) => Promise<void>
   onAudioSend: (blob: Blob, duration: number) => Promise<void>
+  replyingTo?: ChatMessage | null
+  onCancelReply?: () => void
 }) {
   const [text, setText] = useState(() => {
     try { return localStorage.getItem(DRAFT_KEY) ?? '' } catch { return '' }
@@ -738,6 +778,21 @@ function ChatInput({
 
   return (
     <div className="border-t border-hairline bg-paper flex-shrink-0">
+      {replyingTo && (
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-hairline bg-paper-deep">
+          <div className="flex-1 min-w-0">
+            <span className="font-mono text-[9px] text-ink-4 tracking-eyebrow">RESPONDENDO A </span>
+            <span className="font-mono text-[9px] font-bold text-ink">{replyingTo.who}</span>
+            <p className="font-sans text-[11px] text-ink-3 truncate mt-0.5">
+              {replyingTo.type === 'gif' ? '🖼 GIF' : replyingTo.type === 'image' ? '📷 Foto' : replyingTo.type === 'audio' ? '🎤 Áudio' : replyingTo.text}
+            </p>
+          </div>
+          <button
+            onClick={onCancelReply}
+            className="font-mono text-[11px] text-ink-4 hover:text-red transition-colors flex-shrink-0 px-1"
+          >✕</button>
+        </div>
+      )}
       <input
         ref={fileInputRef}
         type="file"
@@ -837,6 +892,7 @@ export function ResenhaScreen() {
   const [mediaErr,       setMediaErr]       = useState<string | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [profileMsg,     setProfileMsg]     = useState<ChatMessage | null>(null)
+  const [replyingTo,     setReplyingTo]     = useState<ChatMessage | null>(null)
 
   const scrollRef        = useRef<HTMLDivElement>(null)
   const bottomRef        = useRef<HTMLDivElement>(null)
@@ -884,7 +940,13 @@ export function ResenhaScreen() {
     [me],
   )
 
-  const sendText  = useCallback((text: string) => addMessage(buildMsg({ text, type: 'text' })), [addMessage, buildMsg])
+  const sendText = useCallback((text: string) => {
+    const reply = replyingTo
+      ? { id: replyingTo.id, who: replyingTo.who, text: replyingTo.text, type: replyingTo.type ?? 'text' }
+      : undefined
+    addMessage(buildMsg({ text, type: 'text', replyTo: reply }))
+    setReplyingTo(null)
+  }, [addMessage, buildMsg, replyingTo])
   const sendGif   = useCallback((gifUrl: string) => { addMessage(buildMsg({ type: 'gif', gifUrl })); setGifOpen(false) }, [addMessage, buildMsg])
   const sendPoll  = useCallback((poll: ChatPoll) => { setPollOpen(false); addMessage(buildMsg({ text: poll.question, type: 'poll', poll, isYou: false })) }, [addMessage, buildMsg])
 
@@ -1068,13 +1130,19 @@ export function ResenhaScreen() {
                       : <TextBubble m={m} grouped={grouped} onOpenProfile={setProfileMsg} />
               }
 
-              {(isAdmin || m.isYou) && hoveredId === m.id && (
+              {hoveredId === m.id && m.type !== 'poll' && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className={cn('absolute -top-2 flex gap-1 z-10', m.isYou ? 'left-0' : 'right-0')}
                 >
-                  {isAdmin && m.type !== 'poll' && (
+                  <button
+                    onClick={() => setReplyingTo(m)}
+                    className="font-mono text-[9px] px-2 py-1 border bg-paper border-hairline text-ink-3 hover:border-ink hover:text-ink"
+                  >
+                    ↩ RESPONDER
+                  </button>
+                  {isAdmin && (
                     <button
                       onClick={() => togglePin(m.id)}
                       className={cn(
@@ -1087,12 +1155,14 @@ export function ResenhaScreen() {
                       {pinnedId === m.id ? 'DESAFIXAR' : 'FIXAR'}
                     </button>
                   )}
-                  <button
-                    onClick={() => setDeleteConfirmId(m.id)}
-                    className="font-mono text-[9px] px-2 py-1 border bg-paper border-hairline text-red/60 hover:border-red hover:text-red"
-                  >
-                    APAGAR
-                  </button>
+                  {(isAdmin || m.isYou) && (
+                    <button
+                      onClick={() => setDeleteConfirmId(m.id)}
+                      className="font-mono text-[9px] px-2 py-1 border bg-paper border-hairline text-red/60 hover:border-red hover:text-red"
+                    >
+                      APAGAR
+                    </button>
+                  )}
                 </motion.div>
               )}
             </div>
@@ -1149,6 +1219,8 @@ export function ResenhaScreen() {
         gifActive={gifOpen}
         onImageSend={sendImage}
         onAudioSend={sendAudio}
+        replyingTo={replyingTo}
+        onCancelReply={() => setReplyingTo(null)}
       />
 
       {/* ── Poll Modal ─────────────────────────────────────────────────── */}

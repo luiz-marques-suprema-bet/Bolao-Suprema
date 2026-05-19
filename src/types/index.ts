@@ -197,6 +197,7 @@ export interface ChatMessage {
   isPinned?: boolean
   poll?: ChatPoll
   reaction?: string
+  replyTo?: { id: string; who: string; text: string; type: string }
   isYou?: boolean
   createdAt: string
 }

@@ -20,7 +20,8 @@ interface MessageRow {
   id: string; user_id: string; channel_id: string | null
   text: string | null; type: string | null; gif_url: string | null
   image_url: string | null; audio_url: string | null; audio_duration: number | null
-  poll_data: Record<string, unknown> | null; reaction: string | null; created_at: string
+  poll_data: Record<string, unknown> | null; reaction: string | null
+  reply_to: unknown | null; created_at: string
   users?: UserRow | null
 }
 
@@ -78,7 +79,8 @@ function mapRow(row: MessageRow, myUserId?: string): ChatMessage {
     audioUrl:      row.audio_url  ?? undefined,
     audioDuration: row.audio_duration ?? undefined,
     poll:          row.poll_data as ChatMessage['poll'],
-    reaction:      row.reaction ?? undefined,
+    reaction:      row.reaction  ?? undefined,
+    replyTo:       row.reply_to  as ChatMessage['replyTo'],
     isPinned:  false,
     isYou:     row.user_id === myUserId,
     createdAt: row.created_at,
@@ -321,6 +323,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     if (msg.audioDuration) row.audio_duration = msg.audioDuration
     if (msg.reaction)      row.reaction       = msg.reaction
     if (msg.poll)          row.poll_data      = msg.poll
+    if (msg.replyTo)       row.reply_to       = msg.replyTo
 
     supabase.from('chat_messages').insert(row).then(({ error }) => {
       if (error) {
