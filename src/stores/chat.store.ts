@@ -325,15 +325,22 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     if (msg.poll)          row.poll_data      = msg.poll
     if (msg.replyTo)       row.reply_to       = msg.replyTo
 
-    supabase.from('chat_messages').insert(row).then(({ error }) => {
-      if (error) {
-        console.error('[Chat] Falha ao salvar mensagem:', error.message, error.code)
-        set(s => ({
-          messages: s.messages.filter(m => m.id !== msg.id),
-          lastError: `Erro ao enviar: ${error.message}`,
-        }))
-      }
-    })
+    const doInsert = (r: Record<string, unknown>) =>
+      supabase.from('chat_messages').insert(r).then(({ error }) => {
+        if (error) {
+          // Migration not applied yet — retry without reply_to so the message still sends
+          if (r.reply_to !== undefined && error.message.includes('reply_to')) {
+            const { reply_to: _rt, ...withoutReply } = r
+            return doInsert(withoutReply)
+          }
+          console.error('[Chat] Falha ao salvar mensagem:', error.message, error.code)
+          set(s => ({
+            messages: s.messages.filter(m => m.id !== msg.id),
+            lastError: `Erro ao enviar: ${error.message}`,
+          }))
+        }
+      })
+    doInsert(row)
   },
 
   // ── setPinned (persisted) ─────────────────────────────────────────────────

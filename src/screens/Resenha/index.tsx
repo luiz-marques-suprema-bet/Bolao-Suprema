@@ -876,6 +876,32 @@ function ChatInput({
   )
 }
 
+// ─── Message context menu item ────────────────────────────────────────────────
+
+function MsgMenuItem({
+  icon, label, danger, onClick,
+}: {
+  icon: string
+  label: string
+  danger?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors',
+        danger
+          ? 'text-red/80 hover:bg-red/10 hover:text-red'
+          : 'text-paper/90 hover:bg-white/8',
+      )}
+    >
+      <span className="text-[15px] w-5 flex-shrink-0 text-center leading-none">{icon}</span>
+      <span className="font-sans text-[13px]">{label}</span>
+    </button>
+  )
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function ResenhaScreen() {
@@ -1132,37 +1158,42 @@ export function ResenhaScreen() {
 
               {hoveredId === m.id && m.type !== 'poll' && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className={cn('absolute -top-2 flex gap-1 z-10', m.isYou ? 'left-0' : 'right-0')}
+                  initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ type: 'spring', damping: 22, stiffness: 400 }}
+                  className={cn(
+                    'absolute -top-1 z-20 translate-y-[-100%]',
+                    m.isYou ? 'right-0' : 'left-0',
+                  )}
                 >
-                  <button
-                    onClick={() => setReplyingTo(m)}
-                    className="font-mono text-[9px] px-2 py-1 border bg-paper border-hairline text-ink-3 hover:border-ink hover:text-ink"
-                  >
-                    ↩ RESPONDER
-                  </button>
-                  {isAdmin && (
-                    <button
-                      onClick={() => togglePin(m.id)}
-                      className={cn(
-                        'font-mono text-[9px] px-2 py-1 border',
-                        pinnedId === m.id
-                          ? 'bg-yellow border-ink text-ink'
-                          : 'bg-paper border-hairline text-ink-3 hover:border-ink hover:text-ink',
-                      )}
-                    >
-                      {pinnedId === m.id ? 'DESAFIXAR' : 'FIXAR'}
-                    </button>
-                  )}
-                  {(isAdmin || m.isYou) && (
-                    <button
-                      onClick={() => setDeleteConfirmId(m.id)}
-                      className="font-mono text-[9px] px-2 py-1 border bg-paper border-hairline text-red/60 hover:border-red hover:text-red"
-                    >
-                      APAGAR
-                    </button>
-                  )}
+                  <div className="bg-[#1a1a1a] border border-white/10 shadow-2xl overflow-hidden min-w-[168px] rounded-sm">
+                    {/* Responder — todos os usuários */}
+                    <MsgMenuItem
+                      icon="↩"
+                      label="Responder"
+                      onClick={() => setReplyingTo(m)}
+                    />
+                    {/* Fixar/Desafixar — só admin */}
+                    {isAdmin && (
+                      <MsgMenuItem
+                        icon={pinnedId === m.id ? '📌' : '📍'}
+                        label={pinnedId === m.id ? 'Desafixar' : 'Fixar'}
+                        onClick={() => togglePin(m.id)}
+                      />
+                    )}
+                    {/* Apagar — admin ou dono */}
+                    {(isAdmin || m.isYou) && (
+                      <>
+                        <div className="h-px bg-white/8 mx-3" />
+                        <MsgMenuItem
+                          icon="🗑"
+                          label="Apagar"
+                          danger
+                          onClick={() => setDeleteConfirmId(m.id)}
+                        />
+                      </>
+                    )}
+                  </div>
                 </motion.div>
               )}
             </div>
