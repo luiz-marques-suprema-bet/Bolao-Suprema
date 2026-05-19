@@ -434,7 +434,7 @@ function ChatProfilePanel({ m, onClose }: { m: ChatMessage; onClose: () => void 
   )
 }
 
-function TextBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: boolean; onOpenProfile: (m: ChatMessage) => void }) {
+function TextBubble({ m, grouped, onOpenProfile, menu }: { m: ChatMessage; grouped: boolean; onOpenProfile: (m: ChatMessage) => void; menu: BubbleMenuProps }) {
   return (
     <div className={cn('flex gap-2.5 items-start', m.isYou ? 'flex-row-reverse' : '')}>
       {!m.isYou && (
@@ -445,13 +445,14 @@ function TextBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: bo
       <div className={cn('max-w-[78%] md:max-w-[65%] flex flex-col gap-0.5', m.isYou ? 'items-end' : 'items-start')}>
         {!m.isYou && !grouped && <MsgHeader m={m} onOpen={() => onOpenProfile(m)} />}
         <div className={cn(
-          'px-3.5 py-2.5 text-[13px] leading-[1.45] break-words whitespace-pre-wrap shadow-sm',
+          'relative px-3.5 py-2.5 text-[13px] leading-[1.45] break-words whitespace-pre-wrap shadow-sm',
           m.isYou
             ? 'bg-yellow text-ink rounded-[16px_4px_16px_16px]'
             : 'bg-paper-deep text-ink rounded-[4px_16px_16px_16px]',
         )}>
           {m.replyTo && <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />}
           {m.text}
+          <InBubbleMenu menu={menu} />
         </div>
         {m.isYou && <span className="font-mono text-[9px] text-ink-4 mt-0.5">{m.time}</span>}
       </div>
@@ -460,7 +461,7 @@ function TextBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: bo
   )
 }
 
-function GifBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: boolean; onOpenProfile: (m: ChatMessage) => void }) {
+function GifBubble({ m, grouped, onOpenProfile, menu }: { m: ChatMessage; grouped: boolean; onOpenProfile: (m: ChatMessage) => void; menu: BubbleMenuProps }) {
   return (
     <div className={cn('flex gap-2.5 items-start', m.isYou ? 'flex-row-reverse' : '')}>
       {!m.isYou && (
@@ -470,13 +471,16 @@ function GifBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: boo
       )}
       <div className={cn('max-w-[60%] flex flex-col gap-0.5', m.isYou ? 'items-end' : 'items-start')}>
         {!m.isYou && !grouped && <MsgHeader m={m} onOpen={() => onOpenProfile(m)} />}
-        {m.replyTo && (
-          <div className={cn('w-full px-2 pt-2 pb-0', m.isYou ? 'bg-yellow rounded-[16px_4px_0_0]' : 'bg-paper-deep rounded-[4px_16px_0_0]')}>
-            <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />
+        <div className="relative">
+          {m.replyTo && (
+            <div className={cn('w-full px-2 pt-2 pb-0', m.isYou ? 'bg-yellow rounded-[16px_4px_0_0]' : 'bg-paper-deep rounded-[4px_16px_0_0]')}>
+              <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />
+            </div>
+          )}
+          <div className={cn('overflow-hidden shadow-sm', m.isYou ? 'rounded-[16px_4px_16px_16px]' : 'rounded-[4px_16px_16px_16px]')}>
+            {isSafeHttpUrl(m.gifUrl) && <img src={m.gifUrl} alt="GIF" className="max-w-full max-h-52 object-contain block" loading="lazy" />}
           </div>
-        )}
-        <div className={cn('overflow-hidden shadow-sm', m.isYou ? 'rounded-[16px_4px_16px_16px]' : 'rounded-[4px_16px_16px_16px]')}>
-          {isSafeHttpUrl(m.gifUrl) && <img src={m.gifUrl} alt="GIF" className="max-w-full max-h-52 object-contain block" loading="lazy" />}
+          <InBubbleMenu menu={menu} />
         </div>
         {m.isYou && <span className="font-mono text-[9px] text-ink-4 mt-0.5">{m.time}</span>}
       </div>
@@ -485,7 +489,7 @@ function GifBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: boo
   )
 }
 
-function ImageBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: boolean; onOpenProfile: (m: ChatMessage) => void }) {
+function ImageBubble({ m, grouped, onOpenProfile, menu }: { m: ChatMessage; grouped: boolean; onOpenProfile: (m: ChatMessage) => void; menu: BubbleMenuProps }) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -497,17 +501,20 @@ function ImageBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: b
         )}
         <div className={cn('max-w-[65%] flex flex-col gap-0.5', m.isYou ? 'items-end' : 'items-start')}>
           {!m.isYou && !grouped && <MsgHeader m={m} onOpen={() => onOpenProfile(m)} />}
-          {m.replyTo && (
-            <div className={cn('w-full px-2 pt-2 pb-0', m.isYou ? 'bg-yellow rounded-[16px_4px_0_0]' : 'bg-paper-deep rounded-[4px_16px_0_0]')}>
-              <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />
-            </div>
-          )}
-          <button
-            onClick={() => setOpen(true)}
-            className={cn('overflow-hidden shadow-sm hover:opacity-90 transition-opacity', m.isYou ? 'rounded-[16px_4px_16px_16px]' : 'rounded-[4px_16px_16px_16px]')}
-          >
-            {isSafeHttpUrl(m.imageUrl) && <img src={m.imageUrl} alt="Foto" className="max-w-full max-h-64 object-cover block" loading="lazy" />}
-          </button>
+          <div className="relative">
+            {m.replyTo && (
+              <div className={cn('w-full px-2 pt-2 pb-0', m.isYou ? 'bg-yellow rounded-[16px_4px_0_0]' : 'bg-paper-deep rounded-[4px_16px_0_0]')}>
+                <ReplyQuote r={m.replyTo} isYou={m.isYou ?? false} />
+              </div>
+            )}
+            <button
+              onClick={() => setOpen(true)}
+              className={cn('overflow-hidden shadow-sm hover:opacity-90 transition-opacity block', m.isYou ? 'rounded-[16px_4px_16px_16px]' : 'rounded-[4px_16px_16px_16px]')}
+            >
+              {isSafeHttpUrl(m.imageUrl) && <img src={m.imageUrl} alt="Foto" className="max-w-full max-h-64 object-cover block" loading="lazy" />}
+            </button>
+            <InBubbleMenu menu={menu} />
+          </div>
           {m.isYou && <span className="font-mono text-[9px] text-ink-4 mt-0.5">{m.time}</span>}
         </div>
         {m.isYou && <div className="w-[32px] flex-shrink-0" />}
@@ -531,7 +538,7 @@ function fmtDur(s: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
-function AudioBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: boolean; onOpenProfile: (m: ChatMessage) => void }) {
+function AudioBubble({ m, grouped, onOpenProfile, menu }: { m: ChatMessage; grouped: boolean; onOpenProfile: (m: ChatMessage) => void; menu: BubbleMenuProps }) {
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(m.audioDuration ?? 0)
@@ -553,7 +560,7 @@ function AudioBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: b
       <div className={cn('flex flex-col gap-0.5', m.isYou ? 'items-end' : 'items-start')}>
         {!m.isYou && !grouped && <MsgHeader m={m} onOpen={() => onOpenProfile(m)} />}
         <div className={cn(
-          'flex flex-col shadow-sm min-w-[180px]',
+          'relative flex flex-col shadow-sm min-w-[180px]',
           m.isYou ? 'bg-yellow text-ink rounded-[16px_4px_16px_16px]' : 'bg-paper-deep text-ink rounded-[4px_16px_16px_16px]',
         )}>
           {m.replyTo && (
@@ -595,6 +602,7 @@ function AudioBubble({ m, grouped, onOpenProfile }: { m: ChatMessage; grouped: b
               </span>
             </div>
           </div>
+          <InBubbleMenu menu={menu} />
         </div>
         {m.isYou && <span className="font-mono text-[9px] text-ink-4 mt-0.5">{m.time}</span>}
       </div>
@@ -902,6 +910,62 @@ function MsgMenuItem({
   )
 }
 
+// ─── Bubble menu (trigger button + dropdown, rendered INSIDE each bubble) ─────
+
+interface BubbleMenuProps {
+  showTrigger: boolean
+  menuOpen: boolean
+  onMenuToggle: (e: React.MouseEvent) => void
+  onReply: () => void
+  isAdmin: boolean
+  isPinned: boolean
+  onPin: () => void
+  canDelete: boolean
+  onDeleteConfirm: () => void
+}
+
+function InBubbleMenu({ menu }: { menu: BubbleMenuProps }) {
+  return (
+    <>
+      {menu.showTrigger && (
+        <button
+          type="button"
+          aria-label="Opções da mensagem"
+          onClick={menu.onMenuToggle}
+          className="absolute top-1.5 right-1.5 z-10 w-5 h-5 flex items-center justify-center font-mono text-[11px] bg-black/10 hover:bg-black/20 rounded-sm transition-colors leading-none"
+        >⌄</button>
+      )}
+      <AnimatePresence>
+        {menu.menuOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -4 }}
+            transition={{ type: 'spring', damping: 24, stiffness: 420 }}
+            onClick={e => e.stopPropagation()}
+            className="absolute top-7 right-0 z-20 bg-paper border-2 border-ink shadow-card min-w-[160px]"
+          >
+            <MsgMenuItem icon="↩" label="RESPONDER" onClick={menu.onReply} />
+            {menu.isAdmin && (
+              <MsgMenuItem
+                icon={menu.isPinned ? '◆' : '◇'}
+                label={menu.isPinned ? 'DESAFIXAR' : 'FIXAR'}
+                onClick={menu.onPin}
+              />
+            )}
+            {menu.canDelete && (
+              <>
+                <div className="h-px bg-hairline mx-3" />
+                <MsgMenuItem icon="×" label="APAGAR" danger onClick={menu.onDeleteConfirm} />
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function ResenhaScreen() {
@@ -1143,74 +1207,35 @@ export function ResenhaScreen() {
           const isGroupEnd = !nextItem || nextItem.kind === 'date' ||
             (nextItem.kind === 'msg' && (nextItem.msg.userId !== m.userId || nextItem.msg.type === 'poll'))
 
+          const menu: BubbleMenuProps = {
+            showTrigger: (hoveredId === m.id || menuOpenId === m.id) && m.type !== 'poll',
+            menuOpen: menuOpenId === m.id,
+            onMenuToggle: (e) => { e.stopPropagation(); setMenuOpenId(id => id === m.id ? null : m.id) },
+            onReply: () => { setReplyingTo(m); setMenuOpenId(null) },
+            isAdmin,
+            isPinned: pinnedId === m.id,
+            onPin: () => { togglePin(m.id); setMenuOpenId(null) },
+            canDelete: isAdmin || (m.isYou ?? false),
+            onDeleteConfirm: () => { setDeleteConfirmId(m.id); setMenuOpenId(null) },
+          }
+
           return (
             <div
               key={m.id}
-              className={cn(
-                'relative group',
-                grouped ? 'mt-1' : 'mt-5',
-                isGroupEnd && 'mb-2',
-              )}
+              className={cn(grouped ? 'mt-1' : 'mt-5', isGroupEnd && 'mb-2')}
               onMouseEnter={() => setHoveredId(m.id)}
               onMouseLeave={() => { if (menuOpenId !== m.id) setHoveredId(null) }}
             >
               {m.type === 'poll' && m.poll
                 ? <PollBubble m={m} userId={me?.id} onVote={optId => vote(m.id, optId)} onOpenProfile={setProfileMsg} />
                 : m.type === 'gif' && m.gifUrl
-                  ? <GifBubble m={m} grouped={grouped} onOpenProfile={setProfileMsg} />
+                  ? <GifBubble m={m} grouped={grouped} onOpenProfile={setProfileMsg} menu={menu} />
                   : m.type === 'image' && m.imageUrl
-                    ? <ImageBubble m={m} grouped={grouped} onOpenProfile={setProfileMsg} />
+                    ? <ImageBubble m={m} grouped={grouped} onOpenProfile={setProfileMsg} menu={menu} />
                     : m.type === 'audio' && m.audioUrl
-                      ? <AudioBubble m={m} grouped={grouped} onOpenProfile={setProfileMsg} />
-                      : <TextBubble m={m} grouped={grouped} onOpenProfile={setProfileMsg} />
+                      ? <AudioBubble m={m} grouped={grouped} onOpenProfile={setProfileMsg} menu={menu} />
+                      : <TextBubble m={m} grouped={grouped} onOpenProfile={setProfileMsg} menu={menu} />
               }
-
-              {/* Trigger button — aparece no hover */}
-              {(hoveredId === m.id || menuOpenId === m.id) && m.type !== 'poll' && (
-                <button
-                  onClick={e => { e.stopPropagation(); setMenuOpenId(id => id === m.id ? null : m.id) }}
-                  className={cn(
-                    'absolute top-0 z-10 w-6 h-6 flex items-center justify-center font-mono text-[16px] leading-none text-ink-3 bg-paper border border-hairline hover:bg-hairline hover:text-ink transition-colors',
-                    m.isYou ? 'left-0' : 'right-0',
-                  )}
-                >
-                  ⌄
-                </button>
-              )}
-
-              {/* Dropdown menu — abre no click */}
-              <AnimatePresence>
-                {menuOpenId === m.id && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                    transition={{ type: 'spring', damping: 24, stiffness: 420 }}
-                    onClick={e => e.stopPropagation()}
-                    className={cn(
-                      'absolute top-0 -translate-y-full z-20 bg-paper border-2 border-ink shadow-card min-w-[172px]',
-                      m.isYou ? 'left-0' : 'right-0',
-                    )}
-                  >
-                    <MsgMenuItem icon="↩" label="RESPONDER"
-                      onClick={() => { setReplyingTo(m); setMenuOpenId(null) }} />
-                    {isAdmin && (
-                      <MsgMenuItem
-                        icon={pinnedId === m.id ? '◆' : '◇'}
-                        label={pinnedId === m.id ? 'DESAFIXAR' : 'FIXAR'}
-                        onClick={() => { togglePin(m.id); setMenuOpenId(null) }}
-                      />
-                    )}
-                    {(isAdmin || m.isYou) && (
-                      <>
-                        <div className="h-px bg-hairline mx-3" />
-                        <MsgMenuItem icon="×" label="APAGAR" danger
-                          onClick={() => { setDeleteConfirmId(m.id); setMenuOpenId(null) }} />
-                      </>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           )
         })}
