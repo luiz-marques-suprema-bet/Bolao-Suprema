@@ -145,7 +145,7 @@ function AppLayout() {
 function AnimatedOutlet() {
   const { pathname } = useLocation()
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={pathname}
         initial={{ opacity: 0 }}
