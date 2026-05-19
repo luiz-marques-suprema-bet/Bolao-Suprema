@@ -890,14 +890,14 @@ function MsgMenuItem({
     <button
       onClick={onClick}
       className={cn(
-        'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors',
+        'w-full flex items-center gap-3 px-4 py-3 font-mono text-[11px] tracking-wide text-left transition-colors',
         danger
-          ? 'text-red/80 hover:bg-red/10 hover:text-red'
-          : 'text-paper/90 hover:bg-white/8',
+          ? 'text-red hover:bg-red/8'
+          : 'text-ink hover:bg-hairline',
       )}
     >
-      <span className="text-[15px] w-5 flex-shrink-0 text-center leading-none">{icon}</span>
-      <span className="font-sans text-[13px]">{label}</span>
+      <span className="w-4 flex-shrink-0 text-center leading-none text-ink-3">{icon}</span>
+      {label}
     </button>
   )
 }
@@ -914,11 +914,20 @@ export function ResenhaScreen() {
   const [gifOpen,        setGifOpen]        = useState(false)
   const [pollOpen,       setPollOpen]       = useState(false)
   const [hoveredId,      setHoveredId]      = useState<string | null>(null)
+  const [menuOpenId,     setMenuOpenId]     = useState<string | null>(null)
   const [atBottom,       setAtBottom]       = useState(true)
   const [mediaErr,       setMediaErr]       = useState<string | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [profileMsg,     setProfileMsg]     = useState<ChatMessage | null>(null)
   const [replyingTo,     setReplyingTo]     = useState<ChatMessage | null>(null)
+
+  // Close context menu on outside click
+  useEffect(() => {
+    if (!menuOpenId) return
+    const close = () => setMenuOpenId(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [menuOpenId])
 
   const scrollRef        = useRef<HTMLDivElement>(null)
   const bottomRef        = useRef<HTMLDivElement>(null)
@@ -1143,7 +1152,7 @@ export function ResenhaScreen() {
                 isGroupEnd && 'mb-2',
               )}
               onMouseEnter={() => setHoveredId(m.id)}
-              onMouseLeave={() => setHoveredId(null)}
+              onMouseLeave={() => { if (menuOpenId !== m.id) setHoveredId(null) }}
             >
               {m.type === 'poll' && m.poll
                 ? <PollBubble m={m} userId={me?.id} onVote={optId => vote(m.id, optId)} onOpenProfile={setProfileMsg} />
@@ -1156,46 +1165,52 @@ export function ResenhaScreen() {
                       : <TextBubble m={m} grouped={grouped} onOpenProfile={setProfileMsg} />
               }
 
-              {hoveredId === m.id && m.type !== 'poll' && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ type: 'spring', damping: 22, stiffness: 400 }}
+              {/* Trigger button — aparece no hover */}
+              {(hoveredId === m.id || menuOpenId === m.id) && m.type !== 'poll' && (
+                <button
+                  onClick={e => { e.stopPropagation(); setMenuOpenId(id => id === m.id ? null : m.id) }}
                   className={cn(
-                    'absolute -top-1 z-20 translate-y-[-100%]',
-                    m.isYou ? 'right-0' : 'left-0',
+                    'absolute top-0 z-10 w-6 h-6 flex items-center justify-center font-mono text-[16px] leading-none text-ink-3 bg-paper border border-hairline hover:bg-hairline hover:text-ink transition-colors',
+                    m.isYou ? 'left-0' : 'right-0',
                   )}
                 >
-                  <div className="bg-[#1a1a1a] border border-white/10 shadow-2xl overflow-hidden min-w-[168px] rounded-sm">
-                    {/* Responder — todos os usuários */}
-                    <MsgMenuItem
-                      icon="↩"
-                      label="Responder"
-                      onClick={() => setReplyingTo(m)}
-                    />
-                    {/* Fixar/Desafixar — só admin */}
+                  ⌄
+                </button>
+              )}
+
+              {/* Dropdown menu — abre no click */}
+              <AnimatePresence>
+                {menuOpenId === m.id && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    transition={{ type: 'spring', damping: 24, stiffness: 420 }}
+                    onClick={e => e.stopPropagation()}
+                    className={cn(
+                      'absolute top-0 -translate-y-full z-20 bg-paper border-2 border-ink shadow-card min-w-[172px]',
+                      m.isYou ? 'left-0' : 'right-0',
+                    )}
+                  >
+                    <MsgMenuItem icon="↩" label="RESPONDER"
+                      onClick={() => { setReplyingTo(m); setMenuOpenId(null) }} />
                     {isAdmin && (
                       <MsgMenuItem
-                        icon={pinnedId === m.id ? '📌' : '📍'}
-                        label={pinnedId === m.id ? 'Desafixar' : 'Fixar'}
-                        onClick={() => togglePin(m.id)}
+                        icon={pinnedId === m.id ? '◆' : '◇'}
+                        label={pinnedId === m.id ? 'DESAFIXAR' : 'FIXAR'}
+                        onClick={() => { togglePin(m.id); setMenuOpenId(null) }}
                       />
                     )}
-                    {/* Apagar — admin ou dono */}
                     {(isAdmin || m.isYou) && (
                       <>
-                        <div className="h-px bg-white/8 mx-3" />
-                        <MsgMenuItem
-                          icon="🗑"
-                          label="Apagar"
-                          danger
-                          onClick={() => setDeleteConfirmId(m.id)}
-                        />
+                        <div className="h-px bg-hairline mx-3" />
+                        <MsgMenuItem icon="×" label="APAGAR" danger
+                          onClick={() => { setDeleteConfirmId(m.id); setMenuOpenId(null) }} />
                       </>
                     )}
-                  </div>
-                </motion.div>
-              )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )
         })}

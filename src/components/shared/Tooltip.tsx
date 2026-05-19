@@ -9,7 +9,8 @@ interface TooltipProps {
   maxWidth?: number
 }
 
-const GAP = 12
+// Space reserved above/below the element (includes the 6px arrow)
+const GAP = 16
 
 export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: TooltipProps) {
   const [open, setOpen] = useState(false)
@@ -20,27 +21,27 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
     if (!wrapperRef.current) return
     const r = wrapperRef.current.getBoundingClientRect()
     const mx = e.clientX
-    const my = e.clientY
 
+    // Flip only when there is genuinely not enough room above (rough tooltip height: 64px + gap)
+    const spaceAbove = r.top
+    const spaceBelow = window.innerHeight - r.bottom
+    const needsSpace = 64 + GAP
     const actualSide: 'top' | 'bottom' =
-      side === 'top'    && r.top < 80                         ? 'bottom' :
-      side === 'bottom' && window.innerHeight - r.bottom < 80 ? 'top'    :
+      side === 'top'    && spaceAbove < needsSpace ? 'bottom' :
+      side === 'bottom' && spaceBelow < needsSpace ? 'top'    :
       side
+
+    // Y is anchored to the element edge — tooltip never touches the trigger
+    const y = actualSide === 'top' ? r.top - GAP : r.bottom + GAP
 
     const tooltipLeft = Math.max(8, Math.min(window.innerWidth - maxWidth - 8, mx - maxWidth / 2))
     const arrowX = Math.min(maxWidth - 16, Math.max(10, mx - tooltipLeft - 6))
 
-    // Y is above the cursor AND above the element — whichever gives more clearance.
-    // With transform:translateY(-100%) the value we pass as `top` becomes the
-    // tooltip's BOTTOM edge, so smaller = higher on screen = more clearance.
-    const yAbove = Math.min(my - GAP, r.top - GAP)
-    const yBelow = Math.max(my + GAP, r.bottom + GAP)
-
-    setCoords({ x: tooltipLeft, y: actualSide === 'top' ? yAbove : yBelow, arrowX, actualSide })
+    setCoords({ x: tooltipLeft, y, arrowX, actualSide })
     setOpen(true)
   }, [side, maxWidth])
 
-  // Keep Y frozen; only slide arrow X as cursor moves across the element
+  // Arrow X tracks cursor; Y stays frozen so tooltip never drifts onto the element
   const handleMove = useCallback((e: React.MouseEvent) => {
     if (!open) return
     const mx = e.clientX
@@ -78,6 +79,8 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
                 position: 'fixed',
                 left: coords.x,
                 top: coords.y,
+                // 'top' side: the value is the element's top edge minus GAP,
+                // translateY(-100%) shifts the tooltip UP so its BOTTOM sits at that point.
                 transform: coords.actualSide === 'top' ? 'translateY(-100%)' : 'translateY(0)',
                 width: maxWidth,
                 zIndex: 9999,
@@ -87,9 +90,7 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
               <div className="bg-ink text-paper px-3 py-2.5 border border-white/[0.08] shadow-2xl relative">
                 {typeof content === 'string' ? (
                   <p className="font-mono text-[10px] leading-relaxed text-paper/90">{content}</p>
-                ) : (
-                  content
-                )}
+                ) : content}
 
                 {coords.actualSide === 'top' && (
                   <div style={{
