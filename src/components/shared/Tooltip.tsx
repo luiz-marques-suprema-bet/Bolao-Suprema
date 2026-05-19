@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 
@@ -9,16 +9,21 @@ interface TooltipProps {
   maxWidth?: number
 }
 
+const GAP = 10 // px entre o elemento e o tooltip
+
 export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: TooltipProps) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState({ x: 0, y: 0, arrowX: 0, actualSide: side as 'top' | 'bottom' })
+  const wrapperRef = useRef<HTMLSpanElement>(null)
 
-  const handleEnter = useCallback((e: React.MouseEvent) => {
-    const mx = e.clientX
-    const my = e.clientY
+  const compute = useCallback((mx: number) => {
+    if (!wrapperRef.current) return
+    const r = wrapperRef.current.getBoundingClientRect()
+
+    // Y is anchored to the element — tooltip never overlaps the trigger
     const actualSide: 'top' | 'bottom' =
-      side === 'top'    && my < 80                        ? 'bottom' :
-      side === 'bottom' && window.innerHeight - my < 80   ? 'top'    :
+      side === 'top'    && r.top < 80                         ? 'bottom' :
+      side === 'bottom' && window.innerHeight - r.bottom < 80 ? 'top'    :
       side
 
     const tooltipLeft = Math.max(8, Math.min(window.innerWidth - maxWidth - 8, mx - maxWidth / 2))
@@ -26,12 +31,25 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
 
     setCoords({
       x: tooltipLeft,
-      y: actualSide === 'top' ? my - 10 : my + 10,
+      y: actualSide === 'top' ? r.top - GAP : r.bottom + GAP,
       arrowX,
       actualSide,
     })
-    setOpen(true)
   }, [side, maxWidth])
+
+  const handleEnter = useCallback((e: React.MouseEvent) => {
+    compute(e.clientX)
+    setOpen(true)
+  }, [compute])
+
+  // Arrow tracks cursor as mouse moves across the element
+  const handleMove = useCallback((e: React.MouseEvent) => {
+    if (!open) return
+    const mx = e.clientX
+    const tooltipLeft = Math.max(8, Math.min(window.innerWidth - maxWidth - 8, mx - maxWidth / 2))
+    const arrowX = Math.min(maxWidth - 16, Math.max(10, mx - tooltipLeft - 6))
+    setCoords(c => ({ ...c, arrowX }))
+  }, [open, maxWidth])
 
   const handleLeave = useCallback(() => setOpen(false), [])
 
@@ -41,7 +59,13 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
 
   return (
     <>
-      <span onMouseEnter={handleEnter} onMouseLeave={handleLeave} className="inline-flex">
+      <span
+        ref={wrapperRef}
+        onMouseEnter={handleEnter}
+        onMouseMove={handleMove}
+        onMouseLeave={handleLeave}
+        className="inline-flex"
+      >
         {children}
       </span>
       {createPortal(
