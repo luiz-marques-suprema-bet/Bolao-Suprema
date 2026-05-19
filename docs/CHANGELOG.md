@@ -4,20 +4,19 @@
 
 ### Segurança
 
-- Adicionada migration `20260519090000_lock_user_privileged_columns.sql`:
-  trigger `trg_prevent_user_privilege_escalation` bloqueia qualquer tentativa
-  de usuário comum alterar campos privilegiados (`is_admin`, `is_owner`,
+- Migration `20260519090000`: trigger `trg_prevent_user_privilege_escalation`
+  bloqueia alteração de campos privilegiados (`is_admin`, `is_owner`,
   `is_marketing`, `user_role`, `participant_status`, `approved_at`,
   `approved_by`, `blocked_at`, `removed_at`) via update direto na tabela `users`.
-- Adicionada migration `20260519091000_enforce_prediction_market_lock.sql`:
-  substitui a trigger `ensure_prediction_market_open` por versão mais robusta
-  que bloqueia palpites após `kickoff_utc`, permite updates de pontuação pelo
-  admin e tem `revoke execute` explícito.
+- Migration `20260519091000`: trigger `ensure_prediction_market_open` substituída
+  por versão mais robusta — bloqueia palpites após `kickoff_utc`, permite
+  updates de pontuação pelo admin, possui `revoke execute` explícito.
+- Migration `20260519100000`: proteção extendida para incluir o campo `email` —
+  impede alteração direta da identidade do usuário via API.
 - Criado `src/lib/security.ts` com `isSafeHttpUrl` e `clampText`.
-- GIFs e imagens na Resenha agora são validados por `isSafeHttpUrl` antes de
-  renderizar — rejeita qualquer URL não-`https://`.
-- Removido fallback de direct update em `Admin/index.tsx` para
-  `participant_status` — ação passa obrigatoriamente pela RPC `update_participant_status`.
+- URLs de GIF e imagem na Resenha validadas por `isSafeHttpUrl` — apenas `https://` aceito.
+- Removido fallback de direct update para `participant_status` no painel admin —
+  ação passa obrigatoriamente pela RPC `update_participant_status`.
 
 ### Documentação
 

@@ -128,34 +128,34 @@ As demais variáveis (Tenor, TheSportsDB, Football News) são opcionais.
 
 ## Riscos conhecidos e mitigação
 
-| Risco | Mitigação aplicada |
-|-------|-------------------|
-| Usuário tenta virar admin via API direta | Trigger `trg_prevent_user_privilege_escalation` bloqueia no banco |
-| Palpite enviado após kickoff via API direta | Trigger `trg_predictions_market_open` bloqueia no banco |
-| Chave `anon` exposta no repositório público | Chave anon é projetada para uso público; RLS é a barreira real |
-| URL maliciosa em GIF/imagem de chat | `isSafeHttpUrl` valida apenas `https://` antes de renderizar |
-| Upload de arquivo malicioso | MIME allowlist + limite de tamanho no `uploadFile` em `supabase.ts` |
+| Risco | Controle implementado |
+|-------|-----------------------|
+| Autoelevação de privilégios via API direta | Trigger `trg_prevent_user_privilege_escalation` — verificação no banco |
+| Alteração de e-mail via API direta | Mesma trigger — campo `email` incluído na lista protegida |
+| Palpite enviado após kickoff via API direta | Trigger `trg_predictions_market_open` — verificação no banco |
+| Chave `anon` exposta no repositório público | Chave anon é publishable por definição; RLS é a barreira de autorização |
+| URL maliciosa em GIF/imagem de chat | `isSafeHttpUrl` valida protocolo `https://` antes de renderizar |
+| Upload de arquivo com tipo indevido | MIME allowlist e limite de tamanho em `src/lib/supabase.ts` |
+| Imagens de usuário no histórico Git | Diretório `uploads/` adicionado ao `.gitignore`; histórico anterior pode conter arquivos — ver pendências abaixo |
 
-## Pendências antes de produção
+## Pendências operacionais
 
-- Habilitar Supabase Auth Leaked Password Protection (dashboard Supabase).
-- Configurar SMTP personalizado com domínio `suprema.group` no Supabase (atualmente limitado a 3 e-mails/hora no plano Free).
-- Validar com `npm audit` e resolver vulnerabilidades críticas se houver.
-- Executar as 2 novas migrations desta release no Supabase SQL Editor (ver abaixo).
+As seguintes ações não são de responsabilidade do código-fonte e devem ser executadas pelo time de T.I. no ambiente de produção:
 
-### SQL das novas migrations (aplicar no Supabase SQL Editor)
+1. **Aplicar migrations no Supabase SQL Editor** — em ordem cronológica, conforme listado em `docs/SUPABASE_SETUP.md`.
+2. **Rodar Supabase Security Advisor** após aplicar as migrations e validar que não há alertas críticos.
+3. **Ativar Leaked Password Protection** no Supabase Dashboard > Authentication > Security, se disponível no plano contratado.
+4. **Configurar SMTP personalizado** com domínio `suprema.group` para evitar o limite de 3 e-mails/hora do plano Free (instruções em `docs/SUPABASE_SETUP.md`).
+5. **Validar Site URL e Redirect URLs** no Supabase Auth para o domínio de produção.
+6. **Decidir sobre limpeza do histórico Git** — o diretório `uploads/` contém imagens de desenvolvimento presentes no histórico. Caso o T.I. avalie que representam risco, será necessária limpeza com `git filter-repo` ou BFG Repo-Cleaner. Essa operação é destrutiva e requer aprovação prévia.
 
-**Migration 1 — Proteção contra autoelevação de privilégios:**
+### Migrations desta release (aplicar no Supabase SQL Editor)
 
-```
-supabase/migrations/20260519090000_lock_user_privileged_columns.sql
-```
-
-**Migration 2 — Bloqueio de palpites fora do mercado:**
-
-```
-supabase/migrations/20260519091000_enforce_prediction_market_lock.sql
-```
+| Arquivo | Conteúdo |
+|---------|----------|
+| `supabase/migrations/20260519090000_lock_user_privileged_columns.sql` | Trigger de proteção contra autoelevação de privilégios |
+| `supabase/migrations/20260519091000_enforce_prediction_market_lock.sql` | Trigger de bloqueio de palpites fora do mercado |
+| `supabase/migrations/20260519100000_lock_user_email_updates.sql` | Extensão da trigger para incluir proteção do campo `email` |
 
 ## Contato / responsável
 

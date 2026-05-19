@@ -8,11 +8,11 @@ Após autenticar, o usuário recebe um JWT assinado pelo Supabase. Esse token é
 
 ## Por que o repositório pode ser público
 
-O repositório é público para viabilizar o deploy via GitHub Pages. Isso é seguro porque:
+O repositório é público para viabilizar o deploy via GitHub Pages. Os controles abaixo mitigam o risco associado a essa exposição:
 
-1. Nenhum segredo real (chave de serviço, senha, token de API sensível) está presente no código-fonte.
-2. A chave presente no front-end (`VITE_SUPABASE_ANON_KEY`) é a chave anon/publishable, projetada para uso público e controlada por RLS.
-3. Toda autorização real está no banco de dados (Supabase), não no código JavaScript.
+1. Nenhuma credencial real (chave de serviço, senha, token de API sensível) está presente no código-fonte.
+2. A chave presente no front-end (`VITE_SUPABASE_ANON_KEY`) é a chave anon/publishable, projetada para uso público e protegida por RLS.
+3. A autorização efetiva está no banco de dados, não no código JavaScript — o front-end aplica validações de UX, não de segurança.
 
 ## Chaves do Supabase
 
@@ -44,15 +44,16 @@ Ações sensíveis são encapsuladas em funções PostgreSQL (RPCs) com:
 
 RPCs existentes: `set_match_market_status`, `settle_match_result`, `refresh_ranking_snapshots`, `moderate_chat_message`, `update_participant_status`.
 
-## Proteção contra autoelevação de privilégios
+## Proteção contra autoelevação de privilégios e alteração de identidade
 
-A migration `20260519090000_lock_user_privileged_columns.sql` cria um trigger `BEFORE UPDATE` na tabela `users` que impede qualquer usuário não-admin de alterar os campos:
+As migrations `20260519090000` e `20260519100000` implementam e estendem o trigger `BEFORE UPDATE` na tabela `users`. O controle impede que usuários comuns alterem os seguintes campos via API direta:
 
+- `email` — identidade vinculada ao Supabase Auth e ao domínio corporativo
 - `is_admin`, `is_owner`, `is_marketing`
 - `user_role`
 - `participant_status`, `approved_at`, `approved_by`, `blocked_at`, `removed_at`
 
-A UI nunca envia esses campos no update de perfil, mas o trigger garante a proteção mesmo que um usuário tente manipular a requisição diretamente via API.
+O front-end não envia esses campos no update de perfil. O trigger aplica a restrição no banco como segunda camada de controle, independente do comportamento da aplicação.
 
 ## Proteção contra palpites fora do prazo
 
