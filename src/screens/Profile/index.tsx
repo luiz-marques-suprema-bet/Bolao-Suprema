@@ -8,8 +8,8 @@ import { Stamp } from '@/components/shared/Stamp'
 import { useAuthStore } from '@/stores/auth.store'
 import { usePredictionStore } from '@/stores/prediction.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
-import { WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
+import { TeamSearchPicker } from '@/components/shared/TeamSearchPicker'
 import { getInitials, fmtPts, AVATAR_COLORS } from '@/lib/utils'
 import { searchPlayers } from '@/lib/thesportsdb'
 import { supabase, isMockMode } from '@/lib/supabase'
@@ -111,39 +111,6 @@ function PlayerPicker({
   )
 }
 
-// ─── Teams picker ────────────────────────────────────────────────────────────
-
-function AllTeamsPicker({ value, onChange }: { value?: string; onChange: (code: string) => void }) {
-  return (
-    <div className="border-2 border-hairline overflow-hidden">
-      <div className="max-h-56 overflow-y-auto p-3 space-y-3">
-        {WC2026_GROUPS.map(group => (
-          <div key={group.id}>
-            <p className="font-mono text-[8px] tracking-eyebrow text-ink-4 mb-1.5 sticky top-0 bg-paper py-0.5">
-              GRUPO {group.id}
-            </p>
-            <div className="grid grid-cols-4 gap-1.5">
-              {group.teams.map(code => {
-                const team = TEAMS[code]
-                if (!team) return null
-                const selected = value === code
-                return (
-                  <button key={code} onClick={() => onChange(code)}
-                    className={['flex flex-col items-center gap-1 py-2 px-1 border-2 transition-colors',
-                      selected ? 'border-ink bg-yellow' : 'border-transparent hover:border-hairline',
-                    ].join(' ')}>
-                    <Flag team={team} size={22} />
-                    <span className="font-mono text-[7px] font-bold">{code}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 // ─── Apostas gerais summary ──────────────────────────────────────────────────
 
@@ -407,7 +374,7 @@ function ProfileMobile() {
               <span className="ml-2 text-green">· {TEAMS[f.favoriteTeam].name}</span>
             )}
           </label>
-          <AllTeamsPicker value={f.favoriteTeam} onChange={f.setFavoriteTeam} />
+          <TeamSearchPicker value={f.favoriteTeam} onChange={f.setFavoriteTeam} />
         </div>
 
         <ApostasGeraisSummary
@@ -567,7 +534,7 @@ function ProfileDesktop() {
                     <span className="ml-2 text-green normal-case">· {TEAMS[f.favoriteTeam].name}</span>
                   )}
                 </label>
-                <AllTeamsPicker value={f.favoriteTeam} onChange={f.setFavoriteTeam} />
+                <TeamSearchPicker value={f.favoriteTeam} onChange={f.setFavoriteTeam} />
               </div>
 
               <ApostasGeraisSummary

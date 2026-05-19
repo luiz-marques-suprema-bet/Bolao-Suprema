@@ -12,6 +12,7 @@ import { OnboardingScreen } from '@/screens/Onboarding'
 import { LoginScreen } from '@/screens/Login'
 import { RegisterScreen } from '@/screens/Register'
 import { ProfileScreen } from '@/screens/Profile'
+import { SetupScreen } from '@/screens/Setup'
 import { HomeScreen } from '@/screens/Home'
 import { PredictionScreen } from '@/screens/Prediction'
 import { RankingScreen } from '@/screens/Ranking'
@@ -59,8 +60,8 @@ function RequireAuth() {
   }
 
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  if (!profileComplete && pathname !== '/profile') return <Navigate to="/profile" replace />
-  if (user?.participantStatus === 'blocked' && pathname !== '/profile') return <ParticipantStatusScreen />
+  if (!profileComplete && pathname !== '/setup') return <Navigate to="/setup" replace />
+  if (user?.participantStatus === 'blocked' && pathname !== '/setup' && pathname !== '/profile') return <ParticipantStatusScreen />
 
   return <Outlet />
 }
@@ -170,6 +171,7 @@ const router = createHashRouter([
   {
     element: <RequireAuth />,
     children: [
+      { path: '/setup', element: <SetupScreen /> },
       { path: '/profile', element: <ProfileScreen /> },
       {
         element: <AppLayout />,
