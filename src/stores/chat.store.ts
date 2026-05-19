@@ -51,11 +51,21 @@ function cacheFrom(row: UserRow) {
 async function ensureCached(userId: string) {
   if (_userCache.has(userId)) return
   const { data } = await supabase
-    .from('users')
+    .from('public_profiles')
     .select('id,first_name,last_name,dept,initials,color,avatar_url')
     .eq('id', userId)
     .single()
   if (data) cacheFrom(data as UserRow)
+}
+
+async function fetchProfiles(ids: string[]): Promise<void> {
+  const missing = ids.filter(id => !_userCache.has(id))
+  if (missing.length === 0) return
+  const { data } = await supabase
+    .from('public_profiles')
+    .select('id,first_name,last_name,dept,initials,color,avatar_url')
+    .in('id', missing)
+  if (data) for (const row of data as UserRow[]) cacheFrom(row)
 }
 
 // ─── Row mappers ──────────────────────────────────────────────────────────────
@@ -152,14 +162,9 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     }
 
     // 1. Load last 200 messages (ordered asc for display)
-    const SELECT_WITH_REPLY = `
-      id, user_id, channel_id, text, type, gif_url, image_url, audio_url, audio_duration, poll_data, reaction, reply_to, created_at,
-      users!user_id ( id, first_name, last_name, dept, initials, color, avatar_url )
-    `
-    const SELECT_WITHOUT_REPLY = `
-      id, user_id, channel_id, text, type, gif_url, image_url, audio_url, audio_duration, poll_data, reaction, created_at,
-      users!user_id ( id, first_name, last_name, dept, initials, color, avatar_url )
-    `
+    // Fetch messages without join — profiles loaded separately via public_profiles
+    const SELECT_WITH_REPLY    = 'id, user_id, channel_id, text, type, gif_url, image_url, audio_url, audio_duration, poll_data, reaction, reply_to, created_at'
+    const SELECT_WITHOUT_REPLY = 'id, user_id, channel_id, text, type, gif_url, image_url, audio_url, audio_duration, poll_data, reaction, created_at'
 
     let { data: rows, error: fetchError } = await supabase
       .from('chat_messages')
@@ -168,7 +173,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       .order('created_at', { ascending: true })
       .limit(200)
 
-    // Migration not applied yet — retry without reply_to so messages still load
+    // Migration not applied yet — retry without reply_to
     if (fetchError?.message?.includes('reply_to')) {
       ;({ data: rows, error: fetchError } = await supabase
         .from('chat_messages')
@@ -181,9 +186,9 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     if (fetchError) console.error('[Chat] init fetch error:', fetchError.message)
 
     if (rows) {
-      for (const row of rows) {
-        if (row.users) cacheFrom(row.users as UserRow)
-      }
+      // Batch-load all profiles from public_profiles (no join needed, respects RLS)
+      const ids = Array.from(new Set((rows as MessageRow[]).map(r => r.user_id)))
+      await fetchProfiles(ids)
       set({ messages: (rows as MessageRow[]).map(r => mapRow(r, myUserId)), isLoaded: true })
     } else {
       set({ isLoaded: true })
