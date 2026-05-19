@@ -66,34 +66,31 @@ export function MessageList({
       onScroll={onScroll}
       className="flex-1 overflow-y-auto overscroll-contain min-h-0 py-2"
     >
-      {/* Inner centered column — scrollbar stays at screen edge */}
-      <div className="max-w-4xl mx-auto w-full">
-        {!isLoaded && <ChatSkeleton />}
-        {isLoaded && messages.length === 0 && <EmptyChat />}
+      {!isLoaded && <ChatSkeleton />}
+      {isLoaded && messages.length === 0 && <EmptyChat />}
 
-        {isLoaded && items.map(item => {
-          if (item.kind === 'date') {
-            return <DateDivider key={item.key} label={item.label} />
-          }
-          const { msg: m, grouped } = item
-          return (
-            <div key={m.id} className={grouped ? 'mt-0.5' : 'mt-3'}>
-              <MessageBubble
-                message={m}
-                grouped={grouped}
-                isAdmin={isAdmin}
-                isPinned={pinnedId === m.id}
-                currentUserId={currentUserId}
-                onReply={() => onReply(m)}
-                onPin={() => onPin(m.id)}
-                onDeleteRequest={() => onDeleteRequest(m.id)}
-                onVote={optId => onVote(m.id, optId)}
-                onOpenProfile={() => onOpenProfile(m)}
-              />
-            </div>
-          )
-        })}
-      </div>
+      {isLoaded && items.map(item => {
+        if (item.kind === 'date') {
+          return <DateDivider key={item.key} label={item.label} />
+        }
+        const { msg: m, grouped } = item
+        return (
+          <div key={m.id} className={grouped ? 'mt-0.5' : 'mt-3'}>
+            <MessageBubble
+              message={m}
+              grouped={grouped}
+              isAdmin={isAdmin}
+              isPinned={pinnedId === m.id}
+              currentUserId={currentUserId}
+              onReply={() => onReply(m)}
+              onPin={() => onPin(m.id)}
+              onDeleteRequest={() => onDeleteRequest(m.id)}
+              onVote={optId => onVote(m.id, optId)}
+              onOpenProfile={() => onOpenProfile(m)}
+            />
+          </div>
+        )
+      })}
 
       <div ref={bottomRef} />
     </div>

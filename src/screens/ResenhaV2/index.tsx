@@ -128,26 +128,22 @@ export function ResenhaScreen() {
         onCreatePoll={() => setPollOpen(true)}
       />
 
-      {/* Content — flex-1 full width so scrollbar stays at screen edge */}
+      {/* Content — full width, scrollbar at screen edge */}
       <div className="flex-1 flex flex-col min-h-0">
 
-        {/* Pinned — centered inner */}
+        {/* Pinned */}
         <AnimatePresence>
           {pinnedMsg && (
-            <div className="flex-shrink-0">
-              <div className="max-w-4xl mx-auto">
-                <PinnedBanner
-                  key="pinned"
-                  msg={pinnedMsg}
-                  isAdmin={isAdmin}
-                  onUnpin={() => void setPinned(null)}
-                />
-              </div>
-            </div>
+            <PinnedBanner
+              key="pinned"
+              msg={pinnedMsg}
+              isAdmin={isAdmin}
+              onUnpin={() => void setPinned(null)}
+            />
           )}
         </AnimatePresence>
 
-        {/* Messages — scroll full width, content centered inside */}
+        {/* Messages */}
         <MessageList
           messages={messages}
           isLoaded={isLoaded}
@@ -189,7 +185,7 @@ export function ResenhaScreen() {
               initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
               className="overflow-hidden flex-shrink-0"
             >
-              <div className="max-w-4xl mx-auto w-full flex items-center justify-between px-4 py-2 bg-red/8 border-t border-red/20">
+              <div className="flex items-center justify-between px-4 py-2 bg-red/8 border-t border-red/20">
                 <span className="font-mono text-[10px] text-red">{combinedError}</span>
                 <button
                   onClick={() => { clearError(); setMediaErr(null) }}
@@ -200,31 +196,21 @@ export function ResenhaScreen() {
           )}
         </AnimatePresence>
 
-        {/* GIF picker — centered inner */}
+        {/* GIF picker */}
         <AnimatePresence>
-          {gifOpen && (
-            <div className="flex-shrink-0">
-              <div className="max-w-4xl mx-auto">
-                <GifPicker onSelect={sendGif} onClose={() => setGifOpen(false)} />
-              </div>
-            </div>
-          )}
+          {gifOpen && <GifPicker onSelect={sendGif} onClose={() => setGifOpen(false)} />}
         </AnimatePresence>
 
-        {/* Composer — centered inner */}
-        <div className="flex-shrink-0">
-          <div className="max-w-4xl mx-auto">
-            <ChatComposer
-              replyingTo={replyingTo}
-              onCancelReply={() => setReplyingTo(null)}
-              onSendText={sendText}
-              onToggleGif={() => setGifOpen(v => !v)}
-              gifActive={gifOpen}
-              onSendImage={sendImage}
-              onSendAudio={sendAudio}
-            />
-          </div>
-        </div>
+        {/* Composer */}
+        <ChatComposer
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
+          onSendText={sendText}
+          onToggleGif={() => setGifOpen(v => !v)}
+          gifActive={gifOpen}
+          onSendImage={sendImage}
+          onSendAudio={sendAudio}
+        />
 
       </div>
 
