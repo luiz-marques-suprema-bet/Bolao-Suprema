@@ -55,35 +55,29 @@ export function MessageBubble({
         'group/message relative min-w-0',
         'max-w-[84%] sm:max-w-[78%] md:max-w-[560px]',
       )}>
-        {/* Author name (above bubble for first in group) */}
-        {!isMine && !grouped && (
-          <button
-            onClick={onOpenProfile}
-            className="block font-mono text-[9px] font-bold text-ink hover:underline mb-1 ml-1 text-left leading-none truncate max-w-full"
-          >
-            {m.who}
-            {m.dept && <span className="font-normal text-ink-4"> · {m.dept}</span>}
-          </button>
-        )}
-
         {/* Bubble shell */}
         <div className={cn(
           'relative break-words shadow-sm',
-          m.type === 'gif' || m.type === 'image'
-            ? 'overflow-hidden p-0'
-            : m.type === 'audio'
-              ? 'px-3.5 py-2.5'
-              : 'px-3.5 py-2.5',
+          m.type === 'gif' || m.type === 'image' ? 'overflow-hidden' : 'px-3.5 py-2.5',
           isMine
             ? 'rounded-2xl rounded-br-sm bg-yellow text-ink'
             : 'rounded-2xl rounded-bl-sm border border-line bg-paper-deep text-ink',
         )}>
-          {/* Media wrapper with padding for gif/image */}
-          {(m.type === 'gif' || m.type === 'image') && !m.replyTo ? (
-            <MessageContent message={m} isMine={isMine} userId={currentUserId} onVote={onVote} />
-          ) : (
-            <MessageContent message={m} isMine={isMine} userId={currentUserId} onVote={onVote} />
+          {/* Author name — inside bubble, first line, aligned with content */}
+          {!isMine && !grouped && (
+            <button
+              onClick={onOpenProfile}
+              className={cn(
+                'block font-mono text-[9px] font-bold text-ink hover:underline text-left leading-none truncate max-w-full mb-1',
+                (m.type === 'gif' || m.type === 'image') && 'px-2.5 pt-2',
+              )}
+            >
+              {m.who}
+              {m.dept && <span className="font-normal text-ink-4"> · {m.dept}</span>}
+            </button>
           )}
+
+          <MessageContent message={m} isMine={isMine} userId={currentUserId} onVote={onVote} />
 
           {/* Timestamp */}
           {m.type !== 'poll' && (
