@@ -30,7 +30,7 @@ interface PredictionState {
   clearDraft: (matchId: string) => void
   confirmPrediction: (prediction: Prediction) => PredictionResult
   removePrediction: (matchId: string) => void
-  clearAllPredictions: () => void
+  clearAllPredictions: () => Promise<void>
   clearError: () => void
   getPrediction: (matchId: string) => Prediction | undefined
   getDraft: (matchId: string) => { home: number; away: number } | undefined
@@ -190,8 +190,16 @@ export const usePredictionStore = create<PredictionState>()(
           return { predictions }
         }),
 
-      clearAllPredictions: () =>
-        set({ predictions: {}, drafts: {}, championPick: null, vicePick: null, scorerPick: null, lastError: null }),
+      clearAllPredictions: async () => {
+        set({ predictions: {}, drafts: {}, championPick: null, vicePick: null, scorerPick: null, lastError: null })
+        const userId = get()._userId
+        if (!isMockMode && userId) {
+          await Promise.all([
+            supabase.from('predictions').delete().eq('user_id', userId),
+            supabase.from('users').update({ champion_pick: null, vice_pick: null, scorer_pick: null }).eq('id', userId),
+          ])
+        }
+      },
 
       clearError: () => set({ lastError: null }),
 
