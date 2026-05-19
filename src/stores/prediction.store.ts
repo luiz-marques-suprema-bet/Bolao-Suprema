@@ -5,6 +5,7 @@ import { WC2026_MATCHES } from '@/data/wc2026'
 import { isBetOpen } from '@/lib/markets'
 import { validateChampionVice } from '@/lib/tournamentValidation'
 import { useMatchStore } from '@/stores/match.store'
+import { useBracketStore } from '@/stores/bracket.store'
 
 interface PredictionResult {
   ok: boolean
@@ -192,12 +193,17 @@ export const usePredictionStore = create<PredictionState>()(
 
       clearAllPredictions: async () => {
         set({ predictions: {}, drafts: {}, championPick: null, vicePick: null, scorerPick: null, lastError: null })
+        useBracketStore.getState().clearAllPicks()
         const userId = get()._userId
         if (!isMockMode && userId) {
-          await Promise.all([
+          const [{ error: predErr }, { error: bracketErr }, { error: userErr }] = await Promise.all([
             supabase.from('predictions').delete().eq('user_id', userId),
+            supabase.from('bracket_picks').delete().eq('user_id', userId),
             supabase.from('users').update({ champion_pick: null, vice_pick: null, scorer_pick: null }).eq('id', userId),
           ])
+          if (predErr)    console.error('[clearPredictions] predictions:', predErr.message)
+          if (bracketErr) console.error('[clearPredictions] bracket_picks:', bracketErr.message)
+          if (userErr)    console.error('[clearPredictions] users:', userErr.message)
         }
       },
 
