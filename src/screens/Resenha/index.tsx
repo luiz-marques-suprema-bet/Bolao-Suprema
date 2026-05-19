@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
 import { useChatStore } from '@/stores/chat.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
-import { uploadChatMedia } from '@/lib/supabase'
+import { supabase, isMockMode, uploadChatMedia } from '@/lib/supabase'
 import type { ChatMessage, ChatPoll } from '@/types'
 
 // ─── GIF API ─────────────────────────────────────────────────────────────────
@@ -295,8 +295,56 @@ function MsgHeader({ m, onOpen }: { m: ChatMessage; onOpen: () => void }) {
 
 // ─── Chat Profile Panel (WhatsApp-style side panel) ──────────────────────────
 
+interface UserProfileSnap {
+  bio?: string
+  favoriteTeam?: string
+  pts?: number
+  rank?: number
+  correctPredictions?: number
+  exactPredictions?: number
+}
+
 function ChatProfilePanel({ m, onClose }: { m: ChatMessage; onClose: () => void }) {
   const navigate = useNavigate()
+  const [snap, setSnap]       = useState<UserProfileSnap | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const [{ data: uData }, { data: rData }] = await Promise.all([
+          supabase.from('users').select('bio,favorite_team').eq('id', m.userId).single(),
+          supabase
+            .from('ranking_snapshots')
+            .select('pts,rank,correct_predictions,exact_predictions')
+            .eq('user_id', m.userId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ])
+        if (!cancelled) setSnap({
+          bio:                uData?.bio                   ?? undefined,
+          favoriteTeam:       uData?.favorite_team         ?? undefined,
+          pts:                rData?.pts                   ?? undefined,
+          rank:               rData?.rank                  ?? undefined,
+          correctPredictions: rData?.correct_predictions   ?? undefined,
+          exactPredictions:   rData?.exact_predictions     ?? undefined,
+        })
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    if (!isMockMode) load()
+    else setLoading(false)
+    return () => { cancelled = true }
+  }, [m.userId])
+
+  const hasStats = snap && (
+    snap.rank !== undefined || snap.pts !== undefined ||
+    snap.correctPredictions !== undefined || snap.exactPredictions !== undefined
+  )
+
   return (
     <motion.div
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
@@ -309,20 +357,74 @@ function ChatProfilePanel({ m, onClose }: { m: ChatMessage; onClose: () => void 
         </button>
         <span className="font-mono text-[9px] tracking-eyebrow text-ink-4">PARTICIPANTE</span>
       </div>
-      <div className="flex flex-col items-center pt-10 pb-6 px-6 gap-4">
+
+      <div className="flex flex-col items-center pt-8 pb-6 px-6 gap-3 overflow-y-auto flex-1">
+        {/* Avatar */}
         <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 border-2 border-hairline" style={{ background: m.color }}>
           {m.avatarUrl
             ? <img src={m.avatarUrl} alt="" className="w-full h-full object-cover" />
             : <Avatar initials={m.initials} color={m.color} size={80} />
           }
         </div>
+
+        {/* Name + dept */}
         <div className="text-center">
           <div className="font-display text-xl text-ink leading-none">{m.who}</div>
-          {m.dept && <div className="font-sans text-[13px] text-ink-3 mt-1.5">{m.dept}</div>}
+          {m.dept && <div className="font-sans text-[13px] text-ink-3 mt-1">{m.dept}</div>}
         </div>
+
+        {/* Stats */}
+        {loading ? (
+          <span className="font-mono text-[10px] text-ink-4 animate-pulse">carregando...</span>
+        ) : (
+          <>
+            {hasStats && (
+              <div className="w-full grid grid-cols-4 border border-hairline mt-1">
+                {snap.rank !== undefined && (
+                  <div className="flex flex-col items-center py-2.5">
+                    <span className="font-display text-base text-ink leading-none">#{snap.rank}</span>
+                    <span className="font-mono text-[7px] text-ink-4 tracking-eyebrow mt-0.5">RANK</span>
+                  </div>
+                )}
+                {snap.pts !== undefined && (
+                  <div className="flex flex-col items-center py-2.5 border-l border-hairline">
+                    <span className="font-display text-base text-ink leading-none">{snap.pts}</span>
+                    <span className="font-mono text-[7px] text-ink-4 tracking-eyebrow mt-0.5">PTS</span>
+                  </div>
+                )}
+                {snap.correctPredictions !== undefined && (
+                  <div className="flex flex-col items-center py-2.5 border-l border-hairline">
+                    <span className="font-display text-base text-ink leading-none">{snap.correctPredictions}</span>
+                    <span className="font-mono text-[7px] text-ink-4 tracking-eyebrow mt-0.5">ACERTOS</span>
+                  </div>
+                )}
+                {snap.exactPredictions !== undefined && (
+                  <div className="flex flex-col items-center py-2.5 border-l border-hairline">
+                    <span className="font-display text-base text-ink leading-none">{snap.exactPredictions}</span>
+                    <span className="font-mono text-[7px] text-ink-4 tracking-eyebrow mt-0.5">EXATOS</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {snap?.favoriteTeam && (
+              <div className="flex items-center gap-2 w-full">
+                <span className="font-mono text-[9px] text-ink-4 flex-shrink-0">TIME:</span>
+                <span className="font-mono text-[10px] text-ink">{snap.favoriteTeam}</span>
+              </div>
+            )}
+
+            {snap?.bio && (
+              <p className="font-sans text-[12px] text-ink-3 leading-relaxed text-center border-t border-hairline pt-3 w-full">
+                {snap.bio}
+              </p>
+            )}
+          </>
+        )}
+
         <button
           onClick={() => { onClose(); navigate(`/u/${m.userId}`) }}
-          className="btn-yellow w-full justify-center mt-2"
+          className="btn-yellow w-full justify-center mt-auto"
         >
           VER PERFIL COMPLETO →
         </button>
@@ -1002,12 +1104,13 @@ export function ResenhaScreen() {
       <AnimatePresence>
         {!atBottom && (
           <motion.div
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-            className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20"
+            initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.15 }}
+            className="flex justify-center py-1.5 flex-shrink-0 border-t border-hairline bg-paper"
           >
             <button
               onClick={() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); setAtBottom(true) }}
-              className="bg-ink text-paper font-mono text-[10px] px-3 py-1.5 border border-ink shadow-card active:scale-95 transition-transform"
+              className="bg-ink text-paper font-mono text-[10px] px-3 py-1.5 shadow-card active:scale-95 transition-transform"
             >
               ↓ VER NOVAS MSGS
             </button>
