@@ -17,6 +17,7 @@
     @apply bg-paper text-ink font-sans;
     margin: 0;
     min-height: 100dvh;
+    overflow-x: hidden;
     user-select: none;
     -webkit-user-select: none;
   }

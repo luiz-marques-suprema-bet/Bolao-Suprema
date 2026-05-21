@@ -618,7 +618,7 @@ function AdminRolesPanel({ onToast }: { onToast: (msg: string, ok: boolean) => v
       .select('id,first_name,last_name,email,is_admin,is_marketing,is_owner,user_role,participant_status')
       .order('first_name', { ascending: true })
     if (error) onToast(`Erro ao carregar usuários: ${error.message}`, false)
-    setUsers((data ?? []) as RoleUserRow[])
+    setUsers(((data ?? []) as RoleUserRow[]).filter(u => u.email !== 'seu.email@suprema.group'))
     setLoading(false)
   }, [onToast])
 
@@ -673,8 +673,8 @@ function AdminRolesPanel({ onToast }: { onToast: (msg: string, ok: boolean) => v
             const isProtected = u.is_owner || isSelf
 
             return (
-              <div key={u.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1 min-w-0">
+              <div key={u.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
+                <div className="w-full min-w-0 sm:flex-1">
                   <div className="font-mono text-[11px] font-bold truncate">
                     {name}
                     {isSelf && <span className="ml-1.5 text-ink-4 font-normal">(você)</span>}
@@ -682,12 +682,12 @@ function AdminRolesPanel({ onToast }: { onToast: (msg: string, ok: boolean) => v
                   <div className="font-mono text-[9px] text-ink-4 truncate">{u.email}</div>
                 </div>
 
-                <span className={cn('font-mono text-[8px] px-2 py-0.5 border flex-shrink-0', role.cls)}>
+                <span className={cn('w-fit font-mono text-[8px] px-2 py-0.5 border flex-shrink-0', role.cls)}>
                   {role.text}
                 </span>
 
                 {!isProtected && isOwner && (
-                  <div className="flex gap-1 flex-shrink-0">
+                  <div className="grid grid-cols-2 gap-1 sm:flex sm:flex-shrink-0">
                     <button
                       disabled={busy !== null}
                       onClick={() => toggle(u, 'is_admin')}

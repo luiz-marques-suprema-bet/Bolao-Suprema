@@ -125,17 +125,11 @@ function AppLayout() {
         <AnimatedOutlet />
       </main>
 
-      {/* Fixed ticker — always visible above mobile nav or at viewport bottom on desktop */}
-      <div
-        className="fixed left-0 right-0 z-40 border-t border-line bg-ink"
-        style={
-          isDesktop
-            ? { bottom: 0 }
-            : { bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }
-        }
-      >
-        <Marquee items={MARQUEE_ITEMS} color="#FFCB05" bg="#0D0D0D" speed={35} />
-      </div>
+      {isDesktop && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-line bg-ink">
+          <Marquee items={MARQUEE_ITEMS} color="#FFCB05" bg="#0D0D0D" speed={35} />
+        </div>
+      )}
 
       {!isDesktop && <MobileNav />}
     </div>

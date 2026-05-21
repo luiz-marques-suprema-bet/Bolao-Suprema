@@ -309,13 +309,13 @@ export function ResenhaScreen() {
     }
   }
 
-  const sendAudio = async () => {
+  const startAudioRecording = async () => {
+    const ok = await audio.start()
+    if (!ok) setError('Permissao de microfone negada.')
+  }
+
+  const finishAudioRecording = async () => {
     if (!user?.id) return
-    if (!audio.recording) {
-      const ok = await audio.start()
-      if (!ok) setError('Permissao de microfone negada.')
-      return
-    }
     const result = await audio.stop()
     if (!result) return
     audio.setUploading(true)
@@ -340,13 +340,13 @@ export function ResenhaScreen() {
     }
   }
 
-  const sendVideoNoteRecording = async () => {
+  const startVideoNoteRecording = async () => {
+    const ok = await videoNote.start()
+    if (!ok) setError('Permissao de camera negada.')
+  }
+
+  const finishVideoNoteRecording = async () => {
     if (!user?.id) return
-    if (!videoNote.recording) {
-      const ok = await videoNote.start()
-      if (!ok) setError('Permissao de camera negada.')
-      return
-    }
     const result = await videoNote.stop()
     if (!result) return
     await sendMedia('video_note', result.blob, result.duration)
@@ -360,7 +360,7 @@ export function ResenhaScreen() {
 
   return (
     <div className="min-h-0 flex-1 bg-[#f6f1e6] text-ink">
-      <div className="h-[calc(100dvh-5.5rem)] overflow-hidden lg:h-[calc(100dvh-5.75rem)]">
+      <div className="h-[calc(100dvh-3.5rem)] overflow-hidden lg:h-[calc(100dvh-5.75rem)]">
         <section className="flex h-full min-h-0 flex-col">
           <header className="flex shrink-0 items-center justify-between gap-3 border-b border-black/10 bg-[#fbf7ed] px-4 py-3">
             <div className="min-w-0">
@@ -483,7 +483,7 @@ export function ResenhaScreen() {
                 </button>
                 <AnimatePresence>
                   {actionMenu && (
-                    <motion.div initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 8, opacity: 0 }} className="absolute bottom-13 left-0 z-30 w-48 overflow-hidden border-2 border-ink bg-paper shadow-[5px_5px_0_#0D0D0D]">
+                    <motion.div initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 8, opacity: 0 }} className="absolute bottom-full left-0 z-50 mb-2 w-56 overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-[5px_5px_0_#0D0D0D]">
                       <ActionButton label="Foto" detail="imagem do celular" busy={uploading === 'image'} onClick={() => void sendMedia('image')} />
                       <ActionButton label="Video" detail="arquivo ou camera" busy={uploading === 'video'} onClick={() => void sendMedia('video')} />
                       <ActionButton label="Bolinha" detail="video circular" busy={uploading === 'video_note'} onClick={() => void sendMedia('video_note')} />
@@ -508,10 +508,10 @@ export function ResenhaScreen() {
                 className="max-h-32 min-h-11 flex-1 resize-none rounded-[22px] border border-black/10 bg-paper px-4 py-3 font-sans text-[15px] leading-5 outline-none transition placeholder:text-ink-4 focus:border-ink"
               />
 
-              <button type="button" onClick={sendVideoNoteRecording} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border border-black/10 bg-paper font-mono text-[9px] font-bold text-ink-3 transition hover:border-ink hover:bg-paper-deep hover:text-ink', videoNote.recording && 'border-red bg-red text-white')}>
+              <button type="button" onClick={startVideoNoteRecording} disabled={videoNote.recording || audio.recording} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border border-black/10 bg-paper font-mono text-[9px] font-bold text-ink-3 transition hover:border-ink hover:bg-paper-deep hover:text-ink disabled:opacity-40', videoNote.recording && 'border-red bg-red text-white')}>
                 CAM
               </button>
-              <button type="button" onClick={sendAudio} disabled={audio.uploading} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border border-black/10 bg-paper font-mono text-[9px] font-bold text-ink-3 transition hover:border-red hover:bg-paper-deep hover:text-red disabled:opacity-50', audio.recording && 'border-red bg-red text-white')}>
+              <button type="button" onClick={startAudioRecording} disabled={audio.uploading || audio.recording || videoNote.recording} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border border-black/10 bg-paper font-mono text-[9px] font-bold text-ink-3 transition hover:border-red hover:bg-paper-deep hover:text-red disabled:opacity-50', audio.recording && 'border-red bg-red text-white')}>
                 {audio.recording ? `${audio.seconds}s` : 'MIC'}
               </button>
               <button type="button" onClick={sendText} disabled={!draft.trim()} className="h-11 min-w-16 shrink-0 rounded-[22px] bg-green px-4 font-mono text-[10px] font-bold text-white shadow-[2px_2px_0_#0D0D0D] transition hover:bg-green/90 disabled:opacity-40 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
@@ -520,16 +520,35 @@ export function ResenhaScreen() {
             </div>
 
             <AnimatePresence>
+              {(audio.recording || audio.uploading) && (
+                <motion.div initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }} className="flex flex-col gap-3 border-t border-red/20 bg-red/8 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="h-3 w-3 rounded-full bg-red animate-pulse" />
+                    <div>
+                      <div className="font-mono text-[10px] font-bold text-red">GRAVANDO AUDIO · {audio.seconds}s</div>
+                      <div className="font-sans text-xs text-ink-3">{audio.uploading ? 'enviando...' : 'revise antes de enviar'}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={audio.cancel} disabled={audio.uploading} className="flex-1 border border-red px-3 py-2 font-mono text-[10px] text-red disabled:opacity-40 sm:flex-none">CANCELAR</button>
+                    <button type="button" onClick={() => void finishAudioRecording()} disabled={audio.uploading} className="flex-1 bg-red px-4 py-2 font-mono text-[10px] font-bold text-white disabled:opacity-40 sm:flex-none">ENVIAR</button>
+                  </div>
+                </motion.div>
+              )}
+
               {videoNote.recording && (
                 <motion.div initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }} className="flex flex-col gap-3 border-t border-red/20 bg-red/8 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-4">
                     <VideoPreview stream={videoNote.stream} />
                     <div>
                       <div className="font-mono text-[10px] font-bold text-red">GRAVANDO BOLINHA · {videoNote.seconds}s</div>
-                      <div className="font-sans text-xs text-ink-3">toque CAM para enviar</div>
+                      <div className="font-sans text-xs text-ink-3">revise antes de enviar</div>
                     </div>
                   </div>
-                  <button type="button" onClick={videoNote.cancel} className="border border-red px-3 py-2 font-mono text-[10px] text-red">CANCELAR</button>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={videoNote.cancel} className="flex-1 border border-red px-3 py-2 font-mono text-[10px] text-red sm:flex-none">CANCELAR</button>
+                    <button type="button" onClick={() => void finishVideoNoteRecording()} className="flex-1 bg-red px-4 py-2 font-mono text-[10px] font-bold text-white sm:flex-none">ENVIAR</button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

@@ -23,7 +23,7 @@ export function MobileNav() {
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-paper"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="grid grid-flow-col auto-cols-[4.25rem] h-14 overflow-x-auto no-scrollbar overscroll-x-contain">
+      <div className="grid grid-cols-7 h-14">
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.path
           const isProfile = item.id === 'profile'
@@ -45,9 +45,9 @@ export function MobileNav() {
                   size={20}
                 />
               ) : (
-                <span className="text-base leading-none">{item.icon}</span>
+                <span className="text-[13px] leading-none">{item.icon}</span>
               )}
-              <span className={cn('max-w-full truncate px-0.5 font-mono text-[7px] font-bold tracking-eyebrow', active && 'text-ink')}>
+              <span className={cn('max-w-full truncate px-0.5 font-mono text-[6.5px] font-bold tracking-eyebrow', active && 'text-ink')}>
                 {isProfile && user ? (user.firstName?.toUpperCase() || 'EU') : item.label}
               </span>
               {active && (
