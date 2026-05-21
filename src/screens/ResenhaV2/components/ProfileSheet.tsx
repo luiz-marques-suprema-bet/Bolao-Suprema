@@ -190,13 +190,16 @@ export function ProfileSheet({ m, onClose }: { m: ChatMessage; onClose: () => vo
 
   if (isDesktop) {
     return (
-      <motion.div
-        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-        transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-        className="absolute inset-y-0 right-0 w-80 bg-paper border-l border-hairline z-40 flex flex-col shadow-2xl overflow-hidden"
-      >
-        {panelContent}
-      </motion.div>
+      <>
+        <div className="absolute inset-0 z-30" onClick={onClose} />
+        <motion.div
+          initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+          transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+          className="absolute inset-y-0 right-0 w-80 bg-paper border-l border-hairline z-40 flex flex-col shadow-2xl overflow-hidden"
+        >
+          {panelContent}
+        </motion.div>
+      </>
     )
   }
 
