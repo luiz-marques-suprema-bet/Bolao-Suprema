@@ -8,36 +8,37 @@ interface PollCardProps {
 }
 
 export function PollCard({ poll, userId, onVote }: PollCardProps) {
-  const myVote   = userId ? poll.votes[userId] : null
+  const myVote = userId ? poll.votes[userId] : null
   const hasVoted = !!myVote
-  const total    = Object.keys(poll.votes).length
+  const total = Object.keys(poll.votes).length
 
   return (
-    <div className="border-2 border-ink bg-paper p-4 min-w-[220px]">
-      <p className="font-display text-[14px] leading-tight mb-4">{poll.question}</p>
+    <div className="min-w-[220px] rounded-2xl border border-ink/20 bg-paper p-4">
+      <p className="font-display text-[15px] leading-tight mb-4">{poll.question}</p>
       <div className="space-y-2">
-        {poll.options.map(opt => {
-          const count    = Object.values(poll.votes).filter(v => v === opt.id).length
-          const pct      = total > 0 ? Math.round((count / total) * 100) : 0
-          const isMyPick = myVote === opt.id
+        {poll.options.map(option => {
+          const count = Object.values(poll.votes).filter(vote => vote === option.id).length
+          const pct = total > 0 ? Math.round((count / total) * 100) : 0
+          const isMyPick = myVote === option.id
           return (
             <button
-              key={opt.id}
-              onClick={() => !hasVoted && onVote(opt.id)}
-              disabled={hasVoted && !isMyPick}
+              key={option.id}
+              type="button"
+              onClick={() => onVote(option.id)}
               className={cn(
-                'w-full text-left relative overflow-hidden border transition-colors',
-                isMyPick ? 'border-ink' : 'border-hairline',
-                !hasVoted && 'hover:border-line cursor-pointer',
+                'w-full text-left relative overflow-hidden rounded-xl border transition-colors',
+                isMyPick ? 'border-green' : 'border-hairline',
+                'hover:border-ink',
               )}
             >
               <div
-                className={cn('absolute inset-0 transition-all duration-700', isMyPick ? 'bg-yellow/50' : 'bg-paper-deep/70')}
+                className={cn('absolute inset-0 transition-all duration-700', isMyPick ? 'bg-green/15' : 'bg-yellow/20')}
                 style={{ width: hasVoted ? `${pct}%` : '0%' }}
               />
               <div className="relative flex items-center justify-between px-3 py-2.5">
-                <span className={cn('font-sans text-[12px]', isMyPick ? 'font-bold' : 'text-ink-2')}>
-                  {isMyPick && '✓ '}{opt.text}
+                <span className={cn('font-sans text-[12px]', isMyPick ? 'font-bold text-green' : 'text-ink-2')}>
+                  {isMyPick && 'OK '}
+                  {option.text}
                 </span>
                 {hasVoted && (
                   <span className="font-mono text-[10px] text-ink-3 ml-2 flex-shrink-0">{pct}%</span>
@@ -49,7 +50,7 @@ export function PollCard({ poll, userId, onVote }: PollCardProps) {
       </div>
       <p className="font-mono text-[10px] text-ink-4 mt-3">
         {total} {total === 1 ? 'voto' : 'votos'}
-        {!hasVoted && ' · toque para votar'}
+        {!hasVoted && ' - toque para votar'}
       </p>
     </div>
   )

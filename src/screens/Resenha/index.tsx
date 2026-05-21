@@ -1,1 +1,1 @@
-export { ResenhaScreen } from '@/screens/ResenhaV2'
+export { ResenhaScreen } from '@/screens/ResenhaV3'
