@@ -22,7 +22,7 @@ export function useAudioRecorder() {
       rec.start(100)
       setRecording(true)
       setSeconds(0)
-      timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000)
+      timerRef.current = setInterval(() => setSeconds(Math.floor((Date.now() - startTime.current) / 1000)), 500)
       return true
     } catch { return false }
   }

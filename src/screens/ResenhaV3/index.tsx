@@ -87,7 +87,8 @@ function useVideoNoteRecorder() {
       setStream(media)
       setSeconds(0)
       setRecording(true)
-      timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000)
+      if (timerRef.current) clearInterval(timerRef.current)
+      timerRef.current = setInterval(() => setSeconds(Math.floor((Date.now() - startRef.current) / 1000)), 500)
       return true
     } catch {
       return false
@@ -163,6 +164,7 @@ export function ResenhaScreen() {
   const [messageMenuId, setMessageMenuId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
+  const videoAutoStopRef = useRef(false)
   const audio = useAudioRecorder()
   const videoNote = useVideoNoteRecorder()
 
@@ -220,6 +222,15 @@ export function ResenhaScreen() {
   useEffect(() => {
     return () => setTyping(false)
   }, [setTyping])
+
+  useEffect(() => {
+    if (videoNote.recording && videoNote.seconds >= 10 && !videoAutoStopRef.current) {
+      videoAutoStopRef.current = true
+      void finishVideoNoteRecording()
+    }
+    if (!videoNote.recording) videoAutoStopRef.current = false
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoNote.seconds, videoNote.recording])
 
   const buildMessage = useCallback((overrides: Partial<ChatMessage>): ChatMessage => ({
     id: crypto.randomUUID(),
@@ -486,7 +497,6 @@ export function ResenhaScreen() {
                     <motion.div initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 8, opacity: 0 }} className="absolute bottom-full left-0 z-50 mb-2 w-56 overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-[5px_5px_0_#0D0D0D]">
                       <ActionButton label="Foto" detail="imagem do celular" busy={uploading === 'image'} onClick={() => void sendMedia('image')} />
                       <ActionButton label="Video" detail="arquivo ou camera" busy={uploading === 'video'} onClick={() => void sendMedia('video')} />
-                      <ActionButton label="Bolinha" detail="video circular" busy={uploading === 'video_note'} onClick={() => void sendMedia('video_note')} />
                       <ActionButton label="Enquete" detail="votacao do grupo" onClick={() => { setPollOpen(true); setActionMenu(false) }} />
                     </motion.div>
                   )}
@@ -526,7 +536,7 @@ export function ResenhaScreen() {
                     <span className="h-3 w-3 rounded-full bg-red animate-pulse" />
                     <div>
                       <div className="font-mono text-[10px] font-bold text-red">GRAVANDO AUDIO · {audio.seconds}s</div>
-                      <div className="font-sans text-xs text-ink-3">{audio.uploading ? 'enviando...' : 'revise antes de enviar'}</div>
+                      {audio.uploading && <div className="font-sans text-xs text-ink-3">enviando...</div>}
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -541,8 +551,7 @@ export function ResenhaScreen() {
                   <div className="flex items-center gap-4">
                     <VideoPreview stream={videoNote.stream} />
                     <div>
-                      <div className="font-mono text-[10px] font-bold text-red">GRAVANDO BOLINHA · {videoNote.seconds}s</div>
-                      <div className="font-sans text-xs text-ink-3">revise antes de enviar</div>
+                      <div className="font-mono text-[10px] font-bold text-red">GRAVANDO BOLINHA · {videoNote.seconds}s / 10s</div>
                     </div>
                   </div>
                   <div className="flex gap-2">
