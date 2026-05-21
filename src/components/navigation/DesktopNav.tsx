@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 const NAV_ITEMS = [
   { id: 'home',       label: 'HOME',     path: '/home',           tip: 'Resumo do dia, boletim rápido e destaques do bolão' },
   { id: 'prediction',label: 'PALPITAR', path: '/prediction',     tip: 'Faça seus palpites por grupo, mata-mata e apostas gerais' },
-  { id: 'mine',      label: 'MEUS',     path: '/meus-palpites',  tip: 'Histórico de todos os seus palpites com pontuação detalhada' },
+  { id: 'mine',      label: 'MEUS PALPITES', path: '/meus-palpites',  tip: 'Histórico de todos os seus palpites com pontuação detalhada' },
   { id: 'ranking',   label: 'RANKING',  path: '/ranking',        tip: 'Classificação geral — veja quem está na frente e a quantos pts você está' },
   { id: 'rules',     label: 'REGRAS',   path: '/regulamento',    tip: 'Regulamento completo e tabela de pontos do bolão' },
   { id: 'alerts',    label: 'AVISOS',   path: '/notificacoes',   tip: 'Comunicados e notificações importantes do admin' },

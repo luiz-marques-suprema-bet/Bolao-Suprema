@@ -976,9 +976,9 @@ function ChampionTab() {
     <div className="px-4 py-6 pb-24">
       {/* Header */}
       <div className="mb-6">
-        <div className="font-display text-4xl leading-none text-ink">APOSTAS GERAIS</div>
+        <div className="font-display text-4xl leading-none text-ink">APOSTAS ESPECIAIS</div>
         <div className="font-serif-it text-xl text-green-deep leading-snug mt-0.5">
-          obrigatórias antes da primeira partida
+          campeão, vice e artilheiro — antes de tudo
         </div>
         <div className={cn(
           'mt-3 inline-flex items-center gap-2 px-3 py-1.5 border font-mono text-[10px]',
@@ -1336,7 +1336,7 @@ export function PredictionScreen() {
   const tabs = [
     { id: 'groups'   as const, label: 'GRUPOS'        },
     { id: 'knockout' as const, label: 'MATA-MATA'      },
-    { id: 'champion' as const, label: 'APOSTAS GERAIS' },
+    { id: 'champion' as const, label: 'ESPECIAIS' },
   ]
 
   return (

@@ -666,6 +666,126 @@ export function HomeScreen() {
   return isDesktop ? <HomeDesktop /> : <HomeMobile />
 }
 
+// ─── Quick-pick modal ─────────────────────────────────────────────────────────
+
+function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void }) {
+  const { predictions, drafts, setDraft, clearDraft, confirmPrediction } = usePredictionStore()
+  const userId = useAuthStore(s => s.user?.id ?? 'me')
+  const existing = predictions[match.id]
+  const draft = drafts[match.id]
+
+  const [home, setHome] = useState(draft?.home ?? existing?.homeScore ?? 0)
+  const [away, setAway] = useState(draft?.away ?? existing?.awayScore ?? 0)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
+
+  const hasPick = !!existing
+
+  const updateHome = (v: number) => { setHome(v); setDraft(match.id, v, away) }
+  const updateAway = (v: number) => { setAway(v); setDraft(match.id, home, v) }
+
+  const handleConfirm = async () => {
+    setSaveError(null)
+    setSaving(true)
+    const result = await confirmPrediction({
+      id: `pred-${match.id}`,
+      userId,
+      matchId: match.id,
+      homeScore: home,
+      awayScore: away,
+      submittedAt: new Date().toISOString(),
+    })
+    setSaving(false)
+    if (!result.ok) { setSaveError(result.error ?? 'Erro ao salvar.'); return }
+    clearDraft(match.id)
+    setDone(true)
+    setTimeout(onClose, 700)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4">
+      <div className="absolute inset-0 bg-ink/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+        className="relative w-full max-w-sm bg-paper border-2 border-ink"
+      >
+        <button onClick={onClose}
+          className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center font-mono text-[11px] text-ink-3 hover:text-ink border border-hairline hover:border-ink transition-colors z-10">
+          ✕
+        </button>
+
+        <div className="px-5 pt-5 pb-4 border-b border-hairline">
+          {done ? (
+            <div className="inline-flex items-center gap-1.5 font-mono text-[8px] font-bold tracking-eyebrow text-green mb-3">✓ PALPITE SALVO!</div>
+          ) : hasPick ? (
+            <div className="inline-flex items-center gap-1.5 font-mono text-[8px] font-bold tracking-eyebrow text-green mb-3">✓ PALPITE FEITO · TOQUE PARA ATUALIZAR</div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 font-mono text-[8px] font-bold tracking-eyebrow bg-yellow text-ink px-2 py-1 mb-3">⚡ PALPITE PENDENTE</div>
+          )}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Flag team={match.home} size={28} />
+              <span className="font-mono text-[12px] font-bold">{match.home.code}</span>
+            </div>
+            <div className="text-center flex-shrink-0">
+              <div className="font-mono text-[8px] text-ink-4">{formatMatchDate(match)}</div>
+              <div className="font-display text-lg leading-none">{formatMatchTime(match)}</div>
+              <div className="font-mono text-[7px] text-ink-4 mt-0.5">GRUPO {match.group}</div>
+            </div>
+            <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+              <span className="font-mono text-[12px] font-bold">{match.away.code}</span>
+              <Flag team={match.away} size={28} />
+            </div>
+          </div>
+        </div>
+
+        <div className="px-5 py-4">
+          <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 text-center mb-4">QUAL VAI SER O PLACAR?</p>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col items-center gap-2 flex-1">
+              <Flag team={match.home} size={32} />
+              <span className="font-mono text-[8px] font-bold text-center leading-tight">{match.home.name.toUpperCase()}</span>
+              <div className="flex items-center">
+                <button onClick={() => updateHome(clamp(home - 1, 0, 9))} disabled={home === 0}
+                  className="w-10 h-10 flex items-center justify-center border-2 border-r-0 border-ink font-mono text-xl hover:bg-yellow disabled:opacity-25 select-none">−</button>
+                <div className="w-11 h-10 flex items-center justify-center border-2 border-ink font-display text-2xl select-none">{home}</div>
+                <button onClick={() => updateHome(clamp(home + 1, 0, 9))}
+                  className="w-10 h-10 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-xl hover:bg-yellow select-none">+</button>
+              </div>
+            </div>
+            <span className="font-serif-it text-2xl text-ink-3 flex-shrink-0">×</span>
+            <div className="flex flex-col items-center gap-2 flex-1">
+              <Flag team={match.away} size={32} />
+              <span className="font-mono text-[8px] font-bold text-center leading-tight">{match.away.name.toUpperCase()}</span>
+              <div className="flex items-center">
+                <button onClick={() => updateAway(clamp(away - 1, 0, 9))} disabled={away === 0}
+                  className="w-10 h-10 flex items-center justify-center border-2 border-r-0 border-ink font-mono text-xl hover:bg-yellow disabled:opacity-25 select-none">−</button>
+                <div className="w-11 h-10 flex items-center justify-center border-2 border-ink font-display text-2xl select-none">{away}</div>
+                <button onClick={() => updateAway(clamp(away + 1, 0, 9))}
+                  className="w-10 h-10 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-xl hover:bg-yellow select-none">+</button>
+              </div>
+            </div>
+          </div>
+          {saveError && (
+            <p className="font-mono text-[10px] text-red text-center mt-3 border border-red/30 bg-red/5 px-2 py-1.5">{saveError}</p>
+          )}
+          <button
+            onClick={handleConfirm}
+            disabled={saving || done}
+            className="btn-yellow w-full text-[11px] py-3 mt-4 tracking-eyebrow font-bold disabled:opacity-50 disabled:cursor-wait"
+          >
+            {saving ? 'SALVANDO...' : done ? 'SALVO ✓' : hasPick ? 'ATUALIZAR PALPITE ✓' : 'CONFIRMAR PALPITE ✓'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 // ─── Mobile ───────────────────────────────────────────────────────────────────
 
 function HomeMobile() {
@@ -674,6 +794,7 @@ function HomeMobile() {
   const { predictions, championPick, vicePick, scorerPick } = usePredictionStore()
   const { ranking, upcoming } = useHomeData()
   const days = daysUntil(TOURNAMENT_START)
+  const [quickPickMatch, setQuickPickMatch] = useState<Match | null>(null)
 
   const totalMatches   = WC2026_MATCHES.length
   const totalPreds     = Object.keys(predictions).length
@@ -738,7 +859,7 @@ function HomeMobile() {
             {upcoming.slice(0, 6).map(match => {
               const hasPick = !!predictions[match.id]
               return (
-                <button key={match.id} onClick={() => navigate('/prediction')}
+                <button key={match.id} onClick={() => setQuickPickMatch(match)}
                   className={cn('w-full flex items-center gap-3 px-4 py-3 text-left transition-colors active:scale-[0.99]',
                     hasPick ? 'bg-green/5 hover:bg-green/10' : 'hover:bg-hairline')}>
                   <div className="font-mono text-[8px] text-ink-3 w-12 flex-shrink-0">GRUPO<br/>{match.group}</div>
@@ -752,7 +873,7 @@ function HomeMobile() {
                   <Flag team={match.away} size={22} />
                   {hasPick
                     ? <span className="font-mono text-[10px] text-green flex-shrink-0">✓</span>
-                    : <span className="font-mono text-[10px] text-ink-4 flex-shrink-0">→</span>}
+                    : <span className="font-mono text-[8px] font-bold tracking-eyebrow bg-yellow text-ink px-1.5 py-0.5 flex-shrink-0 leading-none">PENDENTE</span>}
                 </button>
               )
             })}
@@ -826,6 +947,12 @@ function HomeMobile() {
         <VideoHighlights />
 
       </div>
+
+      <AnimatePresence>
+        {quickPickMatch && (
+          <QuickPickModal match={quickPickMatch} onClose={() => setQuickPickMatch(null)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -838,6 +965,7 @@ function HomeDesktop() {
   const { predictions, championPick, vicePick, scorerPick } = usePredictionStore()
   const { ranking, upcoming } = useHomeData()
   const days = daysUntil(TOURNAMENT_START)
+  const [quickPickMatch, setQuickPickMatch] = useState<Match | null>(null)
 
   const totalMatches  = WC2026_MATCHES.length
   const totalPreds    = Object.keys(predictions).length
@@ -952,7 +1080,7 @@ function HomeDesktop() {
               {upcoming.slice(0, 6).map(match => {
                 const hasPick = !!predictions[match.id]
                 return (
-                  <button key={match.id} onClick={() => navigate('/prediction')}
+                  <button key={match.id} onClick={() => setQuickPickMatch(match)}
                     className={cn('w-full flex items-center gap-4 px-4 py-3 transition-colors text-left group active:scale-[0.99]',
                       hasPick ? 'bg-green/5 hover:bg-green/10' : 'hover:bg-hairline')}>
                     <div className="flex-shrink-0 w-12 text-center">
@@ -972,7 +1100,7 @@ function HomeDesktop() {
                     </div>
                     {hasPick
                       ? <span className="font-mono text-[10px] text-green flex-shrink-0">✓</span>
-                      : <span className="font-mono text-[10px] text-ink-4 group-hover:text-ink transition-colors flex-shrink-0">→</span>}
+                      : <span className="font-mono text-[8px] font-bold tracking-eyebrow bg-yellow text-ink px-1.5 py-0.5 flex-shrink-0 leading-none">PENDENTE</span>}
                   </button>
                 )
               })}
@@ -1027,6 +1155,12 @@ function HomeDesktop() {
         <VideoHighlights />
 
       </div>
+
+      <AnimatePresence>
+        {quickPickMatch && (
+          <QuickPickModal match={quickPickMatch} onClose={() => setQuickPickMatch(null)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
