@@ -1,164 +1,297 @@
-# Handoff Técnico — Bolão Suprema
+# Handoff Tecnico - Bolao Suprema
 
-## Objetivo do projeto
+Documento para revisao e aprovacao do T.I.
 
-O Bolão Suprema é uma aplicação web interna para palpites da Copa do Mundo 2026, destinada aos colaboradores da Suprema Gaming. O app permite que participantes façam palpites de partidas e do chaveamento, acompanhem o ranking e interajam via chat em tempo real.
+## Objetivo
 
-## Escopo funcional
+O Bolao Suprema e uma aplicacao interna para palpites da Copa do Mundo 2026. O app cobre login corporativo, cadastro de participantes, palpites por partida, ranking, chat interno, boletins, notificacoes e painel administrativo.
 
-| Módulo | Descrição |
-|--------|-----------|
-| Autenticação | OTP por e-mail corporativo (@suprema.group) |
-| Onboarding | Wizard de cadastro de perfil para novos usuários |
-| Palpites | Placar de partidas, fase de grupos e eliminatórias |
-| Ranking | Pontuação em tempo real com snapshots históricos |
-| Resenha | Chat ao vivo: texto, imagem, GIF, áudio, enquetes |
-| Boletim | Comunicados internos (admin/marketing) |
-| Notificações | Avisos internos e sistema de notificações |
-| Perfil | Foto, banner, bio, seleção/jogador favorito |
-| Admin | Controle de mercados, resultados, participantes, exportação |
-| Auditoria | Log de ações administrativas |
+## Status da release
+
+Data de referencia: 2026-05-21.
+
+Implementado e validado:
+
+- Fluxo de palpites independente do admin.
+- Salvamento de palpite com confirmacao real do Supabase.
+- Salvamento em lote de grupo/fase por meio da RPC `save_match_predictions(jsonb)`.
+- Trava por kickoff e status de mercado reforcada no banco.
+- Admin restrito a operacoes de excecao: bloquear/reabrir, desfazer palpite, apurar resultado.
+- Edge Function `football-data-sync` criada para football-data.org.
+- `FOOTBALL_DATA_TOKEN` configurado como secret no Supabase.
+- Edge Function executada com `season=2026`.
+- Resultado informado do sync: `63` partidas atualizadas, `41` sem match.
+- Edge Function redeployada com `verify_jwt=true`.
+- Grants anonimos removidos de RPCs administrativas sensiveis.
+- Listagem ampla do bucket `chat-media` removida.
+
+Observacao sobre os `41` unmatched:
+
+Esses jogos provavelmente correspondem a fases eliminatorias, placeholders ou registros da football-data.org que ainda nao possuem correspondencia direta na tabela `matches` por `home_code`, `away_code` e `kickoff_utc`. Isso nao impede a fase de grupos atual de funcionar.
+
+## Repositorio e deploy
+
+- Repositorio: `https://github.com/ojozinho/Bolao-Suprema`
+- Branch principal: `main`
+- Deploy: GitHub Actions para GitHub Pages
+- URL: `https://ojozinho.github.io/Bolao-Suprema/`
+- Rotas: HashRouter, por exemplo `/#/home`, `/#/prediction`, `/#/admin`
 
 ## Stack
 
-- **Frontend:** React 19 + TypeScript + Vite — SPA estática, sem SSR.
-- **Estilo:** Tailwind CSS com design system próprio.
-- **Roteamento:** React Router v6 com HashRouter (necessário para GitHub Pages).
-- **Estado:** Zustand com persistência local via localStorage.
-- **Backend:** Supabase (PostgreSQL + Auth + Realtime + Storage).
-- **Deploy:** GitHub Actions → GitHub Pages (branch `gh-pages`).
+| Area | Tecnologia |
+|------|------------|
+| Frontend | React 19, TypeScript, Vite |
+| UI | Tailwind CSS, Framer Motion |
+| Rotas | React Router v6 com HashRouter |
+| Estado | Zustand |
+| Backend | Supabase PostgreSQL, Auth, Realtime, Storage |
+| Sync externo | Supabase Edge Function + football-data.org |
+| Deploy | GitHub Actions + GitHub Pages |
 
-## Fluxo de autenticação
+## Supabase
 
-1. Usuário informa e-mail corporativo.
-2. Supabase envia OTP de 6 dígitos para o e-mail.
-3. Usuário insere o código.
-4. Supabase emite JWT; o cliente armazena a sessão.
-5. Novo usuário entra com `participant_status = 'pending'` — aguarda aprovação de admin.
-6. Após aprovação, perfil é completado via wizard `/setup`.
-7. Com perfil completo (`firstName` + `dept` preenchidos), usuário acessa o app.
+Projeto:
 
-## Modelo de permissões
-
-| Role | participant_status | Pode fazer |
-|------|--------------------|-----------|
-| Qualquer | `pending` | Ver onboarding, aguardar aprovação |
-| `user` | `active` | Palpitar, usar chat, ver ranking |
-| `user` | `blocked` | Apenas ver perfil — sem palpites ou chat |
-| `marketing` | `active` | Tudo de `user` + publicar/editar boletins |
-| `admin` | `active` | Tudo + controle de mercados, resultados, participantes |
-| `owner` | `active` | Tudo + concessão de roles sensíveis |
-
-Roles são concedidas exclusivamente por admins/owners via Supabase. O front-end apenas reflete permissões lidas do banco.
-
-## Banco de dados
-
-Projeto Supabase: `mklmnxquvslflgljhgqn`
+- Ref: `mklmnxquvslflgljhgqn`
+- Regiao: `us-east-1`
+- Status observado: `ACTIVE_HEALTHY`
 
 Tabelas principais:
 
-| Tabela | Descrição |
-|--------|-----------|
+| Tabela | Finalidade |
+|--------|------------|
 | `users` | Perfis, roles, status de participante |
-| `matches` | Calendário de partidas, status de mercado |
+| `matches` | Jogos, kickoff, status esportivo, mercado e dados football-data |
 | `predictions` | Palpites por partida |
 | `bracket_picks` | Palpites de chaveamento |
-| `scoring_rules` | Regras de pontuação configuráveis |
-| `ranking_snapshots` | Snapshots de ranking |
-| `ranking_breakdowns` | Detalhamento por partida |
-| `chat_messages` | Mensagens da Resenha |
-| `poll_votes` | Votos em enquetes |
+| `scoring_rules` | Regras de pontuacao |
+| `ranking_snapshots` | Ranking consolidado |
+| `ranking_breakdowns` | Detalhamento de pontos |
+| `chat_messages` | Resenha |
+| `poll_votes` | Votos de enquetes |
 | `channel_pins` | Mensagens fixadas |
-| `bulletins` | Comunicados do Boletim |
-| `notifications` | Notificações internas |
-| `participant_invites` | Links de convite |
-| `audit_logs` | Log de ações administrativas |
+| `bulletins` | Comunicados internos |
+| `notifications` | Avisos/notificacoes |
+| `participant_invites` | Convites |
+| `audit_logs` | Auditoria |
 
-Buckets Storage: `avatars`, `banners`, `bulletins`, `chat-media`, `user-media` (legado).
+Storage:
 
-## RLS e segurança
+- `avatars`
+- `banners`
+- `bulletins`
+- `chat-media`
+- `user-media` legado
 
-- RLS habilitado em todas as tabelas.
-- Ações administrativas protegidas por RPCs com `security definer`.
-- Trigger `trg_prevent_user_privilege_escalation` bloqueia autoelevação de privilégios.
-- Trigger `trg_predictions_market_open` bloqueia palpites após fechamento de mercado.
+## Variaveis e secrets
 
-Detalhes completos: [SECURITY.md](SECURITY.md)
+### GitHub Actions / frontend
 
-## Publicação no GitHub Pages
+Somente chaves publicas/publishable:
 
-- Branch de deploy: `gh-pages` (gerada automaticamente pelo GitHub Actions).
-- Workflow: `.github/workflows/deploy.yml`.
-- Gatilho: push para `main`.
-- URL: `https://ojozinho.github.io/Bolao-Suprema/`
+| Secret/variavel | Uso |
+|-----------------|-----|
+| `VITE_SUPABASE_URL` | URL publica do Supabase |
+| `VITE_SUPABASE_ANON_KEY` | Anon/publishable key |
+| `VITE_TENOR_KEY` | Opcional, GIFs |
+| `VITE_THESPORTSDB_KEY` | Opcional, busca de jogadores |
+| `VITE_FNEWS_URL`, `VITE_FNEWS_KEY`, `VITE_FNEWS_HOST` | Opcionais, noticias |
 
-## Variáveis de ambiente necessárias
+### Supabase Edge Function secrets
 
-Configurar em: GitHub > Settings > Secrets and variables > Actions
+Nunca colocar esses valores no frontend:
 
-| Secret | Descrição |
-|--------|-----------|
-| `VITE_SUPABASE_URL` | URL pública do projeto Supabase |
-| `VITE_SUPABASE_ANON_KEY` | Chave anon/publishable |
+| Secret | Uso |
+|--------|-----|
+| `FOOTBALL_DATA_TOKEN` | Token football-data.org |
+| `SUPABASE_SERVICE_ROLE_KEY` | Acesso interno da Edge Function ao banco |
 
-As demais variáveis (Tenor, TheSportsDB, Football News) são opcionais.
+## Fluxo de autenticacao
 
-## Checklist de validação do T.I.
+1. Usuario informa e-mail corporativo `@suprema.group`.
+2. Supabase envia OTP.
+3. Usuario valida o codigo.
+4. Supabase emite sessao/JWT.
+5. Novo usuario fica `pending`.
+6. Admin aprova participante.
+7. Usuario completa perfil.
+8. Usuario acessa app.
 
-### Pré-produção
+## Roles e status
 
-- [ ] Secrets `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` configurados no GitHub.
-- [ ] Migrations em `supabase/migrations/` aplicadas em ordem no Supabase.
-- [ ] Domínio `@suprema.group` configurado no Supabase Auth (Site URL + Redirect URLs).
-- [ ] SMTP personalizado configurado (Resend com domínio `suprema.group`).
-- [ ] Supabase Auth Leaked Password Protection habilitado no dashboard.
-- [ ] RLS habilitado em todas as tabelas (verificar via Supabase Advisors).
-- [ ] Buckets de storage com políticas corretas (sem listagem pública).
+| Role/status | Permissao |
+|-------------|-----------|
+| `pending` | Aguardando aprovacao |
+| `active` | Participa normalmente |
+| `blocked` | Sem palpites/chat |
+| `removed` | Removido/desativado |
+| `user` | Palpites, ranking, resenha |
+| `marketing` | User + boletins |
+| `admin` | Operacao, resultados, participantes |
+| `owner` | Admin + concessao de roles sensiveis |
 
-### Pós-deploy
+Roles sensiveis devem ser definidas no banco/RPC. O frontend apenas reflete permissoes.
 
-- [ ] Login com OTP funciona em `https://ojozinho.github.io/Bolao-Suprema/`.
-- [ ] Rotas hash funcionam: `/#/home`, `/#/prediction`, `/#/ranking`, `/#/admin`.
-- [ ] Novo usuário é criado com `participant_status = 'pending'`.
-- [ ] Admin consegue aprovar participante e alterar status.
-- [ ] Palpite funciona quando mercado está aberto.
-- [ ] Palpite é bloqueado quando mercado está fechado (testar via painel admin).
-- [ ] Upload de foto e banner funcionam.
-- [ ] Chat em tempo real funciona entre abas/dispositivos diferentes.
+## Fluxo de palpites
 
-## Riscos conhecidos e mitigação
+### Fluxo normal do usuario
 
-| Risco | Controle implementado |
-|-------|-----------------------|
-| Autoelevação de privilégios via API direta | Trigger `trg_prevent_user_privilege_escalation` — verificação no banco |
-| Alteração de e-mail via API direta | Mesma trigger — campo `email` incluído na lista protegida |
-| Palpite enviado após kickoff via API direta | Trigger `trg_predictions_market_open` — verificação no banco |
-| Chave `anon` exposta no repositório público | Chave anon é publishable por definição; RLS é a barreira de autorização |
-| URL maliciosa em GIF/imagem de chat | `isSafeHttpUrl` valida protocolo `https://` antes de renderizar |
-| Upload de arquivo com tipo indevido | MIME allowlist e limite de tamanho em `src/lib/supabase.ts` |
-| Imagens de usuário no histórico Git | Diretório `uploads/` adicionado ao `.gitignore`; histórico anterior pode conter arquivos — ver pendências abaixo |
+1. Usuario entra em `/#/prediction`.
+2. Seleciona grupo ou partida.
+3. Ajusta placares.
+4. Salva jogo a jogo ou clica em `SALVAR GRUPO`.
+5. Frontend chama Supabase.
+6. UI so mostra como salvo apos resposta positiva.
 
-## Pendências operacionais
+### Controles no banco
 
-As seguintes ações não são de responsabilidade do código-fonte e devem ser executadas pelo time de T.I. no ambiente de produção:
+Trigger:
 
-1. **Aplicar migrations no Supabase SQL Editor** — em ordem cronológica, conforme listado em `docs/SUPABASE_SETUP.md`.
-2. **Rodar Supabase Security Advisor** após aplicar as migrations e validar que não há alertas críticos.
-3. **Ativar Leaked Password Protection** no Supabase Dashboard > Authentication > Security, se disponível no plano contratado.
-4. **Configurar SMTP personalizado** com domínio `suprema.group` para evitar o limite de 3 e-mails/hora do plano Free (instruções em `docs/SUPABASE_SETUP.md`).
-5. **Validar Site URL e Redirect URLs** no Supabase Auth para o domínio de produção.
-6. **Decidir sobre limpeza do histórico Git** — o diretório `uploads/` contém imagens de desenvolvimento presentes no histórico. Caso o T.I. avalie que representam risco, será necessária limpeza com `git filter-repo` ou BFG Repo-Cleaner. Essa operação é destrutiva e requer aprovação prévia.
+- `trg_predictions_market_open`
 
-### Migrations desta release (aplicar no Supabase SQL Editor)
+Validacoes:
 
-| Arquivo | Conteúdo |
-|---------|----------|
-| `supabase/migrations/20260519090000_lock_user_privileged_columns.sql` | Trigger de proteção contra autoelevação de privilégios |
-| `supabase/migrations/20260519091000_enforce_prediction_market_lock.sql` | Trigger de bloqueio de palpites fora do mercado |
-| `supabase/migrations/20260519100000_lock_user_email_updates.sql` | Extensão da trigger para incluir proteção do campo `email` |
+- partida existe;
+- usuario autenticado;
+- participante ativo;
+- `market_status = open`;
+- status nao esta `locked`, `live`, `finished`;
+- `kickoff_utc > now()`;
+- updates administrativos de pontuacao continuam permitidos.
 
-## Contato / responsável
+RPC principal:
 
-Responsável técnico pelo desenvolvimento: equipe T.I. / Suprema Gaming.
+- `save_match_predictions(jsonb)`
 
-Para dúvidas sobre funcionalidades do app ou regras de negócio, consultar o administrador do Bolão Suprema.
+## Admin
+
+Admin nao e pre-requisito para usuario palpitar.
+
+Admin serve para:
+
+- bloquear mercado manualmente;
+- reabrir em caso de erro operacional;
+- registrar resultado;
+- apurar pontos;
+- remover/desfazer palpite especifico;
+- gerenciar participantes;
+- auditar acoes.
+
+RPCs relevantes:
+
+- `admin_update_match_status`
+- `admin_bulk_match_status`
+- `admin_delete_prediction`
+- `settle_match_result`
+- `admin_set_user_role`
+
+Todas possuem checagem interna de permissao e nao devem ficar executaveis por `anon`.
+
+## Integracao football-data.org
+
+Documentacao especifica: [FOOTBALL_DATA_SYNC.md](FOOTBALL_DATA_SYNC.md)
+
+Configuracao:
+
+- Secret: `FOOTBALL_DATA_TOKEN`
+- Edge Function: `football-data-sync`
+- JWT: obrigatorio (`verify_jwt=true`)
+- Rota: `/functions/v1/football-data-sync?season=2026`
+- Competicao: `WC`
+- Endpoint externo: `/v4/competitions/WC/matches?season=2026`
+
+Comportamento:
+
+- Busca jogos na football-data.org.
+- Tenta casar primeiro por `football_data_id`.
+- Se nao existir, tenta casar por `home_code`, `away_code` e `kickoff_utc`.
+- Atualiza status, placar, minuto ao vivo, kickoff e status externo.
+- Nao reabre lock manual de admin.
+
+Resultado esperado inicial:
+
+- Pode haver `unmatched` enquanto fases eliminatorias nao tiverem times definidos.
+- Isso e esperado e deve ser monitorado, nao necessariamente erro.
+
+## Migrations recentes
+
+| Arquivo | Finalidade |
+|---------|------------|
+| `20260521103000_prediction_batch_and_football_data.sql` | Salvamento em lote e base football-data |
+| `20260521110000_restrict_rpc_grants.sql` | Remove grants anonimos de RPCs sensiveis |
+| `20260521110500_harden_chat_media_listing.sql` | Remove listagem ampla do bucket `chat-media` |
+
+## Checklist de aprovacao
+
+### Build e deploy
+
+- [ ] `npm install`
+- [ ] `npm run type-check`
+- [ ] `npm run build`
+- [ ] GitHub Actions finaliza sem erro.
+- [ ] GitHub Pages abre a URL de producao.
+
+### Supabase
+
+- [ ] Todas as migrations aplicadas em ordem.
+- [ ] RLS ativo nas tabelas publicas.
+- [ ] Views publicas com `security_invoker=true`.
+- [ ] `FOOTBALL_DATA_TOKEN` configurado como secret.
+- [ ] `football-data-sync` ativa com `verify_jwt=true`.
+- [ ] Security Advisor sem alertas criticos.
+- [ ] Performance Advisor revisado.
+
+### Funcional
+
+- [ ] Login OTP funciona.
+- [ ] Novo usuario fica pendente.
+- [ ] Admin aprova usuario.
+- [ ] Usuario completa perfil.
+- [ ] Usuario salva um palpite individual.
+- [ ] Usuario salva um grupo inteiro.
+- [ ] Alteracao de palpite bloqueada apos fechar mercado/kickoff.
+- [ ] Admin bloqueia/reabre mercado.
+- [ ] Admin registra resultado e pontuacao atualiza.
+- [ ] Ranking reflete pontos.
+- [ ] Resenha funciona em duas abas.
+- [ ] Upload de avatar/banner funciona.
+
+### Seguranca
+
+- [ ] Nenhuma `service_role` key no frontend, GitHub Actions ou repositorio.
+- [ ] Tokens colados em terminal/chat foram revogados se necessario.
+- [ ] Bucket `chat-media` nao permite listagem ampla.
+- [ ] RPCs administrativas nao possuem grant para `anon`.
+- [ ] Site URL e Redirect URLs do Supabase Auth conferidos.
+- [ ] SMTP corporativo configurado para evitar limite do plano Free.
+- [ ] Leaked Password Protection avaliado no dashboard.
+
+## Riscos e observacoes
+
+| Risco | Mitigacao |
+|-------|-----------|
+| Usuario tenta alterar palpite direto pela API apos kickoff | Trigger no banco bloqueia |
+| Admin abre/fecha mercado por engano | Auditoria e RPCs com log |
+| Token football-data exposto | Deve ficar apenas em Supabase secrets |
+| Service role exposta | Nunca usar no frontend; rotacionar se vazou |
+| Dados externos ainda incompletos | `unmatched` monitorado no retorno da Edge Function |
+| GitHub Pages sem rewrite de rotas | HashRouter usado em todas as rotas |
+
+## Comandos uteis
+
+```bash
+npm run type-check
+npm run build
+```
+
+Teste local com mock:
+
+```powershell
+$env:VITE_MOCK_AUTH="true"
+npm run dev
+```
+
+## Responsabilidade operacional
+
+Codigo-fonte e migrations ficam neste repositorio. Secrets, Auth, SMTP, rotacao de chaves, monitoramento de advisors e aprovacao de participantes ficam sob operacao do ambiente Supabase/GitHub da empresa.

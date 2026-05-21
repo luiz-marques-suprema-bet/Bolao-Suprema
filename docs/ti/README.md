@@ -1,124 +1,104 @@
-# Bolao Suprema - Guia de T.I.
+# Guia rapido de T.I. - Bolao Suprema
 
-## Visao geral
+Este arquivo e o checklist curto. O handoff completo esta em [../TI_HANDOFF.md](../TI_HANDOFF.md).
 
-Bolao Suprema e um app interno para palpites da Copa, com auth via Supabase, perfis, palpites, ranking, Resenha, Boletim, administracao, auditoria e exportacoes.
+## O que o app faz
 
-## Variaveis de ambiente
+- Bolao interno da Suprema para Copa 2026.
+- Login por OTP com e-mail `@suprema.group`.
+- Palpites por jogo e por grupo.
+- Ranking, Resenha, Boletim, notificacoes e painel admin.
+- Sync esportivo via football-data.org usando Supabase Edge Function.
 
-- `VITE_SUPABASE_URL`: URL publica do projeto Supabase.
-- `VITE_SUPABASE_ANON_KEY`: anon/publishable key do Supabase.
-- `VITE_TENOR_KEY`: opcional para GIFs.
-- `VITE_PEXELS_API_KEY`, `VITE_FNEWS_URL`, `VITE_FNEWS_KEY`, `VITE_FNEWS_HOST`: opcionais para conteudo externo.
-- `VITE_MOCK_AUTH=true`: opcional apenas para teste local explicito.
+## Pontos que T.I. deve saber
 
-Nunca use service role no frontend e nunca commite `.env`.
+- O usuario nao depende do admin para palpitar.
+- A tela admin e apenas para operacao e correcao.
+- O usuario pode editar palpite ate o kickoff da partida.
+- A trava principal esta no banco, nao so no frontend.
+- Service role nunca deve ir para frontend ou GitHub Actions.
+- `FOOTBALL_DATA_TOKEN` fica somente em Supabase secrets.
 
-Sem `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`, login e acoes persistentes devem falhar de forma clara; isso nao deve ser usado para validar producao.
+## Projeto Supabase
 
-## Supabase
+- Ref: `mklmnxquvslflgljhgqn`
+- Edge Function: `football-data-sync`
+- JWT da Edge Function: deve ficar habilitado (`verify_jwt=true`)
 
-Projeto: `mklmnxquvslflgljhgqn`
+## Secrets
 
-Principais tabelas:
+### GitHub Actions
 
-- `users`: perfis, roles, status de participante e privacidade.
-- `matches`: agenda, resultados, status esportivo e `market_status`.
-- `predictions`: palpites por partida.
-- `bracket_picks`: palpites de chave.
-- `scoring_rules`: regras configuraveis de pontuacao.
-- `ranking_snapshots` e `ranking_breakdowns`: ranking e transparencia de pontos.
-- `chat_messages`, `poll_votes`, `channel_pins`: Resenha.
-- `bulletins`: comunicados de marketing/endomarketing.
-- `participant_invites`: convites.
-- `notifications`: notificacoes internas.
-- `audit_logs`: auditoria.
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
-Buckets:
+### Supabase Edge Function
 
-- `avatars`: novos avatares.
-- `banners`: novos banners.
-- `bulletins`: imagens de boletim.
-- `user-media`: legado; manter para URLs antigas.
+- `FOOTBALL_DATA_TOKEN`
+- `SUPABASE_SERVICE_ROLE_KEY` (secret interno do Supabase)
 
-Limite de upload: 5 MB. Mimes: JPG, PNG, WEBP, GIF.
+## Migrations importantes desta fase
 
-## Roles e participantes
+- `20260521103000_prediction_batch_and_football_data.sql`
+- `20260521110000_restrict_rpc_grants.sql`
+- `20260521110500_harden_chat_media_listing.sql`
 
-- `pending`: aguardando aprovacao; acesso limitado.
-- `active`: participa normalmente.
-- `blocked`: sem palpites/chat.
-- `removed`: removido/desativado.
-- `user`: usuario comum.
-- `marketing`: gerencia boletins e uploads editoriais.
-- `admin`: participantes, mercados, resultados, ranking, chat, exportacoes.
-- `owner`: concede roles sensiveis e controla configuracoes.
-
-Roles sensiveis devem ser concedidas no banco por admin/owner. O frontend apenas reflete permissoes.
-
-## Setup local
+## Validacao tecnica
 
 ```bash
 npm install
 npm run type-check
 npm run build
-npm run dev
 ```
 
-## Deploy
+## Validacao funcional
 
-GitHub Pages publica a partir de `main`.
+- [ ] Login OTP funciona.
+- [ ] Usuario novo entra pendente.
+- [ ] Admin aprova usuario.
+- [ ] Usuario salva um palpite individual.
+- [ ] Usuario salva um grupo inteiro.
+- [ ] Mercado bloqueado impede alteracao.
+- [ ] Resultado apurado atualiza ranking.
+- [ ] Resenha funciona em duas abas.
+- [ ] Upload de avatar/banner funciona.
+- [ ] `football-data-sync?season=2026` retorna JSON sem erro de token.
 
-Checklist:
+## Resultado esperado do sync
 
-1. Verificar secrets `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
-2. Rodar `npm run build`.
-3. Fazer merge/push em `main`.
-4. Confirmar Pages em `https://ojozinho.github.io/Bolao-Suprema/`.
-5. Validar rotas hash `/#/home`, `/#/prediction`, `/#/admin`.
+Um retorno valido tem este formato:
 
-## Migrations
+```json
+{
+  "ok": true,
+  "competition": "WC",
+  "season": "2026",
+  "updated": 63,
+  "unmatched": []
+}
+```
 
-Migrations ficam em `supabase/migrations`.
+`unmatched` pode vir preenchido enquanto fases futuras ainda nao tiverem times definidos. Isso nao bloqueia a fase de grupos.
 
-Aplicadas nesta onda:
+## Security Advisor
 
-- `20260515143000_internal_product_governance.sql`
-- `20260515144500_harden_storage_listing.sql`
-- `20260515150000_harden_rpc_permissions.sql`
-- `20260515151000_index_new_foreign_keys.sql`
-- `20260515162000_harden_user_profile_privacy.sql`
+Depois das migrations, rodar Supabase Security Advisor.
 
-Antes de aplicar em producao:
+Aceitavel para seguir:
 
-1. Gerar snapshot/auditoria.
-2. Revisar SQL.
-3. Confirmar rollback.
-4. Aplicar em branch/dev se disponivel.
-5. Aplicar no projeto principal.
-6. Validar com queries e advisors.
+- Sem RPC administrativa executavel por `anon`.
+- Sem bucket publico com listagem ampla.
+- RLS ativo nas tabelas publicas.
+- Views publicas com `security_invoker=true`.
 
-## Backup e rollback
+Avisos comuns que exigem decisao operacional:
 
-Nunca apagar tabelas/buckets antigos sem confirmacao. Para rollback rapido, reverta o commit do app e mantenha as tabelas novas. Rollback destrutivo exige backup validado.
+- `authenticated_security_definer_function_executable`: esperado para algumas RPCs chamadas pelo app, desde que elas validem admin/owner internamente.
+- `auth_leaked_password_protection`: ativar pelo dashboard se o plano/politica permitir.
 
-## Fluxos principais
+## Links
 
-- Usuario solicita OTP com e-mail corporativo.
-- Novo usuario entra pendente.
-- Admin aprova participante.
-- Usuario completa perfil, palpita e acompanha ranking.
-- Admin bloqueia/desbloqueia mercados e apura resultados.
-- Marketing publica boletins.
-- Admin modera Resenha e consulta auditoria/exportacoes.
-- Admin cria links de convite no painel operacional; usuario entra pendente ate aprovacao.
-- Avisos internos aparecem em `/#/notificacoes`.
-
-## LGPD e privacidade
-
-O app salva dados de perfil, palpites, mensagens, uploads e logs de auditoria. Ranking/chat nao devem expor e-mail. Perfil tem opcoes de privacidade. `privacy_hide_profile` e aplicado na UI e na RLS de `users`: o proprio usuario e admins leem o perfil, usuarios comuns nao leem perfis marcados como privados. Dados administrativos ficam protegidos por RLS/RPC.
-
-## Limitacoes conhecidas
-
-- WhatsApp/e-mail/push estao modelados como canais de notificacao, mas nao integrados a provedores externos nesta entrega.
-- A Copa 2026 completa tera 104 jogos; a base atual cobre a fase de grupos existente no app e foi preparada para expansao.
+- README principal: [../../README.md](../../README.md)
+- Handoff completo: [../TI_HANDOFF.md](../TI_HANDOFF.md)
+- Sync football-data: [../FOOTBALL_DATA_SYNC.md](../FOOTBALL_DATA_SYNC.md)
+- Seguranca: [../SECURITY.md](../SECURITY.md)
