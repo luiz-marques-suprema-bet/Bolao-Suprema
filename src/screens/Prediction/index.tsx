@@ -532,28 +532,28 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
       id={`match-row-${match.id}`}
       className={cn(
         'border-b border-hairline last:border-0',
-        hasPick && isPickable ? 'bg-green/[0.03]' : '',
+        hasPick && isPickable ? 'bg-green/[0.04]' : '',
       )}
     >
-      {/* Header row */}
+      {/* Info row — grid garante espaço igual para os dois times */}
       <div
         onClick={handleHeaderClick}
         className={cn(
-          'px-3 py-3 flex items-center gap-2',
+          'px-3 py-3 grid grid-cols-[1fr_80px_1fr] items-center gap-x-2',
           isPickable && hasPick ? 'cursor-pointer hover:bg-paper-deep transition-colors' : '',
         )}
       >
-        {/* Home team */}
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <Flag team={match.home} size={26} />
+        {/* Home */}
+        <div className="flex items-center gap-2 min-w-0">
+          <Flag team={match.home} size={28} className="shrink-0" />
           <div className="min-w-0">
             <div className="font-mono text-[12px] font-bold leading-none">{match.home.code}</div>
-            <div className="font-mono text-[8px] text-ink-3 truncate leading-none mt-0.5 max-w-[60px]">{match.home.name}</div>
+            <div className="font-mono text-[9px] text-ink-3 truncate leading-none mt-0.5">{match.home.name}</div>
           </div>
         </div>
 
-        {/* Center: time / result / pick */}
-        <div className="flex-shrink-0 flex flex-col items-center gap-0.5 min-w-[68px]">
+        {/* Center */}
+        <div className="flex flex-col items-center gap-0.5">
           {isLive && (
             <>
               <span className="font-display text-lg leading-none">{match.homeScore}–{match.awayScore}</span>
@@ -571,66 +571,59 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
           )}
           {isLocked && !isLive && !isDone && (
             hasPick
-              ? <span className="font-display text-lg leading-none text-green">{existing.homeScore}–{existing.awayScore}</span>
-              : <span className="font-mono text-[8px] text-ink-3">sem palpite</span>
+              ? <><span className="font-display text-lg leading-none text-ink-3">{existing.homeScore}–{existing.awayScore}</span><span className="font-mono text-[7px] text-ink-4 tracking-eyebrow">BLOQUEADO</span></>
+              : <span className="font-mono text-[8px] text-ink-4 text-center leading-tight">sem<br/>palpite</span>
           )}
           {!isLive && !isDone && !isLocked && hasPick && !editing && (
-            <div className="flex items-center gap-1">
+            <>
               <span className="font-display text-lg leading-none text-green">{existing.homeScore}–{existing.awayScore}</span>
-              <span className="font-mono text-[9px] text-green">✓</span>
-            </div>
+              <span className="font-mono text-[7px] text-green font-bold tracking-eyebrow">SALVO ✓</span>
+            </>
           )}
           {!isLive && !isDone && !isLocked && hasPick && editing && (
-            <span className="font-mono text-[7px] text-ink-3 tracking-eyebrow">EDITANDO ▲</span>
+            <span className="font-mono text-[7px] text-ink-3 tracking-eyebrow text-center">EDITAR<br/>▲</span>
           )}
           {!isLive && !isDone && !isLocked && !hasPick && (
             <>
               <span className="font-mono text-[7px] text-ink-4">{formatMatchDate(match)}</span>
               <span className="font-display text-base leading-none">{match.time}</span>
-              <span className="font-mono text-[6px] text-ink-4 tracking-eyebrow">BRT</span>
+              <span className="font-mono text-[7px] text-green font-bold tracking-eyebrow">ABERTO</span>
             </>
           )}
         </div>
 
-        {/* Away team */}
-        <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
+        {/* Away */}
+        <div className="flex items-center gap-2 min-w-0 justify-end">
           <div className="min-w-0 text-right">
             <div className="font-mono text-[12px] font-bold leading-none">{match.away.code}</div>
-            <div className="font-mono text-[8px] text-ink-3 truncate leading-none mt-0.5 max-w-[60px]">{match.away.name}</div>
+            <div className="font-mono text-[9px] text-ink-3 truncate leading-none mt-0.5">{match.away.name}</div>
           </div>
-          <Flag team={match.away} size={26} />
+          <Flag team={match.away} size={28} className="shrink-0" />
         </div>
-
-        {isPickable && !hasPick && (
-          <span className="font-mono text-[7px] tracking-eyebrow text-green font-bold shrink-0 w-10 text-right">ABERTO</span>
-        )}
-        {isPickable && hasPick && (
-          <span className="font-mono text-[9px] text-ink-3 shrink-0 w-4 text-center">{editing ? '▲' : '✎'}</span>
-        )}
       </div>
 
-      {/* Compact score inputs */}
+      {/* Score inputs */}
       {showInputs && (
-        <div className="px-3 pb-2.5 flex items-center gap-1.5">
+        <div className="px-3 pb-3 flex items-center gap-2">
           <div className="flex-1 flex items-center justify-end">
             <button onClick={() => updateHome(clamp(home - 1, 0, 9))} disabled={home === 0}
-              className="w-7 h-7 flex items-center justify-center border-2 border-r-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow disabled:opacity-25 select-none">−</button>
-            <div className="w-8 h-7 flex items-center justify-center border-2 border-ink font-display text-base select-none">{home}</div>
+              className="w-8 h-8 flex items-center justify-center border-2 border-r-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow disabled:opacity-25 select-none">−</button>
+            <div className="w-9 h-8 flex items-center justify-center border-2 border-ink font-display text-lg select-none">{home}</div>
             <button onClick={() => updateHome(clamp(home + 1, 0, 9))}
-              className="w-7 h-7 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow select-none">+</button>
+              className="w-8 h-8 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow select-none">+</button>
           </div>
-          <span className="font-mono text-[10px] text-ink-3 shrink-0 px-0.5">×</span>
+          <span className="font-mono text-[11px] text-ink-3 shrink-0">×</span>
           <div className="flex-1 flex items-center justify-start">
             <button onClick={() => updateAway(clamp(away - 1, 0, 9))} disabled={away === 0}
-              className="w-7 h-7 flex items-center justify-center border-2 border-r-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow disabled:opacity-25 select-none">−</button>
-            <div className="w-8 h-7 flex items-center justify-center border-2 border-ink font-display text-base select-none">{away}</div>
+              className="w-8 h-8 flex items-center justify-center border-2 border-r-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow disabled:opacity-25 select-none">−</button>
+            <div className="w-9 h-8 flex items-center justify-center border-2 border-ink font-display text-lg select-none">{away}</div>
             <button onClick={() => updateAway(clamp(away + 1, 0, 9))}
-              className="w-7 h-7 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow select-none">+</button>
+              className="w-8 h-8 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow select-none">+</button>
           </div>
           <button
             onClick={handleConfirm}
             disabled={saving}
-            className="btn-yellow text-[9px] px-3 h-7 tracking-eyebrow font-bold disabled:opacity-50 shrink-0"
+            className="btn-yellow text-[9px] px-3 h-8 tracking-eyebrow font-bold disabled:opacity-50 shrink-0"
           >
             {saving ? '···' : hasPick ? 'ATUALIZAR' : 'CONFIRMAR'}
           </button>
@@ -861,10 +854,13 @@ function GroupsTab() {
                   setTimeout(() => {
                     const preds = usePredictionStore.getState().predictions
                     const next = groupMatches.find(gm => isBetOpen(gm) && !preds[gm.id] && gm.id !== m.id)
-                    if (next) {
-                      document.getElementById(`match-row-${next.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                    }
-                  }, 150)
+                    if (!next) return
+                    const el = document.getElementById(`match-row-${next.id}`)
+                    if (!el) return
+                    // 44px tab bar + 52px group selector + 20px breathing room
+                    const offset = el.getBoundingClientRect().top + window.scrollY - 116
+                    window.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' })
+                  }, 200)
                 }}
               />
             ))}
@@ -1404,10 +1400,13 @@ function DesktopGroupView({
                   setTimeout(() => {
                     const preds = usePredictionStore.getState().predictions
                     const next = groupMatches.find(gm => isBetOpen(gm) && !preds[gm.id] && gm.id !== m.id)
-                    if (next) {
-                      document.getElementById(`match-row-${next.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                    }
-                  }, 150)
+                    if (!next) return
+                    const el = document.getElementById(`match-row-${next.id}`)
+                    if (!el) return
+                    // 44px tab bar + 52px group selector + 20px breathing room
+                    const offset = el.getBoundingClientRect().top + window.scrollY - 116
+                    window.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' })
+                  }, 200)
                 }}
               />
             ))}
