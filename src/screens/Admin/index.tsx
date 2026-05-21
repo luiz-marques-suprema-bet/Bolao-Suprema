@@ -296,7 +296,7 @@ async function exportRankingCsv() {
 
 function KpiCard({ label, value, sub }: { label: string; value: number | string; sub: string }) {
   return (
-    <div className="border-2 border-ink p-4">
+    <div className="ui-card p-4">
       <div className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-1">{label}</div>
       <div className="font-display text-3xl leading-none">{value}</div>
       <div className="font-mono text-[10px] text-ink-4 mt-0.5">{sub}</div>
@@ -388,8 +388,8 @@ function ParticipantsPanel({ onToast }: { onToast: (msg: string, ok: boolean) =>
   const blocked = participants.filter(p => p.participant_status === 'blocked').length
 
   return (
-    <section className="border-2 border-ink mb-6">
-      <div className="px-4 py-3 bg-ink text-paper flex items-center justify-between gap-3">
+    <section className="ui-panel mb-6">
+      <div className="ui-panel-header flex items-center justify-between gap-3">
         <div>
           <div className="font-display text-xl">PARTICIPANTES</div>
           <div className="font-mono text-[9px] text-paper/50">{total} cadastrados · {blocked} bloqueados</div>
@@ -440,7 +440,7 @@ function ParticipantsPanel({ onToast }: { onToast: (msg: string, ok: boolean) =>
                   <button
                     disabled={busy}
                     onClick={() => loadPreds(p.id)}
-                    className="font-mono text-[8px] border border-hairline px-2 py-1 hover:bg-paper-deep transition-colors"
+                    className="font-mono text-[8px] border border-hairline px-2 py-1 hover:bg-surface-hover transition-colors"
                   >
                     {isOpen ? '✕' : 'PALPITES'}
                   </button>
@@ -527,8 +527,8 @@ function NoticesPanel({ onToast }: { onToast: (msg: string, ok: boolean) => void
   }
 
   return (
-    <section className="border-2 border-ink mb-6">
-      <div className="px-4 py-3 bg-ink text-paper flex items-center justify-between gap-3">
+    <section className="ui-panel mb-6">
+      <div className="ui-panel-header flex items-center justify-between gap-3">
         <div>
           <div className="font-display text-xl">AVISOS GLOBAIS</div>
           <div className="font-mono text-[9px] text-paper/50">Aparecem na aba Avisos para todos</div>
@@ -651,8 +651,8 @@ function AdminRolesPanel({ onToast }: { onToast: (msg: string, ok: boolean) => v
   }
 
   return (
-    <section className="border-2 border-ink mb-6">
-      <div className="px-4 py-3 bg-ink text-paper flex items-center justify-between gap-3">
+    <section className="ui-panel mb-6">
+      <div className="ui-panel-header flex items-center justify-between gap-3">
         <div>
           <div className="font-display text-xl">ATRIBUIÇÃO DE PAPÉIS</div>
           <div className="font-mono text-[9px] text-paper/50">
@@ -857,7 +857,7 @@ function AdminMobile() {
         </div>
       </div>
 
-      <div className="border-2 border-ink mx-4 mt-3">
+      <div className="ui-panel mx-4 mt-3">
         <div className="px-3 py-2 border-b border-hairline font-mono text-[10px] tracking-eyebrow text-ink-3">
           PARTIDAS ({filtered.length})
         </div>
@@ -935,7 +935,7 @@ function AdminDesktop() {
         <div className="grid grid-cols-[1.6fr_1fr] gap-5">
 
           <div className="space-y-4">
-            <div className="border-2 border-ink">
+            <div className="ui-panel">
               <div className="px-4 py-3 border-b border-hairline flex items-center gap-3 flex-wrap">
                 <span className="font-mono text-[10px] tracking-eyebrow text-ink-3">FILTRAR:</span>
                 {(['all', 'scheduled', 'open', 'locked', 'finished'] as const).map(f => (
@@ -996,7 +996,7 @@ function AdminDesktop() {
           </div>
 
           <div className="space-y-4">
-            <div className="border-2 border-ink p-4">
+            <div className="ui-card p-4">
               <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">AÇÕES POR GRUPO</p>
               <div className="grid grid-cols-3 gap-1.5 mb-3">
                 {WC2026_GROUPS.map(g => (
@@ -1023,7 +1023,7 @@ function AdminDesktop() {
               </button>
             </div>
 
-            <div className="border-2 border-ink p-4">
+            <div className="ui-card p-4">
               <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">DATAS-CHAVE</p>
               <div className="space-y-2">
                 {[
@@ -1043,7 +1043,7 @@ function AdminDesktop() {
               </div>
             </div>
 
-            <div className="border-2 border-ink p-4">
+            <div className="ui-card p-4">
               <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">TABELA DE PONTUAÇÃO</p>
               <div className="space-y-1.5">
                 {POINT_RULES.map(r => (

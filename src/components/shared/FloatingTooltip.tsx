@@ -73,7 +73,7 @@ export function FloatingTooltip({ label, children, className }: FloatingTooltipP
           ref={tooltipRef}
           role="tooltip"
           style={{ position: 'absolute', top: pos.top, left: pos.left }}
-          className="z-[9999] max-w-[280px] border-2 border-ink bg-ink px-3 py-2 font-mono text-[10px] leading-snug text-paper shadow-[4px_4px_0_#FFCB05] pointer-events-none"
+          className="z-[9999] max-w-[280px] border-2 border-line-strong bg-inverse px-3 py-2 font-mono text-[10px] leading-snug text-inverse-text shadow-[4px_4px_0_#FFCB05] pointer-events-none"
         >
           {label}
         </div>,

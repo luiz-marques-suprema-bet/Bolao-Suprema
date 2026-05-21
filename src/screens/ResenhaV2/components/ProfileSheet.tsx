@@ -195,7 +195,7 @@ export function ProfileSheet({ m, onClose }: { m: ChatMessage; onClose: () => vo
         <motion.div
           initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
           transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-          className="absolute inset-y-0 right-0 w-80 bg-paper border-l border-hairline z-40 flex flex-col shadow-2xl overflow-hidden"
+          className="absolute inset-y-0 right-0 w-80 bg-card border-l border-hairline z-40 flex flex-col shadow-2xl overflow-hidden"
         >
           {panelContent}
         </motion.div>
@@ -206,13 +206,13 @@ export function ProfileSheet({ m, onClose }: { m: ChatMessage; onClose: () => vo
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[60] flex flex-col justify-end bg-ink/50"
+      className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/70 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-        className="bg-paper rounded-t-2xl max-h-[88dvh] overflow-hidden flex flex-col"
+        className="bg-card rounded-t-2xl max-h-[88dvh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {panelContent}

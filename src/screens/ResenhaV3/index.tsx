@@ -370,10 +370,10 @@ export function ResenhaScreen() {
   }
 
   return (
-    <div className="min-h-0 flex-1 bg-[#f6f1e6] text-ink">
+    <div className="min-h-0 flex-1 bg-app text-ink">
       <div className="h-[calc(100dvh-3.5rem)] overflow-hidden lg:h-[calc(100dvh-5.75rem)]">
         <section className="flex h-full min-h-0 flex-col">
-          <header className="flex shrink-0 items-center justify-between gap-3 border-b border-black/10 bg-[#fbf7ed] px-4 py-3">
+          <header className="flex shrink-0 items-center justify-between gap-3 border-b border-hairline bg-paper px-4 py-3 shadow-card">
             <div className="min-w-0">
               <div className="flex items-end gap-3">
                 <div className="font-display text-4xl leading-none">RESENHA</div>
@@ -389,10 +389,10 @@ export function ResenhaScreen() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setPollOpen(true)} className="hidden border border-ink bg-ink px-3 py-2 font-mono text-[10px] font-bold text-paper transition hover:bg-ink-2 sm:block">
+              <button type="button" onClick={() => setPollOpen(true)} className="hidden border border-line-strong bg-inverse px-3 py-2 font-mono text-[10px] font-bold text-inverse-text transition hover:bg-surface-hover sm:block">
                 ENQUETE
               </button>
-              <button type="button" onClick={() => setGifOpen(true)} className="border border-ink bg-yellow px-3 py-2 font-mono text-[10px] font-bold text-ink shadow-[3px_3px_0_#0D0D0D] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
+              <button type="button" onClick={() => setGifOpen(true)} className="border border-yellow bg-yellow px-3 py-2 font-mono text-[10px] font-bold text-[#0D0D0D] shadow-btn transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
                 GIF
               </button>
             </div>
@@ -448,7 +448,7 @@ export function ResenhaScreen() {
             <div ref={endRef} />
           </div>
 
-          <footer className="shrink-0 border-t border-black/10 bg-[#fbf7ed]">
+          <footer className="shrink-0 border-t border-hairline bg-paper shadow-[0_-18px_42px_rgba(var(--color-shadow-soft)/0.24)]">
             <AnimatePresence>
               {gifOpen && (
                 <GifDock
@@ -470,7 +470,7 @@ export function ResenhaScreen() {
             </AnimatePresence>
 
             {replyingTo && (
-              <div className="flex items-center justify-between gap-3 border-b border-black/10 bg-paper px-4 py-2">
+              <div className="flex items-center justify-between gap-3 border-b border-hairline bg-surface-2 px-4 py-2">
                 <div className="min-w-0 border-l-2 border-green pl-3">
                   <div className="font-mono text-[9px] font-bold text-green">RESPONDENDO {replyingTo.who}</div>
                   <div className="truncate font-sans text-xs text-ink-3">{getContentPreview(replyingTo)}</div>
@@ -480,9 +480,9 @@ export function ResenhaScreen() {
             )}
 
             {mentionSuggestions.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto border-b border-black/10 px-3 py-2">
+              <div className="flex gap-2 overflow-x-auto border-b border-hairline px-3 py-2">
                 {mentionSuggestions.map(profile => (
-                  <button key={profile.id} type="button" onClick={() => insertMention(profile)} className="flex shrink-0 items-center gap-2 border border-black/10 bg-paper px-2 py-1.5 hover:border-ink">
+                  <button key={profile.id} type="button" onClick={() => insertMention(profile)} className="flex shrink-0 items-center gap-2 border border-hairline bg-card px-2 py-1.5 hover:border-line-strong">
                     <Avatar initials={profile.initials} color={profile.color} src={profile.avatarUrl} size={24} />
                     <span className="font-mono text-[10px] font-bold">{profile.firstName} {profile.lastName}</span>
                   </button>
@@ -492,12 +492,12 @@ export function ResenhaScreen() {
 
             <div className="flex items-end gap-2 px-3 py-2.5 sm:px-4">
               <div className="relative">
-                <button type="button" onClick={() => setActionMenu(value => !value)} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-ink bg-paper font-display text-xl transition hover:bg-yellow', actionMenu && 'bg-ink text-paper')}>
+                <button type="button" onClick={() => setActionMenu(value => !value)} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-line-strong bg-card font-display text-xl transition hover:bg-yellow hover:text-[#0D0D0D]', actionMenu && 'bg-yellow text-[#0D0D0D]')}>
                   +
                 </button>
                 <AnimatePresence>
                   {actionMenu && (
-                    <motion.div initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 8, opacity: 0 }} className="absolute bottom-full left-0 z-50 mb-2 w-56 overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-[5px_5px_0_#0D0D0D]">
+                    <motion.div initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 8, opacity: 0 }} className="absolute bottom-full left-0 z-50 mb-2 w-56 overflow-hidden rounded-2xl ui-card">
                       <ActionButton label="Foto" detail="imagem do celular" busy={uploading === 'image'} onClick={() => void sendMedia('image')} />
                       <ActionButton label="Video" detail="arquivo ou camera" busy={uploading === 'video'} onClick={() => void sendMedia('video')} />
                       <ActionButton label="Enquete" detail="votacao do grupo" onClick={() => { setPollOpen(true); setActionMenu(false) }} />
@@ -518,16 +518,16 @@ export function ResenhaScreen() {
                 }}
                 rows={1}
                 placeholder="Mensagem"
-                className="max-h-32 min-h-11 flex-1 resize-none rounded-[22px] border border-black/10 bg-paper px-4 py-3 font-sans text-[15px] leading-5 outline-none transition placeholder:text-ink-4 focus:border-ink"
+                className="max-h-32 min-h-11 flex-1 resize-none rounded-[22px] border border-hairline bg-card px-4 py-3 font-sans text-[15px] leading-5 outline-none transition placeholder:text-ink-4 focus:border-line-strong"
               />
 
-              <button type="button" onClick={startVideoNoteRecording} disabled={videoNote.recording || audio.recording} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border border-black/10 bg-paper font-mono text-[9px] font-bold text-ink-3 transition hover:border-ink hover:bg-paper-deep hover:text-ink disabled:opacity-40', videoNote.recording && 'border-red bg-red text-white')}>
+              <button type="button" onClick={startVideoNoteRecording} disabled={videoNote.recording || audio.recording} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border border-hairline bg-card font-mono text-[9px] font-bold text-ink-3 transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:opacity-40', videoNote.recording && 'border-red bg-red text-white')}>
                 CAM
               </button>
-              <button type="button" onClick={startAudioRecording} disabled={audio.uploading || audio.recording || videoNote.recording} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border border-black/10 bg-paper font-mono text-[9px] font-bold text-ink-3 transition hover:border-red hover:bg-paper-deep hover:text-red disabled:opacity-50', audio.recording && 'border-red bg-red text-white')}>
+              <button type="button" onClick={startAudioRecording} disabled={audio.uploading || audio.recording || videoNote.recording} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border border-hairline bg-card font-mono text-[9px] font-bold text-ink-3 transition hover:border-red hover:bg-surface-hover hover:text-red disabled:opacity-50', audio.recording && 'border-red bg-red text-white')}>
                 {audio.recording ? `${audio.seconds}s` : 'MIC'}
               </button>
-              <button type="button" onClick={sendText} disabled={!draft.trim()} className="h-11 min-w-16 shrink-0 rounded-[22px] bg-green px-4 font-mono text-[10px] font-bold text-white shadow-[2px_2px_0_#0D0D0D] transition hover:bg-green/90 disabled:opacity-40 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
+              <button type="button" onClick={sendText} disabled={!draft.trim()} className="h-11 min-w-16 shrink-0 rounded-[22px] bg-green px-4 font-mono text-[10px] font-bold text-white shadow-btn transition hover:bg-green/90 disabled:opacity-40 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
                 ENVIAR
               </button>
             </div>
@@ -649,7 +649,7 @@ function MessageRow({
         <div
           className={cn(
             'relative min-w-0 overflow-visible border px-3.5 py-2.5 shadow-sm',
-            mine ? 'rounded-[20px] rounded-br-[6px] border-green/30 bg-[#dff7d6]' : 'rounded-[20px] rounded-bl-[6px] border-black/10 bg-paper',
+            mine ? 'rounded-[20px] rounded-br-[6px] border-green/40 bg-green/15' : 'rounded-[20px] rounded-bl-[6px] border-hairline bg-card',
             (message.type === 'image' || message.type === 'gif' || message.type === 'video' || message.type === 'video_note') ? 'p-2' : 'pb-6',
             mine ? 'pr-4' : 'pl-4',
           )}
@@ -662,7 +662,7 @@ function MessageRow({
           )}
 
           {message.replyTo && (
-            <div className="mb-2 rounded-xl border-l-2 border-green bg-black/5 px-3 py-2">
+            <div className="mb-2 rounded-xl border-l-2 border-green bg-surface-2 px-3 py-2">
               <div className="font-mono text-[9px] font-bold text-green">{message.replyTo.who}</div>
               <div className="truncate font-sans text-xs text-ink-3">{getContentPreview({ type: message.replyTo.type as ChatMessage['type'], text: message.replyTo.text })}</div>
             </div>
@@ -680,7 +680,7 @@ function MessageRow({
           type="button"
           onClick={onToggleMenu}
           className={cn(
-            'absolute z-30 grid h-7 w-7 place-items-center rounded-full border border-ink/60 bg-paper font-mono text-[11px] leading-none shadow-[1px_1px_0_#0D0D0D] transition hover:border-ink hover:bg-yellow',
+            'absolute z-30 grid h-7 w-7 place-items-center rounded-full border border-line-strong bg-card font-mono text-[11px] leading-none shadow-btn transition hover:border-yellow hover:bg-yellow hover:text-[#0D0D0D]',
             mine ? '-left-9 top-2' : '-right-9 top-2',
             menuOpen && 'bg-yellow',
           )}
@@ -708,7 +708,7 @@ function MessageRow({
         {groupedReactions.length > 0 && (
           <div className={cn('mt-1 flex flex-wrap gap-1', mine && 'justify-end')}>
             {groupedReactions.map(reaction => (
-              <button key={reaction.emoji} type="button" onClick={() => onReact(reaction.emoji)} className={cn('rounded-full border px-2 py-1 text-xs', reaction.mine ? 'border-green bg-green text-white' : 'border-black/10 bg-paper')}>
+              <button key={reaction.emoji} type="button" onClick={() => onReact(reaction.emoji)} className={cn('rounded-full border px-2 py-1 text-xs', reaction.mine ? 'border-green bg-green text-white' : 'border-hairline bg-card')}>
                 {reaction.emoji} <span className="font-mono text-[10px]">{reaction.count}</span>
               </button>
             ))}
@@ -795,12 +795,12 @@ function MessageActionPanel({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -4, scale: 0.98 }}
       className={cn(
-        'absolute z-40 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-black/10 bg-paper shadow-[0_18px_50px_rgba(0,0,0,0.16)]',
+        'absolute z-40 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl ui-card',
         mine ? 'right-0' : 'left-0',
         openUp ? 'bottom-full mb-2' : 'top-full mt-2',
       )}
     >
-      <div className="border-b border-black/10 p-2">
+      <div className="border-b border-hairline p-2">
         <div className="mb-2 px-2 font-mono text-[9px] font-bold text-ink-4">REAGIR</div>
         <div className="grid grid-cols-6 gap-1">
           {QUICK_REACTIONS.map(emoji => (
@@ -808,7 +808,7 @@ function MessageActionPanel({
               key={emoji}
               type="button"
               onClick={() => onReact(emoji)}
-              className="grid h-10 place-items-center rounded-xl border border-black/10 bg-paper-deep text-lg transition hover:border-ink hover:bg-yellow"
+              className="grid h-10 place-items-center rounded-xl border border-hairline bg-surface-2 text-lg transition hover:border-yellow hover:bg-yellow hover:text-[#0D0D0D]"
             >
               {emoji}
             </button>
@@ -826,7 +826,7 @@ function MessageActionPanel({
 
 function MenuAction({ label, detail, danger, onClick }: { label: string; detail: string; danger?: boolean; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className={cn('flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition hover:bg-black/5', danger && 'text-red hover:bg-red/10')}>
+    <button type="button" onClick={onClick} className={cn('flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition hover:bg-surface-hover', danger && 'text-red hover:bg-red/10')}>
       <span>
         <span className="block font-mono text-[11px] font-bold">{label}</span>
         <span className={cn('block font-sans text-xs text-ink-4', danger && 'text-red/60')}>{detail}</span>
@@ -839,7 +839,7 @@ function MenuAction({ label, detail, danger, onClick }: { label: string; detail:
 function DateMarker({ label }: { label: string }) {
   return (
     <div className="my-4 flex justify-center">
-      <span className="rounded-full border border-black/10 bg-paper px-3 py-1 font-mono text-[9px] font-bold text-ink-4">{label}</span>
+      <span className="rounded-full border border-hairline bg-card px-3 py-1 font-mono text-[9px] font-bold text-ink-4">{label}</span>
     </div>
   )
 }
@@ -848,7 +848,7 @@ function LoadingChat() {
   return (
     <div className="space-y-4 px-4">
       {[0, 1, 2, 3].map(index => (
-        <div key={index} className={cn('h-16 animate-pulse rounded-2xl bg-black/5', index % 2 ? 'ml-auto w-2/3' : 'w-1/2')} />
+        <div key={index} className={cn('h-16 animate-pulse rounded-2xl bg-surface-2', index % 2 ? 'ml-auto w-2/3' : 'w-1/2')} />
       ))}
     </div>
   )
@@ -901,9 +901,9 @@ function GifDock({ onSelect, onClose }: { onSelect: (url: string) => void; onClo
       animate={{ height: 280, opacity: 1 }}
       exit={{ height: 0, opacity: 0 }}
       transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-      className="overflow-hidden border-b border-black/10 bg-paper"
+      className="overflow-hidden border-b border-hairline bg-surface-2"
     >
-      <div className="flex items-center gap-2 border-b border-black/10 px-3 py-2">
+      <div className="flex items-center gap-2 border-b border-hairline px-3 py-2">
         <span className="font-mono text-[10px] font-bold text-ink">GIF</span>
         <input
           value={query}
@@ -912,7 +912,7 @@ function GifDock({ onSelect, onClose }: { onSelect: (url: string) => void; onClo
           autoFocus
           className="min-w-0 flex-1 bg-transparent font-sans text-[13px] outline-none placeholder:text-ink-4"
         />
-        <button type="button" onClick={onClose} className="rounded-full border border-black/10 px-3 py-1.5 font-mono text-[10px] text-ink-3 hover:border-red hover:text-red">
+        <button type="button" onClick={onClose} className="rounded-full border border-hairline px-3 py-1.5 font-mono text-[10px] text-ink-3 hover:border-red hover:text-red">
           FECHAR
         </button>
       </div>
@@ -928,7 +928,7 @@ function GifDock({ onSelect, onClose }: { onSelect: (url: string) => void; onClo
                 key={gif.id}
                 type="button"
                 onClick={() => { onSelect(gif.url); onClose() }}
-                className="aspect-video overflow-hidden rounded-xl border border-black/10 bg-hairline transition hover:scale-[1.02] hover:border-ink"
+                className="aspect-video overflow-hidden rounded-xl border border-hairline bg-hairline transition hover:scale-[1.02] hover:border-line-strong"
               >
                 <img src={gif.preview} alt="" className="h-full w-full object-cover" loading="lazy" />
               </button>
@@ -943,11 +943,11 @@ function GifDock({ onSelect, onClose }: { onSelect: (url: string) => void; onClo
 function ConfirmDialog({ title, body, onCancel, onConfirm }: { title: string; body: string; onCancel: () => void; onConfirm: () => void }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] grid place-items-center bg-black/60 px-4" onClick={onCancel}>
-      <motion.div initial={{ scale: 0.96, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 8 }} className="w-full max-w-sm border-2 border-ink bg-paper p-5 shadow-[6px_6px_0_#0D0D0D]" onClick={event => event.stopPropagation()}>
+      <motion.div initial={{ scale: 0.96, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 8 }} className="w-full max-w-sm ui-card p-5" onClick={event => event.stopPropagation()}>
         <div className="font-display text-xl leading-none">{title}</div>
         <p className="mt-2 font-sans text-sm text-ink-3">{body}</p>
         <div className="mt-5 flex gap-2">
-          <button type="button" onClick={onCancel} className="flex-1 border border-black/10 py-3 font-mono text-[10px] font-bold">CANCELAR</button>
+          <button type="button" onClick={onCancel} className="flex-1 border border-hairline py-3 font-mono text-[10px] font-bold hover:bg-surface-hover">CANCELAR</button>
           <button type="button" onClick={onConfirm} className="flex-1 bg-red py-3 font-mono text-[10px] font-bold text-white">APAGAR</button>
         </div>
       </motion.div>

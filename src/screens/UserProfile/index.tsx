@@ -140,23 +140,23 @@ export function UserProfileScreen() {
           'grid gap-3 mb-6',
           (favTeam || profile.favoritePlayer) ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2'
         )}>
-          <div className="border-2 border-hairline p-3 text-center">
+          <div className="ui-card p-3 text-center">
             <div className="font-display text-3xl">—</div>
             <div className="font-mono text-[9px] text-ink-4 tracking-eyebrow mt-0.5">PONTOS</div>
           </div>
-          <div className="border-2 border-hairline p-3 text-center">
+          <div className="ui-card p-3 text-center">
             <div className="font-display text-3xl">—</div>
             <div className="font-mono text-[9px] text-ink-4 tracking-eyebrow mt-0.5">ACERTOS</div>
           </div>
           {favTeam && (
-            <div className="border-2 border-hairline p-3 flex flex-col items-center gap-1">
+            <div className="ui-card p-3 flex flex-col items-center gap-1">
               <Flag team={favTeam} size={28} />
               <div className="font-mono text-[9px] text-ink-4 tracking-eyebrow">TORCE POR</div>
               <div className="font-mono text-[9px] font-bold">{favTeam.name}</div>
             </div>
           )}
           {profile.favoritePlayer && (
-            <div className="border-2 border-hairline p-3 flex flex-col items-center justify-center text-center gap-1 overflow-hidden relative">
+            <div className="ui-card p-3 flex flex-col items-center justify-center text-center gap-1 overflow-hidden relative">
               {profile.favoritePlayerImg && (
                 <img
                   src={profile.favoritePlayerImg}

@@ -107,8 +107,8 @@ function VideoHighlights() {
   const toggle = (v: ScorebatVideo) => setActive(prev => prev?.matchviewUrl === v.matchviewUrl ? null : v)
 
   return (
-    <div className="border-2 border-ink overflow-hidden">
-      <div className="px-4 py-3 border-b border-hairline bg-ink flex items-center justify-between">
+    <div className="ui-panel overflow-hidden">
+      <div className="ui-panel-header flex items-center justify-between">
         <div className="flex items-baseline gap-2">
           <span className="font-display text-lg text-paper">DESTAQUES</span>
           <span className="font-mono text-[10px] text-paper/40">futebol ao redor do mundo</span>
@@ -175,8 +175,8 @@ function WC26News({ compact = false }: { compact?: boolean }) {
   if (!newsConfigured() || (!loading && news.length === 0)) return null
 
   return (
-    <div className="border-2 border-ink">
-      <div className="px-4 py-2.5 border-b border-hairline flex items-baseline justify-between bg-ink text-paper">
+    <div className="ui-panel">
+      <div className="ui-panel-header flex items-baseline justify-between">
         <div className="flex items-baseline gap-1.5">
           <span className="font-display text-base">COPA 2026</span>
           <span className="font-mono text-[10px] text-paper/40">últimas notícias</span>
@@ -191,7 +191,7 @@ function WC26News({ compact = false }: { compact?: boolean }) {
         <div className="divide-y divide-hairline">
           {news.map(item => (
             <a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer"
-              className="flex items-start gap-3 px-4 py-3 hover:bg-paper-deep transition-colors group">
+              className="flex items-start gap-3 px-4 py-3 hover:bg-surface-hover transition-colors group">
               {item.image && <img src={item.image} alt="" className="w-16 h-12 object-cover flex-shrink-0 border border-hairline" onError={e => (e.currentTarget.style.display = 'none')} />}
               <div className="flex-1 min-w-0">
                 <p className="font-mono text-[11px] font-bold text-ink leading-tight line-clamp-2 group-hover:underline">{item.title}</p>
@@ -221,7 +221,7 @@ function WC26News({ compact = false }: { compact?: boolean }) {
           <div className="divide-y divide-hairline overflow-hidden">
             {news.slice(1, 7).map(item => (
               <a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer"
-                className="flex items-start gap-2.5 px-3 py-3 hover:bg-paper-deep transition-colors group">
+                className="flex items-start gap-2.5 px-3 py-3 hover:bg-surface-hover transition-colors group">
                 {item.image && <img src={item.image} alt="" className="w-14 h-10 object-cover flex-shrink-0 border border-hairline" onError={e => (e.currentTarget.style.display = 'none')} />}
                 <div className="flex-1 min-w-0">
                   <p className="font-mono text-[10px] font-bold text-ink leading-tight line-clamp-2 group-hover:underline">{item.title}</p>
@@ -453,8 +453,8 @@ function PredProgress({ done, total, label, color = 'bg-green' }: { done: number
 function GroupsGrid({ predictions }: { predictions: Record<string, unknown> }) {
   const navigate = useNavigate()
   return (
-    <div className="border-2 border-ink">
-      <div className="px-4 py-3 border-b border-hairline flex items-baseline justify-between bg-ink text-paper">
+    <div className="ui-panel">
+      <div className="ui-panel-header flex items-baseline justify-between">
         <span className="font-display text-lg">GRUPOS</span>
         <span className="font-mono text-[9px] text-paper/40">48 SELEÇÕES · 12 GRUPOS</span>
       </div>
@@ -466,7 +466,7 @@ function GroupsGrid({ predictions }: { predictions: Record<string, unknown> }) {
             <button
               key={g.id}
               onClick={() => navigate('/prediction')}
-              className="p-3 text-left hover:bg-paper-deep transition-colors group"
+              className="p-3 text-left hover:bg-surface-hover transition-colors group"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="font-display text-lg">GRUPO {g.id}</span>
@@ -522,7 +522,7 @@ function ResenhaCard() {
   const recent   = messages.slice(-4)
 
   return (
-    <div className="border-2 border-ink flex flex-col overflow-hidden">
+    <div className="ui-panel flex flex-col overflow-hidden">
       <div className="px-4 py-3 border-b border-hairline flex items-baseline justify-between">
         <div className="flex items-baseline gap-1.5">
           <span className="font-display text-lg">#RESENHA</span>
@@ -560,7 +560,7 @@ function ResenhaCard() {
             </div>
           ))}
           <button onClick={() => navigate('/resenha')}
-            className="px-4 py-2.5 font-mono text-[10px] text-ink-4 hover:text-ink hover:bg-hairline text-left transition-colors">
+            className="px-4 py-2.5 font-mono text-[10px] text-ink-4 hover:text-ink hover:bg-surface-hover text-left transition-colors">
             VER TUDO →
           </button>
         </div>
@@ -715,7 +715,7 @@ function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void 
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 40, opacity: 0 }}
         transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-        className="relative w-full max-w-sm bg-paper border-2 border-ink"
+        className="relative w-full max-w-sm ui-card"
       >
         <button onClick={onClose}
           className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center font-mono text-[11px] text-ink-3 hover:text-ink border border-hairline hover:border-ink transition-colors z-10">
@@ -815,7 +815,7 @@ function HomeMobile() {
       <div className="px-4 space-y-4 pt-4">
 
         {/* Progresso + CTA */}
-        <div className="border-2 border-ink overflow-hidden">
+        <div className="ui-card overflow-hidden">
           <div className="px-4 pt-4 pb-3 border-b border-hairline">
             <div className="font-mono text-[9px] tracking-eyebrow text-ink-4">
               OLÁ{user?.firstName ? `, ${user.firstName.toUpperCase()}` : ''}
@@ -852,7 +852,7 @@ function HomeMobile() {
         <HomeBoletimSection compact />
 
         {/* Upcoming matches */}
-        <div className="border-2 border-ink">
+        <div className="ui-panel">
           <div className="px-4 py-3 border-b border-hairline flex items-baseline justify-between">
             <div className="flex items-baseline gap-2">
               <span className="font-display text-lg">PRÓXIMOS</span>
@@ -865,7 +865,7 @@ function HomeMobile() {
               return (
                 <button key={match.id} onClick={() => setQuickPickMatch(match)}
                   className={cn('w-full flex items-center gap-3 px-4 py-3 text-left transition-colors active:scale-[0.99]',
-                    hasPick ? 'bg-green/5 hover:bg-green/10' : 'hover:bg-hairline')}>
+                    hasPick ? 'bg-green/10 hover:bg-green/15' : 'hover:bg-surface-hover')}>
                   <div className="font-mono text-[8px] text-ink-3 w-12 flex-shrink-0">GRUPO<br/>{match.group}</div>
                   <Flag team={match.home} size={22} />
                   <span className="font-mono text-[11px] font-bold flex-1 truncate">{match.home.code}</span>
@@ -890,7 +890,7 @@ function HomeMobile() {
 
         {/* Ranking preview */}
         {top3.length > 0 && (
-          <div className="border-2 border-ink">
+          <div className="ui-panel">
             <div className="px-4 py-3 border-b border-hairline flex items-baseline justify-between">
               <div className="flex items-baseline gap-2">
                 <span className="font-display text-lg">RANKING</span>
@@ -931,7 +931,7 @@ function HomeMobile() {
         {/* Mata-mata */}
         <button
           onClick={() => navigate('/bracket')}
-          className="w-full border-2 border-ink p-4 flex items-center justify-between gap-3 text-left hover:bg-paper-deep transition-colors active:scale-[0.99]"
+          className="w-full ui-card p-4 flex items-center justify-between gap-3 text-left hover:bg-surface-hover transition-colors active:scale-[0.99]"
         >
           <div>
             <div className="font-mono text-[9px] tracking-eyebrow text-ink-3">FASE DE 32 · OITAVAS · QUARTAS · FINAL</div>
@@ -988,7 +988,7 @@ function HomeDesktop() {
           <RotatingHeroDesktop days={days} onCta={() => navigate('/prediction')} />
 
           {/* Progress card */}
-          <div className="border-2 border-ink bg-paper text-ink flex flex-col overflow-hidden">
+          <div className="ui-card text-ink flex flex-col overflow-hidden">
             <div className="px-6 pt-6 pb-4 border-b border-hairline">
               <div className="font-mono text-[9px] tracking-eyebrow text-ink-4 mb-1">
                 OLÁ{user?.firstName ? `, ${user.firstName.toUpperCase()}` : ''}
@@ -1030,7 +1030,7 @@ function HomeDesktop() {
           </div>
 
           {/* Ranking */}
-          <div className="border-2 border-ink flex flex-col">
+          <div className="ui-panel flex flex-col">
             <div className="px-4 py-3 border-b border-hairline flex items-baseline justify-between">
               <div className="flex items-baseline gap-2">
                 <span className="font-display text-lg">RANKING</span>
@@ -1075,7 +1075,7 @@ function HomeDesktop() {
         <div className="grid grid-cols-[1.6fr_1fr_1fr] gap-5">
 
           {/* Upcoming */}
-          <div className="border-2 border-ink">
+          <div className="ui-panel">
             <div className="px-4 py-3 border-b border-hairline flex items-baseline gap-2">
               <span className="font-display text-lg">PRÓXIMOS</span>
               <span className="font-mono text-[10px] text-ink-3">jogos · grupo</span>
@@ -1086,7 +1086,7 @@ function HomeDesktop() {
                 return (
                   <button key={match.id} onClick={() => setQuickPickMatch(match)}
                     className={cn('w-full flex items-center gap-4 px-4 py-3 transition-colors text-left group active:scale-[0.99]',
-                      hasPick ? 'bg-green/5 hover:bg-green/10' : 'hover:bg-hairline')}>
+                      hasPick ? 'bg-green/10 hover:bg-green/15' : 'hover:bg-surface-hover')}>
                     <div className="flex-shrink-0 w-12 text-center">
                       <div className="font-mono text-[8px] text-ink-4 tracking-eyebrow">GRUPO {match.group}</div>
                     </div>
@@ -1116,7 +1116,7 @@ function HomeDesktop() {
           </div>
 
           {/* Mata-mata */}
-          <div className="border-2 border-ink flex flex-col">
+          <div className="ui-panel flex flex-col">
             <div className="px-4 py-3 border-b border-hairline flex items-baseline gap-2">
               <span className="font-display text-lg">MINHA CHAVE</span>
               <span className="font-mono text-[10px] text-ink-3">mata-mata</span>

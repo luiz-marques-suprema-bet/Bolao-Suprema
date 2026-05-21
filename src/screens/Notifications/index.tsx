@@ -76,7 +76,7 @@ export function NotificationsScreen() {
         {loading ? (
           <div className="py-12 font-mono text-[11px] text-ink-3 animate-pulse">CARREGANDO...</div>
         ) : !hasContent ? (
-          <div className="border-2 border-ink p-8 flex flex-col items-center text-center gap-3">
+          <div className="ui-card p-8 flex flex-col items-center text-center gap-3">
             <span className="font-display text-5xl text-ink-4">!</span>
             <div className="font-display text-3xl">SEM AVISOS</div>
             <p className="font-mono text-[11px] text-ink-3 max-w-xs leading-relaxed">
@@ -89,7 +89,7 @@ export function NotificationsScreen() {
             {notices.length > 0 && (
               <div>
                 <p className="font-mono text-[9px] tracking-eyebrow text-ink-4 mb-3">COMUNICADOS DA ORGANIZAÇÃO</p>
-                <div className="border-2 border-ink divide-y divide-hairline">
+                <div className="ui-panel divide-y divide-hairline">
                   {notices.map(n => (
                     <article key={n.id} className="p-4 bg-yellow/10">
                       <div className="font-mono text-[9px] tracking-eyebrow text-ink-4 mb-1">
@@ -109,7 +109,7 @@ export function NotificationsScreen() {
             {items.length > 0 && (
               <div>
                 <p className="font-mono text-[9px] tracking-eyebrow text-ink-4 mb-3">NOTIFICAÇÕES DO SISTEMA</p>
-                <div className="border-2 border-ink divide-y divide-hairline">
+                <div className="ui-panel divide-y divide-hairline">
                   {items.map(item => (
                     <article key={item.id} className={item.readAt ? 'p-4' : 'p-4 bg-yellow/30'}>
                       <div className="flex items-start justify-between gap-4">

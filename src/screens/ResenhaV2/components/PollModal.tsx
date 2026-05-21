@@ -35,7 +35,7 @@ export function PollModal({ onCreate, onClose }: PollModalProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
       onClick={onClose}
     >
       <motion.div
@@ -43,7 +43,7 @@ export function PollModal({ onCreate, onClose }: PollModalProps) {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.94, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 340, damping: 26 }}
-        className="bg-paper border-2 border-ink w-full max-w-sm p-6 flex flex-col gap-4 shadow-[6px_6px_0_#0D0D0D]"
+        className="ui-card w-full max-w-sm p-6 flex flex-col gap-4"
         onClick={event => event.stopPropagation()}
       >
         <div>

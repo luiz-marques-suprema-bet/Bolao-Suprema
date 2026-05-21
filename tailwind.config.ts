@@ -5,6 +5,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        app: 'rgb(var(--color-app) / <alpha-value>)',
         paper: {
           DEFAULT: 'rgb(var(--color-paper) / <alpha-value>)',
           deep: 'rgb(var(--color-paper-deep) / <alpha-value>)',
@@ -17,10 +18,17 @@ export default {
           4: 'rgb(var(--color-ink-4) / <alpha-value>)',
         },
         line: 'rgb(var(--color-line) / <alpha-value>)',
+        'line-strong': 'rgb(var(--color-line-strong))',
         hairline: 'rgb(var(--color-hairline))',
         surface: {
           DEFAULT: 'rgb(var(--color-surface) / <alpha-value>)',
+          2: 'rgb(var(--color-surface-2) / <alpha-value>)',
+          3: 'rgb(var(--color-surface-3) / <alpha-value>)',
           hover: 'rgb(var(--color-surface-hover) / <alpha-value>)',
+        },
+        card: {
+          DEFAULT: 'rgb(var(--color-card) / <alpha-value>)',
+          muted: 'rgb(var(--color-card-muted) / <alpha-value>)',
         },
         inverse: {
           DEFAULT: 'rgb(var(--color-inverse-bg) / <alpha-value>)',
@@ -53,7 +61,7 @@ export default {
         btn: '4px 4px 0 rgb(var(--color-shadow-strong))',
         'btn-hover': '5px 5px 0 rgb(var(--color-shadow-strong))',
         'btn-active': '2px 2px 0 rgb(var(--color-shadow-strong))',
-        card: '4px 4px 0 rgb(var(--color-shadow-strong))',
+        card: '4px 4px 0 rgb(var(--color-shadow-strong)), 0 16px 38px rgb(var(--color-shadow-soft) / 0.16)',
         'card-yellow': '8px 8px 0 #FFCB05',
         'card-live': '0 0 0 3px #E63946, 6px 6px 0 rgb(var(--color-shadow-strong))',
         device: '0 40px 80px rgb(var(--color-shadow-soft) / 0.28), 0 0 0 1px rgb(var(--color-hairline) / 0.9)',

@@ -42,7 +42,7 @@ export function DesktopNav() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-paper/95 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 border-b border-hairline bg-paper/90 shadow-[0_12px_34px_rgba(0,0,0,0.08)] backdrop-blur-md">
       <div className="mx-auto flex max-w-screen-xl items-center gap-4 px-4 h-14 xl:gap-8 xl:px-6">
 
         <button onClick={() => navigate('/home')} className="flex-shrink-0">
@@ -59,8 +59,8 @@ export function DesktopNav() {
                   className={cn(
                     'whitespace-nowrap px-3 py-1.5 font-mono text-[11px] font-bold tracking-eyebrow uppercase transition-all active:scale-95 active:opacity-70',
                     active
-                      ? 'bg-ink text-paper'
-                      : 'text-ink-3 hover:text-ink hover:bg-hairline'
+                      ? 'bg-yellow text-[#0D0D0D]'
+                      : 'text-ink-3 hover:text-ink hover:bg-surface-hover'
                   )}
                 >
                   {item.label}
@@ -100,10 +100,10 @@ export function DesktopNav() {
               </button>
 
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-40 bg-paper border-2 border-ink shadow-card z-50">
+                <div className="absolute right-0 top-full mt-2 w-40 ui-card z-50">
                   <button
                     onClick={() => { setMenuOpen(false); navigate('/profile') }}
-                    className="w-full px-4 py-3 font-mono text-[11px] font-bold tracking-eyebrow text-left hover:bg-yellow transition-colors"
+                    className="w-full px-4 py-3 font-mono text-[11px] font-bold tracking-eyebrow text-left hover:bg-yellow hover:text-[#0D0D0D] transition-colors"
                   >
                     MEU PERFIL
                   </button>

@@ -5,16 +5,22 @@
 @layer base {
   :root {
     color-scheme: light;
+    --color-app: 245 241 232;
     --color-paper: 245 241 232;
     --color-paper-deep: 236 230 214;
     --color-paper-white: 255 252 245;
     --color-surface: 255 252 245;
+    --color-surface-2: 245 241 232;
+    --color-surface-3: 236 230 214;
     --color-surface-hover: 236 230 214;
+    --color-card: 255 252 245;
+    --color-card-muted: 245 241 232;
     --color-ink: 13 13 13;
     --color-ink-2: 42 42 42;
     --color-ink-3: 107 107 102;
     --color-ink-4: 169 168 159;
     --color-line: 31 31 31;
+    --color-line-strong: 13 13 13 / 0.82;
     --color-hairline: 13 13 13 / 0.12;
     --color-shadow-strong: 13 13 13;
     --color-shadow-soft: 0 0 0;
@@ -28,20 +34,26 @@
 
   .dark {
     color-scheme: dark;
+    --color-app: 8 8 8;
     --color-paper: 15 15 15;
-    --color-paper-deep: 21 21 20;
-    --color-paper-white: 26 26 25;
-    --color-surface: 24 24 23;
-    --color-surface-hover: 34 34 32;
-    --color-ink: 237 232 223;
-    --color-ink-2: 219 212 200;
-    --color-ink-3: 166 158 144;
-    --color-ink-4: 105 100 92;
+    --color-paper-deep: 18 18 17;
+    --color-paper-white: 24 24 23;
+    --color-surface: 21 21 21;
+    --color-surface-2: 26 26 24;
+    --color-surface-3: 31 31 28;
+    --color-surface-hover: 35 35 31;
+    --color-card: 20 20 19;
+    --color-card-muted: 17 17 16;
+    --color-ink: 242 237 227;
+    --color-ink-2: 224 217 205;
+    --color-ink-3: 174 166 151;
+    --color-ink-4: 119 112 101;
     --color-line: 237 232 223;
-    --color-hairline: 237 232 223 / 0.14;
+    --color-line-strong: 237 232 223 / 0.34;
+    --color-hairline: 237 232 223 / 0.12;
     --color-shadow-strong: 0 0 0;
     --color-shadow-soft: 0 0 0;
-    --color-inverse-bg: 24 24 23;
+    --color-inverse-bg: 26 26 24;
     --color-inverse-text: 237 232 223;
     --grain-a: rgba(255,203,5,.025);
     --grain-b: rgba(255,255,255,.025);
@@ -60,7 +72,7 @@
   }
 
   body {
-    @apply bg-paper text-ink font-sans;
+    @apply bg-app text-ink font-sans;
     margin: 0;
     min-height: 100dvh;
     overflow-x: hidden;
@@ -149,6 +161,125 @@
 
   .ui-surface {
     @apply bg-surface border-hairline;
+  }
+
+  .ui-card {
+    @apply border-2 border-line-strong bg-card shadow-card;
+  }
+
+  .ui-card-strong {
+    @apply border-2 border-line-strong bg-surface-2 shadow-card;
+  }
+
+  .ui-panel {
+    @apply border-2 border-line-strong bg-card;
+  }
+
+  .ui-panel-header {
+    @apply border-b border-hairline bg-inverse px-4 py-3 text-inverse-text;
+  }
+
+  .ui-section {
+    @apply bg-paper text-ink;
+  }
+
+  .ui-muted {
+    @apply text-ink-3;
+  }
+
+  .ui-divider {
+    @apply border-hairline;
+  }
+
+  .ui-hover {
+    @apply transition-colors hover:bg-surface-hover;
+  }
+
+  .ui-inverse {
+    @apply bg-inverse text-inverse-text border-line-strong;
+  }
+
+  .dark .bg-paper {
+    background-color: rgb(var(--color-paper));
+  }
+
+  .dark .bg-paper-white {
+    background-color: rgb(var(--color-card));
+  }
+
+  .dark .bg-paper-deep {
+    background-color: rgb(var(--color-surface-2));
+  }
+
+  .dark .bg-ink {
+    background-color: rgb(var(--color-inverse-bg));
+  }
+
+  .dark .text-paper {
+    color: rgb(var(--color-inverse-text));
+  }
+
+  .dark .border-ink {
+    border-color: rgb(var(--color-line-strong));
+  }
+
+  .dark .border-line {
+    border-color: rgb(var(--color-line-strong));
+  }
+
+  .dark .hover\:bg-hairline:hover {
+    background-color: rgb(var(--color-surface-hover));
+  }
+
+  .dark .hover\:bg-paper-deep:hover {
+    background-color: rgb(var(--color-surface-hover));
+  }
+
+  .dark .border-2.border-ink:not(.bg-yellow):not(.btn-yellow):not(.score-cell),
+  .dark .border-2.border-hairline:not(.bg-yellow):not(.score-cell) {
+    background-color: rgb(var(--color-card));
+  }
+
+  .dark .bg-yellow,
+  .dark .hover\:bg-yellow:hover {
+    color: #0D0D0D;
+  }
+
+  .dark .bg-yellow .text-ink,
+  .dark .bg-yellow.text-ink,
+  .dark .bg-yellow .text-ink-2 {
+    color: #0D0D0D !important;
+  }
+
+  .dark .bg-yellow .text-ink-3,
+  .dark .bg-yellow .text-ink-4 {
+    color: rgba(13, 13, 13, 0.68) !important;
+  }
+
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: rgb(var(--color-surface-2));
+    border-color: rgb(var(--color-hairline));
+    color: rgb(var(--color-ink));
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: rgb(var(--color-ink-4));
+  }
+
+  .dark input:focus,
+  .dark textarea:focus,
+  .dark select:focus {
+    border-color: rgb(var(--color-line-strong));
+    outline: none;
+  }
+
+  .dark .shadow-card,
+  .dark .shadow-btn,
+  .dark .shadow-btn-hover {
+    box-shadow: 3px 3px 0 rgb(0 0 0), 0 18px 42px rgb(0 0 0 / 0.28);
   }
 
   .dark img {

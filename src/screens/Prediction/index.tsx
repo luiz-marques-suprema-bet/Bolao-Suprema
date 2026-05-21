@@ -380,7 +380,7 @@ function MiniStandings({ standings, totalMatches, filledMatches }: {
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
-      className="mx-4 mb-4 border-2 border-ink overflow-hidden"
+      className="mx-4 mb-4 ui-panel overflow-hidden"
     >
       <div className="px-3 py-2 bg-ink flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -778,7 +778,7 @@ function GroupsTab() {
       )}
 
       {/* Group selector */}
-      <div className="px-3 py-3 border-b border-hairline bg-paper sticky top-[44px] z-10 overflow-x-auto">
+        <div className="px-3 py-3 border-b border-hairline bg-paper/95 sticky top-[44px] z-10 overflow-x-auto backdrop-blur-md">
         <div className="flex gap-1.5 min-w-max">
           {GROUP_LABELS.map(g => {
             const count = countPerGroup[g] ?? 0
@@ -956,7 +956,7 @@ function KnockoutTab() {
     <div className="pb-24">
       {koMatches.length === 0 ? (
         /* ── Empty state: KO matches not in DB yet ── */
-        <div className="mx-4 mt-8 p-6 border-2 border-ink text-center bg-paper">
+        <div className="mx-4 mt-8 p-6 ui-card text-center">
           <div className="font-display text-5xl text-ink mb-3">32</div>
           <p className="font-display text-xl text-ink mb-2">FASE DE 32</p>
           <p className="font-mono text-[11px] text-ink-2 leading-relaxed max-w-sm mx-auto">
@@ -1245,7 +1245,7 @@ function ChampionTab() {
                   onClick={() => setActiveSection(slot.id)}
                   className={cn(
                     'flex flex-col items-center gap-2 p-3 border-2 transition-all min-h-[108px]',
-                    isActive ? 'border-ink bg-paper-deep shadow-[3px_3px_0_0_#0a0a0a]' :
+                    isActive ? 'border-line-strong bg-surface-2 shadow-card' :
                     hasPick  ? 'border-green bg-green/5 hover:bg-green/10' :
                                'border-hairline hover:border-ink',
                   )}
@@ -1272,8 +1272,8 @@ function ChampionTab() {
           </div>
 
           {/* Picker panel for active slot */}
-          <div className="border-2 border-ink overflow-hidden">
-            <div className="px-4 py-2.5 bg-ink text-paper flex items-center justify-between">
+          <div className="ui-panel overflow-hidden">
+            <div className="ui-panel-header flex items-center justify-between">
               <span className="font-display text-base">
                 {activeSection === 'champion' ? 'ESCOLHA O CAMPEÃO' :
                  activeSection === 'vice'     ? 'ESCOLHA O VICE' :
@@ -1305,7 +1305,7 @@ function ChampionTab() {
                   <p className="font-mono text-[10px] text-ink-3 mb-4 leading-relaxed">
                     Quem vai ser o artilheiro da Copa 2026? Esse palpite é critério de desempate no ranking.
                   </p>
-                  <div className="border-2 border-ink p-4">
+                  <div className="ui-card p-4">
                     <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-2">NOME DO JOGADOR</p>
                     <input
                       value={scorerInput}
@@ -1377,7 +1377,7 @@ function DesktopGroupView({
   const countInGroup = allMatches.filter(m => m.group === selectedGroup && predictions[m.id]).length
 
   return (
-    <div className="border-2 border-ink flex flex-col">
+    <div className="ui-panel flex flex-col">
       <div className="px-5 py-4 border-b border-hairline flex items-center gap-3">
         <span className="font-display text-xl">GRUPO {selectedGroup}</span>
         <div className="flex gap-1">
@@ -1395,7 +1395,7 @@ function DesktopGroupView({
         if (!matches.length) return null
         return (
           <div key={md}>
-            <div className="px-5 py-2.5 border-b border-hairline bg-paper-deep">
+            <div className="px-5 py-2.5 border-b border-hairline bg-surface-2">
               <span className="font-mono text-[9px] tracking-eyebrow text-ink-3">RODADA {md}</span>
             </div>
             {matches.map(m => (
@@ -1445,7 +1445,7 @@ function DesktopGroupSidebar({
   countPerGroup: Record<string, number>
 }) {
   return (
-    <div className="border-2 border-ink">
+    <div className="ui-panel">
       <div className="px-4 py-3 border-b border-hairline">
         <span className="font-mono text-[10px] tracking-eyebrow text-ink-3">GRUPOS</span>
       </div>
@@ -1459,7 +1459,7 @@ function DesktopGroupSidebar({
               onClick={() => onSelect(g)}
               className={cn(
                 'w-full px-4 py-3 flex items-center justify-between transition-colors',
-                active ? 'bg-yellow' : 'hover:bg-hairline',
+                active ? 'bg-yellow text-[#0D0D0D]' : 'hover:bg-surface-hover',
               )}
             >
               <div className="flex items-center gap-2">
@@ -1553,7 +1553,7 @@ export function PredictionScreen() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-hairline flex sticky top-0 lg:top-14 bg-paper z-20">
+      <div className="border-b border-hairline flex sticky top-0 lg:top-14 bg-paper/95 z-20 backdrop-blur-md">
         {tabs.map(t => (
           <button
             key={t.id}

@@ -60,7 +60,7 @@ function RankingRow({ r, large = false }: { r: RankingEntry; large?: boolean }) 
       onClick={() => navigate(`/u/${r.userId}`)}
       className={cn(
         'flex items-center gap-3 border-b border-hairline cursor-pointer transition-colors',
-        r.isYou ? 'bg-yellow hover:bg-yellow/80' : 'hover:bg-paper-deep',
+        r.isYou ? 'bg-yellow text-[#0D0D0D] hover:bg-yellow/90' : 'hover:bg-surface-hover',
         large ? 'px-5 py-3.5' : 'px-4 py-2.5'
       )}
     >
@@ -140,7 +140,7 @@ const SCORING_SECTIONS = [
 
 function ScoringRulesBox({ rules: _rules }: { rules: ScoringRule[] }) {
   return (
-    <div className="border-2 border-ink p-4">
+    <div className="ui-card p-4">
       <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">COMO PONTUAR</p>
       <div className="space-y-4">
         {SCORING_SECTIONS.map(section => (
@@ -167,7 +167,7 @@ function ScoringRulesBox({ rules: _rules }: { rules: ScoringRule[] }) {
 
 function BreakdownBox({ items }: { items: RankingBreakdown[] }) {
   return (
-    <div className="border-2 border-ink p-4">
+    <div className="ui-card p-4">
       <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">COMO SUA PONTUACAO FOI CALCULADA</p>
       {items.length === 0 ? (
         <p className="font-mono text-[11px] text-ink-3 leading-relaxed">
@@ -213,7 +213,7 @@ function RankingMobile() {
 
   return (
     <div className="min-h-dvh bg-paper pb-24">
-      <div className="bg-paper-deep px-4 pt-6 pb-4">
+      <div className="bg-surface-2 px-4 pt-6 pb-4">
         <div className="border-b border-hairline pb-4 mb-4">
           <div className="font-display text-5xl leading-none text-ink">RANKING</div>
           <div className="flex items-baseline gap-3">
@@ -234,8 +234,8 @@ function RankingMobile() {
                     {r.name.split(' ')[0]}
                   </div>
                   <div
-                    className={cn('w-full flex items-start justify-center pt-3 border-2 border-ink',
-                      ranks[i] === 1 ? 'bg-yellow' : 'bg-paper')}
+                    className={cn('w-full flex items-start justify-center pt-3 border-2 border-line-strong',
+                      ranks[i] === 1 ? 'bg-yellow text-[#0D0D0D]' : 'bg-card')}
                     style={{ height: heights[i] }}
                   >
                     <span className="font-display text-3xl">{ranks[i]}º</span>
@@ -267,7 +267,7 @@ function RankingMobile() {
         {(['geral', 'squad', 'semana'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={cn('py-2.5 font-mono text-[10px] font-bold tracking-eyebrow uppercase transition-colors',
-              tab === t ? 'bg-ink text-paper' : 'text-ink-3 hover:bg-hairline')}>
+              tab === t ? 'bg-yellow text-[#0D0D0D]' : 'text-ink-3 hover:bg-surface-hover')}>
             {t}
           </button>
         ))}
@@ -346,8 +346,8 @@ function RankingDesktop() {
                       <div className="font-mono text-[11px] font-bold text-center">{r.name}</div>
                       <div className="font-mono text-[10px] text-ink-3">{r.dept}</div>
                       <div
-                        className={cn('w-full flex items-start justify-center pt-4 border-2 border-ink',
-                          ranks[i] === 1 ? 'bg-yellow' : 'bg-paper-deep')}
+                        className={cn('w-full flex items-start justify-center pt-4 border-2 border-line-strong',
+                          ranks[i] === 1 ? 'bg-yellow text-[#0D0D0D]' : 'bg-card')}
                         style={{ height: heights[i] }}
                       >
                         <span className="font-display text-4xl">{ranks[i]}º</span>
@@ -363,7 +363,7 @@ function RankingDesktop() {
             )}
 
             {/* Full table */}
-            <div className="border-2 border-ink">
+            <div className="ui-panel">
               <div className="grid grid-cols-[40px_1fr_100px_48px_48px_48px_80px] gap-2 px-5 py-2 border-b border-hairline font-mono text-[9px] tracking-eyebrow text-ink-4">
                 <span>#</span><span>JOGADOR</span><span>DEPT</span>
                 <span className="text-center">CERT</span>
@@ -374,7 +374,7 @@ function RankingDesktop() {
               {ranking.length > 0 ? ranking.map(r => (
                 <div key={r.userId} onClick={() => navigate(`/u/${r.userId}`)} className={cn(
                   'grid grid-cols-[40px_1fr_100px_48px_48px_48px_80px] gap-2 items-center px-5 py-2.5 border-b border-hairline cursor-pointer transition-colors',
-                  r.isYou ? 'bg-yellow hover:bg-yellow/80' : 'hover:bg-paper-deep/40'
+                  r.isYou ? 'bg-yellow text-[#0D0D0D] hover:bg-yellow/90' : 'hover:bg-surface-hover'
                 )}>
                   <span className="font-display text-2xl">{r.rank}</span>
                   <div className="flex items-center gap-2 min-w-0">

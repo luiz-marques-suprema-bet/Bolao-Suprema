@@ -38,7 +38,7 @@ export function RegulamentoScreen() {
       <div className="max-w-4xl mx-auto px-4 py-6 md:px-8 md:py-8 space-y-5">
 
         {/* Hero */}
-        <header className="bg-ink text-paper p-6 md:p-8 relative overflow-hidden">
+        <header className="ui-inverse p-6 md:p-8 relative overflow-hidden">
           <div className="absolute inset-0 opacity-5 pointer-events-none"
             style={{ backgroundImage: 'repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 50%)', backgroundSize: '12px 12px' }} />
           <p className="font-mono text-[10px] tracking-eyebrow text-yellow relative">REGULAMENTO OFICIAL</p>
@@ -77,11 +77,11 @@ export function RegulamentoScreen() {
 
         {/* Pontuação */}
         <section>
-          <div className="bg-ink text-paper px-5 py-3 flex items-baseline gap-3">
+          <div className="ui-panel-header flex items-baseline gap-3">
             <h2 className="font-display text-3xl">PONTUAÇÃO</h2>
             <span className="font-mono text-[10px] text-paper/40 tracking-eyebrow">COMO GANHAR PTS</span>
           </div>
-          <div className="border-2 border-ink border-t-0 divide-y divide-hairline">
+          <div className="ui-panel border-t-0 divide-y divide-hairline">
             <RulesBlock title="FASE DE GRUPOS" rules={GROUP_RULES} />
             <RulesBlock title="MATA-MATA (fase eliminatória)" rules={KO_RULES} />
             <RulesBlock title="APOSTAS ESPECIAIS" rules={GENERAL_RULES} />
@@ -102,11 +102,11 @@ export function RegulamentoScreen() {
 
         {/* Desempate */}
         <section>
-          <div className="bg-ink text-paper px-5 py-3 flex items-baseline gap-3">
+          <div className="ui-panel-header flex items-baseline gap-3">
             <h2 className="font-display text-3xl">DESEMPATE</h2>
             <span className="font-mono text-[10px] text-paper/40 tracking-eyebrow">APLICADOS NESTA ORDEM</span>
           </div>
-          <div className="border-2 border-ink border-t-0">
+          <div className="ui-panel border-t-0">
             {TIEBREAKERS.map((t, i) => (
               <div key={i} className="flex items-start gap-4 px-5 py-3.5 border-b border-hairline last:border-0">
                 <span className="font-display text-3xl text-ink-4 flex-shrink-0 w-8 leading-tight">{i + 1}</span>
@@ -117,7 +117,7 @@ export function RegulamentoScreen() {
         </section>
 
         {/* Disposições */}
-        <section className="border-2 border-hairline p-5">
+        <section className="ui-card p-5">
           <h2 className="font-display text-xl text-ink-3 mb-2">DISPOSIÇÕES FINAIS</h2>
           <p className="font-mono text-[11px] text-ink-3 leading-relaxed">
             A organização se reserva o direito de resolver casos omissos. O regulamento pode ser complementado
@@ -135,7 +135,7 @@ export function RegulamentoScreen() {
 
 function InfoCard({ title, items, accent }: { title: string; items: string[]; accent: string }) {
   return (
-    <div className={`border-2 border-ink p-4 pl-5 ${accent}`}>
+    <div className={`ui-card p-4 pl-5 ${accent}`}>
       <h2 className="font-display text-xl mb-3">{title}</h2>
       <ul className="space-y-2">
         {items.map(item => (

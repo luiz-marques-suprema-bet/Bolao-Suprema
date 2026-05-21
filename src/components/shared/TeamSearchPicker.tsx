@@ -34,7 +34,7 @@ export function TeamSearchPicker({
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-2.5 border-2 border-ink px-3 py-2.5">
+      <div className="flex items-center gap-2.5 border-2 border-line-strong bg-surface-2 px-3 py-2.5">
         {selectedTeam && !query && <Flag team={selectedTeam} size={20} />}
         <input
           value={open ? query : (selectedTeam?.name ?? '')}
@@ -58,7 +58,7 @@ export function TeamSearchPicker({
           <motion.div
             initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
-            className="absolute z-50 left-0 right-0 mt-1 bg-paper border-2 border-ink shadow-card max-h-56 overflow-y-auto"
+            className="absolute z-50 left-0 right-0 mt-1 ui-card max-h-56 overflow-y-auto"
           >
             {filtered.length === 0 ? (
               <div className="px-4 py-3 font-mono text-[10px] text-ink-4">
@@ -70,7 +70,7 @@ export function TeamSearchPicker({
                   key={code}
                   type="button"
                   onMouseDown={() => select(code)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-paper-deep transition-colors text-left border-b border-hairline last:border-b-0"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors text-left border-b border-hairline last:border-b-0"
                 >
                   <Flag team={team} size={22} />
                   <div>

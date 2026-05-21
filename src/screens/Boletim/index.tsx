@@ -230,7 +230,7 @@ export function CreateModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-ink/60 px-0 md:px-4"
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 px-0 md:px-4 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <motion.div
@@ -238,7 +238,7 @@ export function CreateModal({
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 40, opacity: 0 }}
         transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-        className="w-full md:max-w-lg bg-paper border-2 border-ink p-6 max-h-[90dvh] overflow-y-auto"
+        className="w-full md:max-w-lg ui-card p-6 max-h-[90dvh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-5">
           <div>
@@ -260,7 +260,7 @@ export function CreateModal({
                   onClick={() => setLabel(l)}
                   className={[
                     'font-mono text-[9px] px-2.5 py-1.5 border-2 transition-colors',
-                    label === l ? 'bg-ink border-ink text-paper' : 'border-hairline hover:border-ink',
+                    label === l ? 'bg-yellow border-yellow text-[#0D0D0D]' : 'border-hairline hover:border-line-strong',
                   ].join(' ')}
                 >
                   {l}
@@ -301,7 +301,7 @@ export function CreateModal({
                   onClick={() => setImageFitMode(mode)}
                   className={[
                     'font-mono text-[9px] px-2.5 py-1 border-2 transition-colors',
-                    imageFitMode === mode ? 'bg-ink border-ink text-paper' : 'border-hairline hover:border-ink',
+                    imageFitMode === mode ? 'bg-yellow border-yellow text-[#0D0D0D]' : 'border-hairline hover:border-line-strong',
                   ].join(' ')}
                 >
                   {mode === 'contain' ? 'CONTER' : 'COBRIR'}
@@ -345,7 +345,7 @@ export function CreateModal({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full border-2 border-dashed border-line hover:border-ink transition-colors py-6 flex flex-col items-center gap-1.5"
+                className="w-full border-2 border-dashed border-line hover:border-line-strong bg-surface-2 transition-colors py-6 flex flex-col items-center gap-1.5"
               >
                 <span className="font-mono text-[20px] text-ink-4">↑</span>
                 <span className="font-mono text-[10px] text-ink-3">Clique para selecionar imagem</span>
@@ -419,7 +419,7 @@ export function BoletimScreen() {
   return (
     <div className="min-h-dvh bg-paper pb-24">
       {/* ── Masthead ── */}
-      <div className="border-b-2 border-ink px-4 py-6 md:px-8 md:py-8">
+      <div className="border-b-2 border-line-strong bg-paper px-4 py-6 md:px-8 md:py-8">
         <div className="max-w-screen-lg mx-auto flex items-end justify-between">
           <div>
             <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-2">

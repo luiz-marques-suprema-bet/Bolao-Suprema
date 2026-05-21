@@ -26,7 +26,7 @@ export function MyPredictionsScreen() {
   return (
     <div className="min-h-dvh bg-paper px-4 py-6 md:px-8">
       <div className="max-w-5xl mx-auto space-y-5">
-        <header className="border-2 border-ink p-5">
+        <header className="ui-card p-5">
           <p className="font-mono text-[10px] tracking-eyebrow text-ink-3">MEU PAINEL</p>
           <div className="font-display text-5xl md:text-7xl leading-none text-ink">PALPITES</div>
           <div className="flex items-baseline gap-3 mb-1">
@@ -40,7 +40,7 @@ export function MyPredictionsScreen() {
           </div>
         </header>
 
-        <section className="border-2 border-ink p-4">
+        <section className="ui-card p-4">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="font-display text-2xl">APOSTAS ESPECIAIS</h2>
             <button onClick={() => navigate('/prediction', { state: { tab: 'champion' } })} className="font-mono text-[10px] text-ink-3 hover:text-ink">EDITAR</button>
@@ -52,8 +52,8 @@ export function MyPredictionsScreen() {
           </div>
         </section>
 
-        <section className="border-2 border-ink">
-          <div className="px-4 py-3 border-b border-hairline bg-ink text-paper">
+        <section className="ui-panel">
+          <div className="ui-panel-header">
             <h2 className="font-display text-xl">PARTIDAS</h2>
           </div>
           <div className="divide-y divide-hairline">
@@ -61,7 +61,7 @@ export function MyPredictionsScreen() {
               <button
                 key={match.id}
                 onClick={() => navigate(`/prediction/${match.id}`)}
-                className="w-full px-4 py-3 flex flex-col md:flex-row md:items-center gap-2 hover:bg-hairline text-left"
+                className="w-full px-4 py-3 flex flex-col md:flex-row md:items-center gap-2 hover:bg-surface-hover text-left"
               >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <Flag team={match.home} size={22} />

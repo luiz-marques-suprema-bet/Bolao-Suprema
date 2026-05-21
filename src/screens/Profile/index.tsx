@@ -86,11 +86,11 @@ function PlayerPicker({
           <motion.div
             initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
-            className="absolute z-50 left-0 right-0 mt-1 bg-paper border-2 border-ink shadow-card overflow-hidden max-h-64 overflow-y-auto"
+            className="absolute z-50 left-0 right-0 mt-1 ui-card overflow-hidden max-h-64 overflow-y-auto"
           >
             {results.map(p => (
               <button key={p.idPlayer} type="button" onMouseDown={() => select(p)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-paper-deep transition-colors text-left border-b border-hairline last:border-b-0">
+                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors text-left border-b border-hairline last:border-b-0">
                 {(p.strThumb || p.strCutout) ? (
                   <img src={p.strThumb ?? p.strCutout ?? ''} alt="" className="w-9 h-9 object-cover object-top rounded-sm flex-shrink-0 bg-paper-deep" />
                 ) : (
@@ -133,12 +133,12 @@ function ApostasGeraisSummary({ championPick, vicePick, scorerPick, onEdit }: {
             <span className="font-mono text-[7px] text-ink-3 tracking-eyebrow">CAMPEÃO</span>
             <span className="font-mono text-[8px] font-bold">{TEAMS[championPick!]?.code}</span>
           </div>
-          <div className="border-2 border-hairline p-2 flex flex-col items-center gap-1 text-center">
+          <div className="ui-card p-2 flex flex-col items-center gap-1 text-center">
             <Flag team={TEAMS[vicePick!]} size={22} />
             <span className="font-mono text-[7px] text-ink-3 tracking-eyebrow">VICE</span>
             <span className="font-mono text-[8px] font-bold">{TEAMS[vicePick!]?.code}</span>
           </div>
-          <div className="border-2 border-hairline p-2 flex flex-col items-center justify-center text-center gap-0.5">
+          <div className="ui-card p-2 flex flex-col items-center justify-center text-center gap-0.5">
             <span className="font-mono text-[9px] font-bold leading-tight">{scorerPick}</span>
             <span className="font-mono text-[7px] text-ink-3 tracking-eyebrow">ARTILHEIRO</span>
           </div>
@@ -541,7 +541,7 @@ function ProfileDesktop() {
           {/* Preview card */}
           <div className="sticky top-24 self-start">
             <label className="font-mono text-[10px] tracking-eyebrow text-ink-3 block mb-3">COMO VOCÊ APARECE</label>
-            <motion.div animate={{ rotate: -1 }} className="bg-paper border-2 border-ink shadow-card overflow-visible">
+            <motion.div animate={{ rotate: -1 }} className="ui-card overflow-visible">
 
               {/* Banner in preview */}
               <div className="h-24 bg-ink overflow-hidden relative">
