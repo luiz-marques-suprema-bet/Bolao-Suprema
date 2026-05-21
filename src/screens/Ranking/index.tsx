@@ -78,15 +78,15 @@ function RankingRow({ r, large = false }: { r: RankingEntry; large?: boolean }) 
         {r.mov}
       </span>
       <div className="hidden sm:flex items-center gap-4 font-mono text-[11px] text-ink-3">
-        <Tooltip content="Resultados certos: acertou ao menos o vencedor ou empate" side="top">
+        <FloatingTooltip label="Resultados certos: acertou ao menos o vencedor ou empate">
           <span className="cursor-default">{r.correct}</span>
-        </Tooltip>
-        <Tooltip content="Placares exatos: acertou o placar perfeito — vale +10pts (grupos) ou +12pts (mata-mata)" side="top">
+        </FloatingTooltip>
+        <FloatingTooltip label="Placares exatos: acertou o placar perfeito — vale +10pts (grupos) ou +12pts (mata-mata)">
           <span className="text-green cursor-default">{r.exact}</span>
-        </Tooltip>
-        <Tooltip content="Sequência de acertos consecutivos" side="top">
+        </FloatingTooltip>
+        <FloatingTooltip label="Sequência de acertos consecutivos">
           <span className="cursor-default">{r.streak}</span>
-        </Tooltip>
+        </FloatingTooltip>
       </div>
       <span className={cn('font-display', large ? 'text-2xl' : 'text-xl')}>{fmtPts(r.pts)}</span>
     </div>
