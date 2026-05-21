@@ -129,7 +129,7 @@ const SCORING_SECTIONS = [
     ],
   },
   {
-    label: 'APOSTAS GERAIS',
+    label: 'APOSTAS ESPECIAIS',
     rules: [
       { pts: 25, label: 'Campeão',      tip: 'Acertou o campeão do mundo. Vale antes do início do torneio.' },
       { pts: 15, label: 'Vice-campeão', tip: 'Acertou o vice-campeão. Campeão e vice não podem ser do mesmo grupo.' },

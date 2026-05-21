@@ -12,7 +12,7 @@ import { useBoletimStore } from '@/stores/boletim.store'
 import { BoletimCard, CreateModal } from '@/screens/Boletim'
 import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
-import { fmtPts, cn } from '@/lib/utils'
+import { fmtPts, cn, clamp } from '@/lib/utils'
 import { fetchRanking } from '@/lib/ranking'
 import { fetchFeaturedVideos } from '@/lib/scorebat'
 import type { ScorebatVideo } from '@/lib/scorebat'
@@ -508,10 +508,10 @@ function useHomeData() {
 // ─── Resenha card ─────────────────────────────────────────────────────────────
 
 function msgPreview(msg: { type?: string; text?: string; gifUrl?: string; imageUrl?: string; audioUrl?: string; poll?: { question?: string } }): string {
-  if (msg.type === 'gif')   return '🖼 enviou um GIF'
-  if (msg.type === 'image') return '📷 enviou uma foto'
-  if (msg.type === 'audio') return '🎤 enviou um áudio'
-  if (msg.type === 'poll')  return `📊 ${msg.poll?.question ?? 'enquete'}`
+  if (msg.type === 'gif')   return '[GIF]'
+  if (msg.type === 'image') return 'enviou uma foto'
+  if (msg.type === 'audio') return 'enviou um áudio'
+  if (msg.type === 'poll')  return msg.poll?.question ?? 'enquete'
   return msg.text ?? ''
 }
 
@@ -724,7 +724,7 @@ function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void 
           ) : hasPick ? (
             <div className="inline-flex items-center gap-1.5 font-mono text-[8px] font-bold tracking-eyebrow text-green mb-3">✓ PALPITE FEITO · TOQUE PARA ATUALIZAR</div>
           ) : (
-            <div className="inline-flex items-center gap-1.5 font-mono text-[8px] font-bold tracking-eyebrow bg-yellow text-ink px-2 py-1 mb-3">⚡ PALPITE PENDENTE</div>
+            <div className="inline-flex items-center gap-1.5 font-mono text-[8px] font-bold tracking-eyebrow bg-yellow text-ink px-2 py-1 mb-3">PALPITE PENDENTE</div>
           )}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -823,7 +823,7 @@ function HomeMobile() {
           </div>
           <div className="px-4 py-3 space-y-3">
             <PredProgress done={totalPreds} total={totalMatches} label="FASE DE GRUPOS" color="bg-yellow" />
-            <PredProgress done={apostasFeitas} total={3} label="APOSTAS GERAIS" color="bg-green" />
+            <PredProgress done={apostasFeitas} total={3} label="APOSTAS ESPECIAIS" color="bg-green" />
             <button onClick={() => navigate('/prediction')} className="btn-yellow w-full justify-center text-[11px] mt-1">
               {totalPreds === 0 ? 'COMEÇAR A PALPITAR →' : 'CONTINUAR PALPITANDO →'}
             </button>
@@ -837,7 +837,7 @@ function HomeMobile() {
             className="w-full border-2 border-yellow bg-yellow/10 p-4 flex items-center justify-between gap-3 text-left hover:bg-yellow/20 transition-colors active:scale-[0.98]"
           >
             <div>
-              <div className="font-mono text-[9px] tracking-eyebrow text-ink-3">APOSTAS GERAIS · OBRIGATÓRIO</div>
+              <div className="font-mono text-[9px] tracking-eyebrow text-ink-3">APOSTAS ESPECIAIS · OBRIGATÓRIO</div>
               <div className="font-display text-xl">CAMPEÃO · VICE · ARTILHEIRO</div>
               <div className="font-mono text-[10px] text-ink-3 mt-0.5">Até +50 pontos · prazo: 11 Jun</div>
             </div>
@@ -1004,7 +1004,7 @@ function HomeDesktop() {
               </div>
               <div>
                 <div className="flex justify-between mb-1.5">
-                  <span className="font-mono text-[9px] text-ink-4 tracking-eyebrow">APOSTAS GERAIS</span>
+                  <span className="font-mono text-[9px] text-ink-4 tracking-eyebrow">APOSTAS ESPECIAIS</span>
                   <span className="font-mono text-[9px] text-ink-3">{apostasFeitas}/3</span>
                 </div>
                 <div className="h-1.5 bg-hairline overflow-hidden">
@@ -1019,7 +1019,7 @@ function HomeDesktop() {
               {apostasFeitas < 3 && (
                 <button onClick={() => navigate('/prediction', { state: { tab: 'champion' } })}
                   className="w-full border border-ink py-2 text-center hover:bg-yellow/10 transition-colors">
-                  <span className="font-mono text-[9px] text-ink tracking-eyebrow">⚠ APOSTAS GERAIS PENDENTES</span>
+                  <span className="font-mono text-[9px] text-ink tracking-eyebrow">APOSTAS ESPECIAIS PENDENTES</span>
                 </button>
               )}
             </div>

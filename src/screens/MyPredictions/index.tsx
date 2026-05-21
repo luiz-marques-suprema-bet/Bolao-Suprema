@@ -38,7 +38,7 @@ export function MyPredictionsScreen() {
 
         <section className="border-2 border-ink p-4">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-display text-2xl">APOSTAS GERAIS</h2>
+            <h2 className="font-display text-2xl">APOSTAS ESPECIAIS</h2>
             <button onClick={() => navigate('/prediction', { state: { tab: 'champion' } })} className="font-mono text-[10px] text-ink-3 hover:text-ink">EDITAR</button>
           </div>
           <div className="grid md:grid-cols-3 gap-2 mt-3">

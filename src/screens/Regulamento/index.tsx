@@ -68,7 +68,7 @@ export function RegulamentoScreen() {
             `Primeiro jogo: ${firstMatch}.`,
             'Cada palpite fecha automaticamente no kickoff da partida.',
           ]} />
-          <InfoCard title="APOSTAS GERAIS" accent="border-l-4 border-l-yellow" items={[
+          <InfoCard title="APOSTAS ESPECIAIS" accent="border-l-4 border-l-yellow" items={[
             'Devem ser realizadas antes do início da primeira partida.',
             'Campeão · Vice-campeão · Artilheiro.',
             'Campeão e vice não podem ser do mesmo grupo.',
@@ -84,7 +84,7 @@ export function RegulamentoScreen() {
           <div className="border-2 border-ink border-t-0 divide-y divide-hairline">
             <RulesBlock title="FASE DE GRUPOS" rules={GROUP_RULES} />
             <RulesBlock title="MATA-MATA (fase eliminatória)" rules={KO_RULES} />
-            <RulesBlock title="APOSTAS GERAIS" rules={GENERAL_RULES} />
+            <RulesBlock title="APOSTAS ESPECIAIS" rules={GENERAL_RULES} />
           </div>
         </section>
 

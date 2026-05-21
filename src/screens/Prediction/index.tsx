@@ -539,17 +539,24 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
       <div
         onClick={handleHeaderClick}
         className={cn(
-          'px-3 py-2.5 flex items-center gap-2',
+          'px-3 py-3 flex items-center gap-2',
           isPickable && hasPick ? 'cursor-pointer hover:bg-paper-deep transition-colors' : '',
         )}
       >
-        <Flag team={match.home} size={22} />
-        <span className="font-mono text-[11px] font-bold w-8 leading-none shrink-0">{match.home.code}</span>
+        {/* Home team */}
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <Flag team={match.home} size={26} />
+          <div className="min-w-0">
+            <div className="font-mono text-[12px] font-bold leading-none">{match.home.code}</div>
+            <div className="font-mono text-[8px] text-ink-3 truncate leading-none mt-0.5 max-w-[60px]">{match.home.name}</div>
+          </div>
+        </div>
 
-        <div className="flex-1 flex flex-col items-center min-w-0">
+        {/* Center: time / result / pick */}
+        <div className="flex-shrink-0 flex flex-col items-center gap-0.5 min-w-[68px]">
           {isLive && (
             <>
-              <span className="font-display text-base">{match.homeScore}–{match.awayScore}</span>
+              <span className="font-display text-lg leading-none">{match.homeScore}–{match.awayScore}</span>
               <span className="inline-flex items-center gap-1 font-mono text-[7px] font-bold text-red">
                 <span className="w-1 h-1 rounded-full bg-red animate-pulse-live" />
                 {match.liveMinute ? `${match.liveMinute}'` : 'AO VIVO'}
@@ -558,18 +565,18 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
           )}
           {isDone && (
             <>
-              <span className="font-display text-base text-ink-3">{match.homeScore}–{match.awayScore}</span>
+              <span className="font-display text-lg leading-none text-ink-3">{match.homeScore}–{match.awayScore}</span>
               <span className="font-mono text-[7px] text-ink-4 tracking-eyebrow">ENCERRADO</span>
             </>
           )}
           {isLocked && !isLive && !isDone && (
             hasPick
-              ? <span className="font-display text-base text-green">{existing.homeScore}–{existing.awayScore}</span>
+              ? <span className="font-display text-lg leading-none text-green">{existing.homeScore}–{existing.awayScore}</span>
               : <span className="font-mono text-[8px] text-ink-3">sem palpite</span>
           )}
           {!isLive && !isDone && !isLocked && hasPick && !editing && (
             <div className="flex items-center gap-1">
-              <span className="font-display text-base text-green">{existing.homeScore}–{existing.awayScore}</span>
+              <span className="font-display text-lg leading-none text-green">{existing.homeScore}–{existing.awayScore}</span>
               <span className="font-mono text-[9px] text-green">✓</span>
             </div>
           )}
@@ -577,12 +584,22 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
             <span className="font-mono text-[7px] text-ink-3 tracking-eyebrow">EDITANDO ▲</span>
           )}
           {!isLive && !isDone && !isLocked && !hasPick && (
-            <span className="font-mono text-[8px] text-ink-3">{formatMatchDate(match)} · {match.time}</span>
+            <>
+              <span className="font-mono text-[7px] text-ink-4">{formatMatchDate(match)}</span>
+              <span className="font-display text-base leading-none">{match.time}</span>
+              <span className="font-mono text-[6px] text-ink-4 tracking-eyebrow">BRT</span>
+            </>
           )}
         </div>
 
-        <span className="font-mono text-[11px] font-bold w-8 text-right leading-none shrink-0">{match.away.code}</span>
-        <Flag team={match.away} size={22} />
+        {/* Away team */}
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
+          <div className="min-w-0 text-right">
+            <div className="font-mono text-[12px] font-bold leading-none">{match.away.code}</div>
+            <div className="font-mono text-[8px] text-ink-3 truncate leading-none mt-0.5 max-w-[60px]">{match.away.name}</div>
+          </div>
+          <Flag team={match.away} size={26} />
+        </div>
 
         {isPickable && !hasPick && (
           <span className="font-mono text-[7px] tracking-eyebrow text-green font-bold shrink-0 w-10 text-right">ABERTO</span>
@@ -1024,10 +1041,22 @@ function TeamPickerGrid({
   disabledCodes?: string[]
   disabledReason?: string
 }) {
+  const [search, setSearch] = useState('')
+  const q = search.trim().toLowerCase()
+
+  const visibleGroups = WC2026_GROUPS.map(group => ({
+    ...group,
+    teams: group.teams.filter(code => {
+      if (!q) return true
+      const team = TEAMS[code]
+      return code.toLowerCase().includes(q) || team?.name.toLowerCase().includes(q)
+    }),
+  })).filter(g => g.teams.length > 0)
+
   return (
     <div>
       {pick && (
-        <div className="mb-4 flex items-center gap-3 p-3 border-2 border-green bg-green/5">
+        <div className="mb-3 flex items-center gap-3 p-3 border-2 border-green bg-green/5">
           <Flag team={TEAMS[pick]} size={32} />
           <div className="flex-1">
             <p className="font-mono text-[8px] tracking-eyebrow text-ink-4">ESCOLHIDO</p>
@@ -1038,15 +1067,26 @@ function TeamPickerGrid({
       )}
 
       {disabledReason && (
-        <div className="mb-4 px-3 py-2 border border-yellow/40 bg-yellow/5">
+        <div className="mb-3 px-3 py-2 border border-yellow/40 bg-yellow/5">
           <p className="font-mono text-[9px] text-ink-3 leading-relaxed">{disabledReason}</p>
         </div>
       )}
 
-      <div className="space-y-4">
-        {WC2026_GROUPS.map(group => (
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Buscar seleção..."
+        className="w-full bg-paper-deep border-2 border-line px-3 py-2 font-mono text-[11px] mb-3 outline-none focus:border-ink placeholder:text-ink-4"
+      />
+
+      {visibleGroups.length === 0 && (
+        <p className="font-mono text-[10px] text-ink-4 text-center py-4">Nenhuma seleção encontrada.</p>
+      )}
+
+      <div className="space-y-3">
+        {visibleGroups.map(group => (
           <div key={group.id}>
-            <p className="font-mono text-[8px] tracking-eyebrow text-ink-4 mb-2">GRUPO {group.id}</p>
+            <p className="font-mono text-[8px] tracking-eyebrow text-ink-4 mb-1.5">GRUPO {group.id}</p>
             <div className="grid grid-cols-4 gap-1.5">
               {group.teams.map(code => {
                 const team = TEAMS[code]
@@ -1060,14 +1100,15 @@ function TeamPickerGrid({
                     whileTap={blocked ? {} : { scale: 0.95 }}
                     disabled={blocked}
                     className={cn(
-                      'flex flex-col items-center gap-1.5 py-2.5 px-1 border-2 transition-colors',
+                      'flex flex-col items-center gap-1 py-2 px-1 border-2 transition-colors',
                       selected ? 'border-green bg-green/10' :
                       blocked  ? 'border-hairline opacity-25 cursor-not-allowed' :
                                  'border-hairline hover:border-ink',
                     )}
                   >
                     <Flag team={team} size={26} />
-                    <span className="font-mono text-[8px] font-bold">{code}</span>
+                    <span className="font-mono text-[8px] font-bold leading-none">{code}</span>
+                    {q && <span className="font-mono text-[6px] text-ink-4 truncate w-full text-center leading-none">{team.name}</span>}
                   </motion.button>
                 )
               })}
@@ -1141,7 +1182,7 @@ function ChampionTab() {
             ? 'border-red/40 bg-red/5 text-red'
             : 'border-yellow/50 bg-yellow/5 text-ink-3'
         )}>
-          {isDeadlinePassed ? '■ ENCERRADO' : '⏱ PRAZO:'} {deadlineStr}
+          {isDeadlinePassed ? '■ ENCERRADO' : 'PRAZO:'} {deadlineStr}
         </div>
       </div>
 
@@ -1210,7 +1251,7 @@ function ChampionTab() {
                   {hasPick && slot.isTeam ? (
                     <Flag team={TEAMS[slot.pick!]} size={36} />
                   ) : hasPick && !slot.isTeam ? (
-                    <div className="w-9 h-9 flex items-center justify-center border-2 border-green font-mono text-base text-green">⚽</div>
+                    <div className="w-9 h-9 flex items-center justify-center border-2 border-green font-mono text-base text-green">✓</div>
                   ) : (
                     <div className="w-9 h-9 flex items-center justify-center border-2 border-dashed border-hairline font-mono text-xl text-ink-4">?</div>
                   )}

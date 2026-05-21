@@ -121,7 +121,7 @@ function ApostasGeraisSummary({ championPick, vicePick, scorerPick, onEdit }: {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <p className="font-mono text-[10px] tracking-eyebrow text-ink-3">APOSTAS GERAIS</p>
+        <p className="font-mono text-[10px] tracking-eyebrow text-ink-3">APOSTAS ESPECIAIS</p>
         <button onClick={onEdit} className="font-mono text-[10px] text-ink-4 hover:text-ink tracking-eyebrow">
           {allSet ? 'ALTERAR →' : 'FAZER →'}
         </button>
