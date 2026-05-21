@@ -130,7 +130,8 @@ values (
     'video/x-msvideo',
     'video/avi',
     'video/mpeg',
-    'video/3gpp'
+    'video/3gpp',
+    'video/x-ms-wmv'
   ]
 )
 on conflict (id) do update set

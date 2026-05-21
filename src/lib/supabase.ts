@@ -68,21 +68,39 @@ export async function uploadChatMedia(
     throw new Error(`Arquivo muito grande. Maximo: ${limit} MB.`)
   }
 
-  const type = file.type || ''
+  const originalType = file.type || ''
+  const fileName = file instanceof File ? file.name.toLowerCase() : ''
+  const isVideoKind = kind === 'video' || kind === 'video_note'
+  const looksLikeVideoFile = /\.(mp4|mov|m4v|webm|mkv|avi|mpeg|mpg|3gp|wmv)$/i.test(fileName)
   const allowed = {
     image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
     audio: ['audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav'],
-    video: ['video/webm', 'video/mp4', 'video/quicktime', 'video/x-matroska', 'video/x-msvideo', 'video/avi', 'video/mpeg', 'video/3gpp'],
-    video_note: ['video/webm', 'video/mp4', 'video/quicktime', 'video/x-matroska', 'video/x-msvideo', 'video/avi', 'video/mpeg', 'video/3gpp'],
+    video: ['video/webm', 'video/mp4', 'video/quicktime', 'video/x-matroska', 'video/x-msvideo', 'video/avi', 'video/mpeg', 'video/3gpp', 'video/x-ms-wmv'],
+    video_note: ['video/webm', 'video/mp4', 'video/quicktime', 'video/x-matroska', 'video/x-msvideo', 'video/avi', 'video/mpeg', 'video/3gpp', 'video/x-ms-wmv'],
   }[kind]
-  if (type && !allowed.includes(type)) {
+
+  if (kind === 'image' && originalType && !allowed.includes(originalType)) {
+    throw new Error('Formato de midia nao suportado para a Resenha.')
+  }
+  if (kind === 'audio' && originalType && !allowed.includes(originalType) && !originalType.startsWith('audio/')) {
+    throw new Error('Formato de midia nao suportado para a Resenha.')
+  }
+  if (isVideoKind && originalType && !originalType.startsWith('video/') && originalType !== 'application/octet-stream' && !looksLikeVideoFile) {
     throw new Error('Formato de midia nao suportado para a Resenha.')
   }
 
+  const type = allowed.includes(originalType)
+    ? originalType
+    : isVideoKind
+      ? 'video/mp4'
+      : kind === 'audio' && originalType.startsWith('audio/')
+        ? 'audio/webm'
+        : originalType
+
   const ext = kind === 'audio'
-    ? (type.includes('mp4') ? 'mp4' : type.includes('mpeg') ? 'mp3' : type.includes('ogg') ? 'ogg' : type.includes('wav') ? 'wav' : 'webm')
+    ? (originalType.includes('mp4') ? 'mp4' : originalType.includes('mpeg') ? 'mp3' : originalType.includes('ogg') ? 'ogg' : originalType.includes('wav') ? 'wav' : 'webm')
     : kind === 'video' || kind === 'video_note'
-      ? (type.includes('quicktime') ? 'mov' : type.includes('matroska') ? 'mkv' : type.includes('avi') || type.includes('x-msvideo') ? 'avi' : type.includes('mpeg') ? 'mpeg' : type.includes('3gpp') ? '3gp' : type.includes('mp4') ? 'mp4' : 'webm')
+      ? (fileName.match(/\.(mp4|mov|m4v|webm|mkv|avi|mpeg|mpg|3gp|wmv)$/i)?.[1] ?? (originalType.includes('quicktime') ? 'mov' : originalType.includes('matroska') ? 'mkv' : originalType.includes('avi') || originalType.includes('x-msvideo') ? 'avi' : originalType.includes('mpeg') ? 'mpeg' : originalType.includes('3gpp') ? '3gp' : originalType.includes('wmv') ? 'wmv' : originalType.includes('mp4') ? 'mp4' : 'webm'))
       : (type.includes('png') ? 'png' : type.includes('gif') ? 'gif' : type.includes('webp') ? 'webp' : 'jpg')
 
   const path = `chat/${kind}/${userId}/${Date.now()}.${ext}`

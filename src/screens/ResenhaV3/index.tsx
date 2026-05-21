@@ -405,8 +405,9 @@ export function ResenhaScreen() {
             {isLoaded && messages.length === 0 && <EmptyResenha />}
 
             <AnimatePresence initial={false}>
-              {timeline.map(item => {
+              {timeline.map((item, index) => {
                 if (item.kind === 'date') return <DateMarker key={item.key} label={item.label} />
+                const messagesAfter = timeline.slice(index + 1).filter(next => next.kind === 'message').length
                 return (
                   <MessageRow
                     key={item.message.id}
@@ -417,6 +418,7 @@ export function ResenhaScreen() {
                     isAdmin={isAdmin}
                     isPinned={pinnedId === item.message.id}
                     menuOpen={messageMenuId === item.message.id}
+                    openMenuUp={messagesAfter < 2}
                     onToggleMenu={() => setMessageMenuId(messageMenuId === item.message.id ? null : item.message.id)}
                     onReact={emoji => void toggleReaction(item.message.id, emoji)}
                     onReply={() => { setReplyingTo(item.message); setMessageMenuId(null) }}
@@ -584,6 +586,7 @@ function MessageRow({
   isAdmin,
   isPinned,
   menuOpen,
+  openMenuUp,
   onToggleMenu,
   onReact,
   onReply,
@@ -600,6 +603,7 @@ function MessageRow({
   isAdmin: boolean
   isPinned: boolean
   menuOpen: boolean
+  openMenuUp: boolean
   onToggleMenu: () => void
   onReact: (emoji: string) => void
   onReply: () => void
@@ -639,7 +643,8 @@ function MessageRow({
           className={cn(
             'relative min-w-0 overflow-visible border px-3.5 py-2.5 shadow-sm',
             mine ? 'rounded-[20px] rounded-br-[6px] border-green/30 bg-[#dff7d6]' : 'rounded-[20px] rounded-bl-[6px] border-black/10 bg-paper',
-            (message.type === 'image' || message.type === 'gif' || message.type === 'video' || message.type === 'video_note') && 'p-2',
+            (message.type === 'image' || message.type === 'gif' || message.type === 'video' || message.type === 'video_note') ? 'p-2' : 'pb-6',
+            mine ? 'pr-4' : 'pl-4',
           )}
         >
           {!mine && !grouped && (
@@ -662,25 +667,26 @@ function MessageRow({
             {isPinned && <span>FIXADA</span>}
             <span>{message.time}</span>
           </div>
-
-          <button
-            type="button"
-            onClick={onToggleMenu}
-            className={cn(
-              'absolute top-2 z-20 grid h-8 w-8 place-items-center rounded-full border border-black/10 bg-paper/95 font-mono text-[13px] shadow-sm transition hover:border-ink hover:bg-yellow',
-              mine ? 'left-2' : 'right-2',
-              menuOpen && 'border-ink bg-yellow',
-            )}
-            aria-label="Opcoes da mensagem"
-          >
-            ...
-          </button>
         </div>
+
+        <button
+          type="button"
+          onClick={onToggleMenu}
+          className={cn(
+            'absolute z-30 grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-paper font-mono text-[13px] shadow-[2px_2px_0_#0D0D0D] transition hover:bg-yellow',
+            mine ? '-left-5 top-3' : '-right-5 top-3',
+            menuOpen && 'bg-yellow',
+          )}
+          aria-label="Opcoes da mensagem"
+        >
+          ...
+        </button>
 
         <AnimatePresence>
           {menuOpen && (
             <MessageActionPanel
               mine={mine}
+              openUp={openMenuUp}
               isAdmin={isAdmin}
               isPinned={isPinned}
               canDelete={canDelete}
@@ -757,6 +763,7 @@ function ActionButton({ label, detail, busy, onClick }: { label: string; detail:
 
 function MessageActionPanel({
   mine,
+  openUp,
   isAdmin,
   isPinned,
   canDelete,
@@ -766,6 +773,7 @@ function MessageActionPanel({
   onReact,
 }: {
   mine: boolean
+  openUp: boolean
   isAdmin: boolean
   isPinned: boolean
   canDelete: boolean
@@ -780,8 +788,9 @@ function MessageActionPanel({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -4, scale: 0.98 }}
       className={cn(
-        'absolute z-40 mt-2 w-72 overflow-hidden rounded-2xl border border-black/10 bg-paper shadow-[0_18px_50px_rgba(0,0,0,0.16)]',
+        'absolute z-40 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-black/10 bg-paper shadow-[0_18px_50px_rgba(0,0,0,0.16)]',
         mine ? 'right-0' : 'left-0',
+        openUp ? 'bottom-full mb-2' : 'top-full mt-2',
       )}
     >
       <div className="border-b border-black/10 p-2">
