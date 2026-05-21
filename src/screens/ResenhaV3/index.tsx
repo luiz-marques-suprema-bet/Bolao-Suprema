@@ -930,7 +930,7 @@ function GifDock({ onSelect, onClose }: { onSelect: (url: string) => void; onClo
 
 function ConfirmDialog({ title, body, onCancel, onConfirm }: { title: string; body: string; onCancel: () => void; onConfirm: () => void }) {
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 grid place-items-center bg-black/60 px-4" onClick={onCancel}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] grid place-items-center bg-black/60 px-4" onClick={onCancel}>
       <motion.div initial={{ scale: 0.96, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 8 }} className="w-full max-w-sm border-2 border-ink bg-paper p-5 shadow-[6px_6px_0_#0D0D0D]" onClick={event => event.stopPropagation()}>
         <div className="font-display text-xl leading-none">{title}</div>
         <p className="mt-2 font-sans text-sm text-ink-3">{body}</p>

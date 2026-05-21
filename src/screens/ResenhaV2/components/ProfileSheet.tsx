@@ -203,7 +203,7 @@ export function ProfileSheet({ m, onClose }: { m: ChatMessage; onClose: () => vo
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col justify-end bg-ink/50"
+      className="fixed inset-0 z-[60] flex flex-col justify-end bg-ink/50"
       onClick={onClose}
     >
       <motion.div
