@@ -360,8 +360,8 @@ export function ResenhaScreen() {
 
   return (
     <div className="min-h-0 flex-1 bg-[#f6f1e6] text-ink">
-      <div className="grid h-[calc(100dvh-5.5rem)] grid-cols-1 overflow-hidden lg:h-[calc(100dvh-5.75rem)] lg:grid-cols-[minmax(0,1fr)_19rem]">
-        <section className="flex min-h-0 flex-col border-r border-black/10">
+      <div className="h-[calc(100dvh-5.5rem)] overflow-hidden lg:h-[calc(100dvh-5.75rem)]">
+        <section className="flex h-full min-h-0 flex-col">
           <header className="flex shrink-0 items-center justify-between gap-3 border-b border-black/10 bg-[#fbf7ed] px-4 py-3">
             <div className="min-w-0">
               <div className="flex items-center gap-3">
@@ -476,9 +476,9 @@ export function ResenhaScreen() {
               </div>
             )}
 
-            <div className="flex items-end gap-2 px-2 py-2 sm:px-3">
+            <div className="flex items-end gap-2 px-3 py-2.5 sm:px-4">
               <div className="relative">
-                <button type="button" onClick={() => setActionMenu(value => !value)} className={cn('grid h-11 w-11 place-items-center rounded-full border-2 border-ink bg-paper font-display text-xl transition', actionMenu && 'bg-ink text-paper')}>
+                <button type="button" onClick={() => setActionMenu(value => !value)} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-ink bg-paper font-display text-xl transition hover:bg-yellow', actionMenu && 'bg-ink text-paper')}>
                   +
                 </button>
                 <AnimatePresence>
@@ -508,16 +508,13 @@ export function ResenhaScreen() {
                 className="max-h-32 min-h-11 flex-1 resize-none rounded-[22px] border border-black/10 bg-paper px-4 py-3 font-sans text-[15px] leading-5 outline-none transition placeholder:text-ink-4 focus:border-ink"
               />
 
-              <button type="button" onClick={() => setGifOpen(true)} className="hidden h-11 border border-black/10 bg-paper px-3 font-mono text-[10px] font-bold text-ink-3 hover:border-ink hover:text-ink sm:block">
-                GIF
-              </button>
-              <button type="button" onClick={sendVideoNoteRecording} className={cn('grid h-11 w-11 place-items-center rounded-full border border-black/10 bg-paper font-mono text-[9px] font-bold text-ink-3 hover:border-ink hover:text-ink', videoNote.recording && 'border-red bg-red text-white')}>
+              <button type="button" onClick={sendVideoNoteRecording} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border border-black/10 bg-paper font-mono text-[9px] font-bold text-ink-3 transition hover:border-ink hover:bg-paper-deep hover:text-ink', videoNote.recording && 'border-red bg-red text-white')}>
                 CAM
               </button>
-              <button type="button" onClick={sendAudio} disabled={audio.uploading} className={cn('grid h-11 w-11 place-items-center rounded-full border border-black/10 bg-paper font-mono text-[9px] font-bold text-ink-3 hover:border-red hover:text-red disabled:opacity-50', audio.recording && 'border-red bg-red text-white')}>
+              <button type="button" onClick={sendAudio} disabled={audio.uploading} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border border-black/10 bg-paper font-mono text-[9px] font-bold text-ink-3 transition hover:border-red hover:bg-paper-deep hover:text-red disabled:opacity-50', audio.recording && 'border-red bg-red text-white')}>
                 {audio.recording ? `${audio.seconds}s` : 'MIC'}
               </button>
-              <button type="button" onClick={sendText} disabled={!draft.trim()} className="h-11 min-w-16 rounded-[22px] bg-green px-4 font-mono text-[10px] font-bold text-white shadow-[3px_3px_0_#0D0D0D] transition disabled:opacity-40 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
+              <button type="button" onClick={sendText} disabled={!draft.trim()} className="h-11 min-w-16 shrink-0 rounded-[22px] bg-green px-4 font-mono text-[10px] font-bold text-white shadow-[2px_2px_0_#0D0D0D] transition hover:bg-green/90 disabled:opacity-40 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
                 ENVIAR
               </button>
             </div>
@@ -538,27 +535,6 @@ export function ResenhaScreen() {
             </AnimatePresence>
           </footer>
         </section>
-
-        <aside className="hidden min-h-0 flex-col bg-[#111] text-paper lg:flex">
-          <div className="border-b border-white/10 p-5">
-            <div className="font-display text-2xl leading-none">AO VIVO</div>
-            <p className="mt-2 font-sans text-sm text-white/60">Tudo da firma em tempo real, sem depender do admin para conversa acontecer.</p>
-          </div>
-          <div className="space-y-4 overflow-y-auto p-5">
-            <PanelStat label="mensagens" value={messages.length} />
-            <PanelStat label="online agora" value={onlineUserIds.length || 1} />
-            <div>
-              <div className="mb-2 font-mono text-[10px] text-white/40">PARTICIPANTES</div>
-              <div className="flex flex-wrap gap-2">
-                {profiles.slice(0, 18).map(profile => (
-                  <button key={profile.id} type="button" className="rounded-full border border-white/10 bg-white/5 px-2 py-1 font-mono text-[9px] text-white/80">
-                    {profile.firstName || profile.initials}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </aside>
       </div>
 
       <AnimatePresence>
@@ -930,15 +906,6 @@ function GifDock({ onSelect, onClose }: { onSelect: (url: string) => void; onClo
         )}
       </div>
     </motion.div>
-  )
-}
-
-function PanelStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="border border-white/10 bg-white/5 p-4">
-      <div className="font-display text-3xl leading-none text-yellow">{value}</div>
-      <div className="mt-1 font-mono text-[10px] text-white/50">{label}</div>
-    </div>
   )
 }
 
