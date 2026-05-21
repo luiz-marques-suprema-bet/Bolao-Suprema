@@ -157,29 +157,30 @@ function StatusChip({ match }: { match: Match }) {
 
 // ─── Match row ────────────────────────────────────────────────────────────────
 
-function MatchRow({ match }: { match: Match }) {
+function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => void }) {
   const { predictions, drafts, setDraft, clearDraft, confirmPrediction } = usePredictionStore()
   const userId = useAuthStore(s => s.user?.id ?? 'me')
   const existing = predictions[match.id]
   const draft = drafts[match.id]
 
-  const [expanded, setExpanded] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [home, setHome] = useState(draft?.home ?? existing?.homeScore ?? 0)
   const [away, setAway] = useState(draft?.away ?? existing?.awayScore ?? 0)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    if (expanded) return
-    setHome(draft?.home ?? existing?.homeScore ?? 0)
-    setAway(draft?.away ?? existing?.awayScore ?? 0)
-  }, [draft?.home, draft?.away, existing?.homeScore, existing?.awayScore, expanded])
 
   const isPickable = isBetOpen(match)
   const isLocked = match.status === 'locked' || (!isPickable && (match.status === 'open' || match.status === 'scheduled'))
   const isLive = match.status === 'live'
   const isDone = match.status === 'finished'
   const hasPick = !!existing
+
+  useEffect(() => {
+    if (!hasPick) return
+    if (editing) return
+    setHome(existing?.homeScore ?? 0)
+    setAway(existing?.awayScore ?? 0)
+  }, [existing?.homeScore, existing?.awayScore, editing, hasPick])
 
   const updateHome = (value: number) => {
     setHome(value)
@@ -208,29 +209,78 @@ function MatchRow({ match }: { match: Match }) {
       return
     }
     clearDraft(match.id)
-    setExpanded(false)
+    setEditing(false)
+    onConfirmed?.()
   }
 
-  const toggle = () => {
-    if (!isPickable) return
-    if (!expanded && existing) {
-      setHome(draft?.home ?? existing.homeScore)
-      setAway(draft?.away ?? existing.awayScore)
+  const handleEdit = () => {
+    if (!isPickable || !hasPick) return
+    if (!editing) {
+      setHome(draft?.home ?? existing!.homeScore)
+      setAway(draft?.away ?? existing!.awayScore)
     }
-    setExpanded(v => !v)
+    setEditing(v => !v)
   }
+
+  const pickerContent = (
+    <div className="px-4 pt-5 pb-5 bg-paper-deep border-t border-hairline">
+      <p className="font-mono text-[10px] tracking-eyebrow text-ink text-center mb-1 font-bold">
+        QUAL VAI SER O PLACAR?
+      </p>
+      <p className="font-mono text-[9px] text-ink-2 text-center mb-5">
+        {match.venue} · {formatMatchDateTime(match)}
+      </p>
+
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col items-center gap-2 flex-1">
+          <Flag team={match.home} size={44} />
+          <span className="font-mono text-[9px] font-bold text-center leading-tight">
+            {match.home.name.toUpperCase()}
+          </span>
+          <ScoreInput value={home} onChange={updateHome} />
+        </div>
+
+        <span className="font-serif-it text-3xl text-ink-3 flex-shrink-0 mb-6">×</span>
+
+        <div className="flex flex-col items-center gap-2 flex-1">
+          <Flag team={match.away} size={44} />
+          <span className="font-mono text-[9px] font-bold text-center leading-tight">
+            {match.away.name.toUpperCase()}
+          </span>
+          <ScoreInput value={away} onChange={updateAway} />
+        </div>
+      </div>
+
+      {saveError && (
+        <p className="font-mono text-[10px] text-red text-center mt-3 border border-red/30 bg-red/5 px-2 py-1.5">
+          {saveError}
+        </p>
+      )}
+
+      <button
+        onClick={handleConfirm}
+        disabled={saving}
+        className="btn-yellow w-full text-[11px] py-3 mt-3 tracking-eyebrow font-bold disabled:opacity-50 disabled:cursor-wait"
+      >
+        {saving ? 'SALVANDO...' : hasPick ? 'ATUALIZAR PALPITE ✓' : 'CONFIRMAR PALPITE ✓'}
+      </button>
+    </div>
+  )
 
   return (
-    <div className={cn(
-      'border-b border-hairline last:border-0 transition-colors',
-      hasPick && isPickable ? 'bg-green/[0.04]' : '',
-    )}>
-      {/* Collapsed row */}
+    <div
+      id={`match-row-${match.id}`}
+      className={cn(
+        'border-b border-hairline last:border-0 transition-colors',
+        hasPick && isPickable ? 'bg-green/[0.04]' : '',
+      )}
+    >
+      {/* Match header */}
       <button
-        onClick={toggle}
+        onClick={handleEdit}
         className={cn(
           'w-full px-4 py-3.5 flex items-center gap-3 text-left',
-          isPickable ? 'cursor-pointer hover:bg-paper-deep' : 'cursor-default',
+          isPickable && hasPick ? 'cursor-pointer hover:bg-paper-deep' : 'cursor-default',
         )}
       >
         {/* Home */}
@@ -283,16 +333,19 @@ function MatchRow({ match }: { match: Match }) {
           <Flag team={match.away} size={32} />
         </div>
 
-        {isPickable && (
+        {isPickable && hasPick && (
           <span className="font-mono text-[9px] text-ink-3 flex-shrink-0 w-3 text-center">
-            {expanded ? '▲' : '▼'}
+            {editing ? '▲' : '✎'}
           </span>
         )}
       </button>
 
-      {/* Score picker */}
+      {/* Always-visible picker for open matches without a confirmed pick */}
+      {isPickable && !hasPick && pickerContent}
+
+      {/* Animated picker for editing an existing confirmed pick */}
       <AnimatePresence>
-        {expanded && (
+        {isPickable && hasPick && editing && (
           <motion.div
             key="picker"
             initial={{ height: 0 }}
@@ -301,48 +354,7 @@ function MatchRow({ match }: { match: Match }) {
             transition={{ type: 'spring', damping: 32, stiffness: 400 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pt-5 pb-5 bg-paper-deep border-t border-hairline">
-              <p className="font-mono text-[10px] tracking-eyebrow text-ink text-center mb-1 font-bold">
-                QUAL VAI SER O PLACAR?
-              </p>
-              <p className="font-mono text-[9px] text-ink-2 text-center mb-5">
-                {match.venue} · {formatMatchDateTime(match)}
-              </p>
-
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex flex-col items-center gap-2 flex-1">
-                  <Flag team={match.home} size={44} />
-                  <span className="font-mono text-[9px] font-bold text-center leading-tight">
-                    {match.home.name.toUpperCase()}
-                  </span>
-                  <ScoreInput value={home} onChange={updateHome} />
-                </div>
-
-                <span className="font-serif-it text-3xl text-ink-3 flex-shrink-0 mb-6">×</span>
-
-                <div className="flex flex-col items-center gap-2 flex-1">
-                  <Flag team={match.away} size={44} />
-                  <span className="font-mono text-[9px] font-bold text-center leading-tight">
-                    {match.away.name.toUpperCase()}
-                  </span>
-                  <ScoreInput value={away} onChange={updateAway} />
-                </div>
-              </div>
-
-              {saveError && (
-                <p className="font-mono text-[10px] text-red text-center mt-3 border border-red/30 bg-red/5 px-2 py-1.5">
-                  {saveError}
-                </p>
-              )}
-
-              <button
-                onClick={handleConfirm}
-                disabled={saving}
-                className="btn-yellow w-full text-[11px] py-3 mt-3 tracking-eyebrow font-bold disabled:opacity-50 disabled:cursor-wait"
-              >
-                {saving ? 'SALVANDO...' : hasPick ? 'ATUALIZAR PALPITE ✓' : 'CONFIRMAR PALPITE ✓'}
-              </button>
-            </div>
+            {pickerContent}
           </motion.div>
         )}
       </AnimatePresence>
@@ -656,8 +668,6 @@ function GroupsTab() {
         </div>
       )}
 
-      <GroupBatchSaveBar selectedGroup={selectedGroup} matches={groupMatches} />
-
       {/* Matchdays */}
       {[1, 2, 3].map(md => {
         const matches = byMatchday[md] ?? []
@@ -667,10 +677,26 @@ function GroupsTab() {
             <div className="px-4 py-2 bg-paper-deep border-y border-hairline">
               <span className="font-mono text-[9px] tracking-eyebrow text-ink-3">RODADA {md}</span>
             </div>
-            {matches.map(m => <MatchRow key={m.id} match={m} />)}
+            {matches.map(m => (
+              <MatchRow
+                key={m.id}
+                match={m}
+                onConfirmed={() => {
+                  setTimeout(() => {
+                    const preds = usePredictionStore.getState().predictions
+                    const next = groupMatches.find(gm => isBetOpen(gm) && !preds[gm.id] && gm.id !== m.id)
+                    if (next) {
+                      document.getElementById(`match-row-${next.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                  }, 150)
+                }}
+              />
+            ))}
           </div>
         )
       })}
+
+      <GroupBatchSaveBar selectedGroup={selectedGroup} matches={groupMatches} />
 
       {/* Standings */}
       <div className="mt-4">
@@ -1174,8 +1200,6 @@ function DesktopGroupView({
         <span className="ml-auto font-mono text-[10px] text-ink-3">{countInGroup}/6 palpites</span>
       </div>
 
-      <GroupBatchSaveBar selectedGroup={selectedGroup} matches={groupMatches} compact />
-
       {[1, 2, 3].map(md => {
         const matches = allMatches.filter(
           m => m.group === selectedGroup && m.stageLabel.endsWith(`MD${md}`)
@@ -1186,10 +1210,26 @@ function DesktopGroupView({
             <div className="px-5 py-2.5 border-b border-hairline bg-paper-deep">
               <span className="font-mono text-[9px] tracking-eyebrow text-ink-3">RODADA {md}</span>
             </div>
-            {matches.map(m => <MatchRow key={m.id} match={m} />)}
+            {matches.map(m => (
+              <MatchRow
+                key={m.id}
+                match={m}
+                onConfirmed={() => {
+                  setTimeout(() => {
+                    const preds = usePredictionStore.getState().predictions
+                    const next = groupMatches.find(gm => isBetOpen(gm) && !preds[gm.id] && gm.id !== m.id)
+                    if (next) {
+                      document.getElementById(`match-row-${next.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                  }, 150)
+                }}
+              />
+            ))}
           </div>
         )
       })}
+
+      <GroupBatchSaveBar selectedGroup={selectedGroup} matches={groupMatches} compact />
 
       {filledMatches > 0 && (
         <div className="border-t-2 border-ink">
