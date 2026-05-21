@@ -24,7 +24,7 @@ export function MobileNav() {
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-paper"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="grid grid-cols-8">
+      <div className="grid grid-cols-8 h-14">
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.path
           const isProfile = item.id === 'profile'
