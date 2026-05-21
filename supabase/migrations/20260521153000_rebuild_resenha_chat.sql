@@ -125,7 +125,12 @@ values (
     'audio/x-wav',
     'video/webm',
     'video/mp4',
-    'video/quicktime'
+    'video/quicktime',
+    'video/x-matroska',
+    'video/x-msvideo',
+    'video/avi',
+    'video/mpeg',
+    'video/3gpp'
   ]
 )
 on conflict (id) do update set

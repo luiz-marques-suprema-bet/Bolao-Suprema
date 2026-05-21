@@ -72,8 +72,8 @@ export async function uploadChatMedia(
   const allowed = {
     image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
     audio: ['audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav'],
-    video: ['video/webm', 'video/mp4', 'video/quicktime'],
-    video_note: ['video/webm', 'video/mp4', 'video/quicktime'],
+    video: ['video/webm', 'video/mp4', 'video/quicktime', 'video/x-matroska', 'video/x-msvideo', 'video/avi', 'video/mpeg', 'video/3gpp'],
+    video_note: ['video/webm', 'video/mp4', 'video/quicktime', 'video/x-matroska', 'video/x-msvideo', 'video/avi', 'video/mpeg', 'video/3gpp'],
   }[kind]
   if (type && !allowed.includes(type)) {
     throw new Error('Formato de midia nao suportado para a Resenha.')
@@ -82,7 +82,7 @@ export async function uploadChatMedia(
   const ext = kind === 'audio'
     ? (type.includes('mp4') ? 'mp4' : type.includes('mpeg') ? 'mp3' : type.includes('ogg') ? 'ogg' : type.includes('wav') ? 'wav' : 'webm')
     : kind === 'video' || kind === 'video_note'
-      ? (type.includes('quicktime') ? 'mov' : type.includes('mp4') ? 'mp4' : 'webm')
+      ? (type.includes('quicktime') ? 'mov' : type.includes('matroska') ? 'mkv' : type.includes('avi') || type.includes('x-msvideo') ? 'avi' : type.includes('mpeg') ? 'mpeg' : type.includes('3gpp') ? '3gp' : type.includes('mp4') ? 'mp4' : 'webm')
       : (type.includes('png') ? 'png' : type.includes('gif') ? 'gif' : type.includes('webp') ? 'webp' : 'jpg')
 
   const path = `chat/${kind}/${userId}/${Date.now()}.${ext}`

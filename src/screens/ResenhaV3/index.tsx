@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils'
 import { isSafeHttpUrl } from '@/lib/security'
 import type { ChatMessage, ChatPoll } from '@/types'
 import { Avatar } from '@/components/shared/Avatar'
-import { GifPicker } from '@/screens/ResenhaV2/components/GifPicker'
 import { PollModal } from '@/screens/ResenhaV2/components/PollModal'
 import { ProfileSheet } from '@/screens/ResenhaV2/components/ProfileSheet'
 import { ImageViewer } from '@/screens/ResenhaV2/components/ImageViewer'
@@ -17,6 +16,7 @@ import { VideoBubble } from '@/screens/ResenhaV2/components/VideoBubble'
 import { MentionText } from '@/screens/ResenhaV2/components/MentionText'
 import { formatDayLabel, getContentPreview, minutesBetween } from '@/screens/ResenhaV2/utils/chatUi'
 import { useAudioRecorder } from '@/screens/ResenhaV2/hooks/useAudioRecorder'
+import { fetchGifs, type GifResult } from '@/screens/ResenhaV2/utils/gifApi'
 
 const CHANNEL_ID = 'geral'
 const QUICK_REACTIONS = ['👍', '😂', '🔥', '👏', '😮', '💚']
@@ -160,7 +160,7 @@ export function ResenhaScreen() {
   const [uploading, setUploading] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [actionMenu, setActionMenu] = useState(false)
-  const [emojiTrayFor, setEmojiTrayFor] = useState<string | null>(null)
+  const [messageMenuId, setMessageMenuId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
   const audio = useAudioRecorder()
@@ -416,13 +416,13 @@ export function ResenhaScreen() {
                     profiles={profiles}
                     isAdmin={isAdmin}
                     isPinned={pinnedId === item.message.id}
-                    emojiTrayFor={emojiTrayFor}
-                    onOpenEmoji={() => setEmojiTrayFor(emojiTrayFor === item.message.id ? null : item.message.id)}
+                    menuOpen={messageMenuId === item.message.id}
+                    onToggleMenu={() => setMessageMenuId(messageMenuId === item.message.id ? null : item.message.id)}
                     onReact={emoji => void toggleReaction(item.message.id, emoji)}
-                    onReply={() => setReplyingTo(item.message)}
+                    onReply={() => { setReplyingTo(item.message); setMessageMenuId(null) }}
                     onOpenProfile={() => setProfileMsg(item.message)}
-                    onPin={() => void setPinned(pinnedId === item.message.id ? null : item.message.id)}
-                    onDelete={() => setDeleteId(item.message.id)}
+                    onPin={() => { void setPinned(pinnedId === item.message.id ? null : item.message.id); setMessageMenuId(null) }}
+                    onDelete={() => { setDeleteId(item.message.id); setMessageMenuId(null) }}
                     onVote={optionId => void voteOnPoll(item.message.id, user?.id ?? 'me', optionId)}
                     onImage={setLightboxUrl}
                   />
@@ -433,6 +433,15 @@ export function ResenhaScreen() {
           </div>
 
           <footer className="shrink-0 border-t border-black/10 bg-[#fbf7ed]">
+            <AnimatePresence>
+              {gifOpen && (
+                <GifDock
+                  onSelect={sendGif}
+                  onClose={() => setGifOpen(false)}
+                />
+              )}
+            </AnimatePresence>
+
             <AnimatePresence>
               {combinedError && (
                 <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
@@ -513,8 +522,8 @@ export function ResenhaScreen() {
 
             <AnimatePresence>
               {videoNote.recording && (
-                <motion.div initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }} className="flex items-center justify-between gap-3 border-t border-red/20 bg-red/8 px-4 py-3">
-                  <div className="flex items-center gap-3">
+                <motion.div initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }} className="flex flex-col gap-3 border-t border-red/20 bg-red/8 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-4">
                     <VideoPreview stream={videoNote.stream} />
                     <div>
                       <div className="font-mono text-[10px] font-bold text-red">GRAVANDO BOLINHA · {videoNote.seconds}s</div>
@@ -551,7 +560,6 @@ export function ResenhaScreen() {
       </div>
 
       <AnimatePresence>
-        {gifOpen && <GifPicker onSelect={sendGif} onClose={() => setGifOpen(false)} />}
         {pollOpen && <PollModal onCreate={sendPoll} onClose={() => setPollOpen(false)} />}
         {profileMsg && <ProfileSheet m={profileMsg} onClose={() => setProfileMsg(null)} />}
         {lightboxUrl && <ImageViewer url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
@@ -575,8 +583,8 @@ function MessageRow({
   profiles,
   isAdmin,
   isPinned,
-  emojiTrayFor,
-  onOpenEmoji,
+  menuOpen,
+  onToggleMenu,
   onReact,
   onReply,
   onOpenProfile,
@@ -591,8 +599,8 @@ function MessageRow({
   profiles: ChatProfile[]
   isAdmin: boolean
   isPinned: boolean
-  emojiTrayFor: string | null
-  onOpenEmoji: () => void
+  menuOpen: boolean
+  onToggleMenu: () => void
   onReact: (emoji: string) => void
   onReply: () => void
   onOpenProfile: () => void
@@ -655,24 +663,40 @@ function MessageRow({
             <span>{message.time}</span>
           </div>
 
-          <div className={cn('absolute top-1 z-20 hidden items-center gap-1 rounded-full border border-black/10 bg-paper/95 p-1 shadow-sm group-hover:flex group-focus-within:flex', mine ? 'left-1' : 'right-1')}>
-            <MiniAction label="↩" onClick={onReply} />
-            <MiniAction label="☺" onClick={onOpenEmoji} />
-            {isAdmin && <MiniAction label={isPinned ? '◆' : '◇'} onClick={onPin} />}
-            {canDelete && <MiniAction label="×" danger onClick={onDelete} />}
-          </div>
+          <button
+            type="button"
+            onClick={onToggleMenu}
+            className={cn(
+              'absolute top-2 z-20 grid h-8 w-8 place-items-center rounded-full border border-black/10 bg-paper/95 font-mono text-[13px] shadow-sm transition hover:border-ink hover:bg-yellow',
+              mine ? 'left-2' : 'right-2',
+              menuOpen && 'border-ink bg-yellow',
+            )}
+            aria-label="Opcoes da mensagem"
+          >
+            ...
+          </button>
         </div>
 
-        {(groupedReactions.length > 0 || emojiTrayFor === message.id) && (
+        <AnimatePresence>
+          {menuOpen && (
+            <MessageActionPanel
+              mine={mine}
+              isAdmin={isAdmin}
+              isPinned={isPinned}
+              canDelete={canDelete}
+              onReply={onReply}
+              onPin={onPin}
+              onDelete={onDelete}
+              onReact={onReact}
+            />
+          )}
+        </AnimatePresence>
+
+        {groupedReactions.length > 0 && (
           <div className={cn('mt-1 flex flex-wrap gap-1', mine && 'justify-end')}>
             {groupedReactions.map(reaction => (
               <button key={reaction.emoji} type="button" onClick={() => onReact(reaction.emoji)} className={cn('rounded-full border px-2 py-1 text-xs', reaction.mine ? 'border-green bg-green text-white' : 'border-black/10 bg-paper')}>
                 {reaction.emoji} <span className="font-mono text-[10px]">{reaction.count}</span>
-              </button>
-            ))}
-            {emojiTrayFor === message.id && QUICK_REACTIONS.map(emoji => (
-              <button key={emoji} type="button" onClick={() => onReact(emoji)} className="grid h-7 w-7 place-items-center rounded-full border border-black/10 bg-paper text-xs hover:bg-yellow">
-                {emoji}
               </button>
             ))}
           </div>
@@ -731,10 +755,67 @@ function ActionButton({ label, detail, busy, onClick }: { label: string; detail:
   )
 }
 
-function MiniAction({ label, danger, onClick }: { label: string; danger?: boolean; onClick: () => void }) {
+function MessageActionPanel({
+  mine,
+  isAdmin,
+  isPinned,
+  canDelete,
+  onReply,
+  onPin,
+  onDelete,
+  onReact,
+}: {
+  mine: boolean
+  isAdmin: boolean
+  isPinned: boolean
+  canDelete: boolean
+  onReply: () => void
+  onPin: () => void
+  onDelete: () => void
+  onReact: (emoji: string) => void
+}) {
   return (
-    <button type="button" onClick={onClick} className={cn('grid h-7 w-7 place-items-center rounded-full font-mono text-[12px] transition hover:bg-black/10', danger && 'text-red hover:bg-red/10')}>
-      {label}
+    <motion.div
+      initial={{ opacity: 0, y: -4, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -4, scale: 0.98 }}
+      className={cn(
+        'absolute z-40 mt-2 w-72 overflow-hidden rounded-2xl border border-black/10 bg-paper shadow-[0_18px_50px_rgba(0,0,0,0.16)]',
+        mine ? 'right-0' : 'left-0',
+      )}
+    >
+      <div className="border-b border-black/10 p-2">
+        <div className="mb-2 px-2 font-mono text-[9px] font-bold text-ink-4">REAGIR</div>
+        <div className="grid grid-cols-6 gap-1">
+          {QUICK_REACTIONS.map(emoji => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => onReact(emoji)}
+              className="grid h-10 place-items-center rounded-xl border border-black/10 bg-paper-deep text-lg transition hover:border-ink hover:bg-yellow"
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="p-1">
+        <MenuAction label="Responder" detail="citar esta mensagem" onClick={onReply} />
+        {isAdmin && <MenuAction label={isPinned ? 'Desafixar' : 'Fixar'} detail="destacar no topo" onClick={onPin} />}
+        {canDelete && <MenuAction label="Apagar" detail={mine ? 'remover minha mensagem' : 'moderacao admin'} danger onClick={onDelete} />}
+      </div>
+    </motion.div>
+  )
+}
+
+function MenuAction({ label, detail, danger, onClick }: { label: string; detail: string; danger?: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={cn('flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition hover:bg-black/5', danger && 'text-red hover:bg-red/10')}>
+      <span>
+        <span className="block font-mono text-[11px] font-bold">{label}</span>
+        <span className={cn('block font-sans text-xs text-ink-4', danger && 'text-red/60')}>{detail}</span>
+      </span>
+      <span className="font-mono text-[10px]">→</span>
     </button>
   )
 }
@@ -763,6 +844,83 @@ function EmptyResenha() {
       <div className="font-display text-3xl leading-none">COMECA A RESENHA</div>
       <p className="mt-3 font-sans text-sm text-ink-3">Mande a primeira mensagem, crie uma enquete ou solte um audio.</p>
     </div>
+  )
+}
+
+function GifDock({ onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
+  const [query, setQuery] = useState('')
+  const [gifs, setGifs] = useState<GifResult[]>([])
+  const [loading, setLoading] = useState(true)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    fetchGifs('').then(result => {
+      if (!cancelled) {
+        setGifs(result)
+        setLoading(false)
+      }
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      setLoading(true)
+      fetchGifs(query).then(result => {
+        setGifs(result)
+        setLoading(false)
+      })
+    }, query.trim() ? 350 : 0)
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [query])
+
+  return (
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 280, opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+      className="overflow-hidden border-b border-black/10 bg-paper"
+    >
+      <div className="flex items-center gap-2 border-b border-black/10 px-3 py-2">
+        <span className="font-mono text-[10px] font-bold text-ink">GIF</span>
+        <input
+          value={query}
+          onChange={event => setQuery(event.target.value)}
+          placeholder="pesquisar gif..."
+          autoFocus
+          className="min-w-0 flex-1 bg-transparent font-sans text-[13px] outline-none placeholder:text-ink-4"
+        />
+        <button type="button" onClick={onClose} className="rounded-full border border-black/10 px-3 py-1.5 font-mono text-[10px] text-ink-3 hover:border-red hover:text-red">
+          FECHAR
+        </button>
+      </div>
+      <div className="h-[238px] overflow-y-auto overscroll-contain p-2">
+        {loading ? (
+          <div className="grid h-full place-items-center font-mono text-[10px] text-ink-4">BUSCANDO...</div>
+        ) : gifs.length === 0 ? (
+          <div className="grid h-full place-items-center font-mono text-[10px] text-ink-4">NENHUM GIF</div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+            {gifs.map(gif => (
+              <button
+                key={gif.id}
+                type="button"
+                onClick={() => { onSelect(gif.url); onClose() }}
+                className="aspect-video overflow-hidden rounded-xl border border-black/10 bg-hairline transition hover:scale-[1.02] hover:border-ink"
+              >
+                <img src={gif.preview} alt="" className="h-full w-full object-cover" loading="lazy" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
   )
 }
 
@@ -797,5 +955,5 @@ function VideoPreview({ stream }: { stream: MediaStream | null }) {
     if (videoRef.current) videoRef.current.srcObject = stream
   }, [stream])
 
-  return <video ref={videoRef} autoPlay muted playsInline className="h-16 w-16 rounded-full border-2 border-red object-cover bg-ink" />
+  return <video ref={videoRef} autoPlay muted playsInline className="h-28 w-28 rounded-full border-2 border-red object-cover bg-ink sm:h-36 sm:w-36" />
 }
