@@ -673,13 +673,13 @@ function MessageRow({
           type="button"
           onClick={onToggleMenu}
           className={cn(
-            'absolute z-30 grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-paper font-mono text-[13px] shadow-[2px_2px_0_#0D0D0D] transition hover:bg-yellow',
-            mine ? '-left-5 top-3' : '-right-5 top-3',
+            'absolute z-30 grid h-7 w-7 place-items-center rounded-full border border-ink/60 bg-paper font-mono text-[11px] leading-none shadow-[1px_1px_0_#0D0D0D] transition hover:border-ink hover:bg-yellow',
+            mine ? '-left-9 top-2' : '-right-9 top-2',
             menuOpen && 'bg-yellow',
           )}
           aria-label="Opcoes da mensagem"
         >
-          ...
+          •••
         </button>
 
         <AnimatePresence>
