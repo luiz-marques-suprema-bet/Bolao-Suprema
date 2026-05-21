@@ -13,6 +13,7 @@ Data de referencia: 2026-05-21.
 Implementado e validado:
 
 - Fluxo de palpites independente do admin.
+- Formato Copa 2026 alinhado: 48 selecoes, 12 grupos, 104 partidas, Fase de 32 antes das oitavas.
 - Salvamento de palpite com confirmacao real do Supabase.
 - Salvamento em lote de grupo/fase por meio da RPC `save_match_predictions(jsonb)`.
 - Trava por kickoff e status de mercado reforcada no banco.
@@ -36,6 +37,7 @@ Esses jogos provavelmente correspondem a fases eliminatorias, placeholders ou re
 - Deploy: GitHub Actions para GitHub Pages
 - URL: `https://ojozinho.github.io/Bolao-Suprema/`
 - Rotas: HashRouter, por exemplo `/#/home`, `/#/prediction`, `/#/admin`
+- Referencia de formato do torneio: [WC2026_FORMAT.md](WC2026_FORMAT.md)
 
 ## Stack
 

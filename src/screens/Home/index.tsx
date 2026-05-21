@@ -8,6 +8,8 @@ import { useAuthStore } from '@/stores/auth.store'
 import { usePredictionStore } from '@/stores/prediction.store'
 import { useChatStore } from '@/stores/chat.store'
 import { useMatchStore } from '@/stores/match.store'
+import { useBoletimStore } from '@/stores/boletim.store'
+import { BoletimCard, CreateModal } from '@/screens/Boletim'
 import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
 import { fmtPts, cn } from '@/lib/utils'
@@ -467,7 +469,7 @@ function GroupsGrid({ predictions }: { predictions: Record<string, unknown> }) {
               className="p-3 text-left hover:bg-paper-deep transition-colors group"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="font-display text-lg">GRP {g.id}</span>
+                <span className="font-display text-lg">GRUPO {g.id}</span>
                 {done > 0 && (
                   <span className="font-mono text-[8px] text-green">{done}/{groupMatches.length}</span>
                 )}
@@ -567,6 +569,98 @@ function ResenhaCard() {
   )
 }
 
+function HomeBoletimSection({ compact = false }: { compact?: boolean }) {
+  const { bulletins, isLoaded, init, destroy, addBoletim, togglePin, deleteBoletim } = useBoletimStore()
+  const { user } = useAuthStore()
+  const canEdit = (user?.isAdmin || user?.isMarketing) ?? false
+  const [creating, setCreating] = useState(false)
+
+  useEffect(() => {
+    init()
+    return () => { destroy() }
+  }, [init, destroy])
+
+  const sorted = [...bulletins].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1
+    if (!a.isPinned && b.isPinned) return 1
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
+  const featured = sorted[0]
+  const rest = sorted.slice(1, compact ? 3 : 5)
+
+  return (
+    <section className="border-2 border-ink bg-paper">
+      <div className="px-4 py-3 md:px-5 md:py-4 border-b border-hairline flex items-center justify-between gap-3 bg-ink text-paper">
+        <div>
+          <div className="font-display text-xl md:text-2xl leading-none">BOLETIM DA FIRMA</div>
+          <div className="font-mono text-[9px] md:text-[10px] text-paper/50 tracking-eyebrow mt-1">
+            comunicados oficiais do marketing
+          </div>
+        </div>
+        {canEdit && (
+          <button
+            onClick={() => setCreating(true)}
+            className="bg-yellow text-ink border-2 border-yellow px-3 py-2 md:px-4 font-mono text-[9px] md:text-[10px] font-bold tracking-eyebrow shadow-[3px_3px_0_0_#fff]"
+          >
+            + PUBLICAR
+          </button>
+        )}
+      </div>
+
+      {!isLoaded ? (
+        <div className="p-5 space-y-3">
+          <div className="h-7 w-2/5 bg-hairline animate-pulse" />
+          <div className="h-36 w-full bg-hairline animate-pulse" />
+        </div>
+      ) : bulletins.length === 0 ? (
+        <div className="px-5 py-12 text-center">
+          <div className="font-display text-3xl text-ink-3">SEM BOLETINS</div>
+          <p className="font-mono text-[11px] text-ink-3 mt-2">
+            Quando o marketing publicar, o destaque aparece direto aqui na Home.
+          </p>
+        </div>
+      ) : (
+        <div className="p-3 md:p-5 space-y-3">
+          {featured && (
+            <BoletimCard
+              b={featured}
+              canEdit={canEdit}
+              onDelete={deleteBoletim}
+              onTogglePin={togglePin}
+              featured
+            />
+          )}
+          {rest.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {rest.map(b => (
+                <BoletimCard
+                  key={b.id}
+                  b={b}
+                  canEdit={canEdit}
+                  onDelete={deleteBoletim}
+                  onTogglePin={togglePin}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {creating && (
+          <CreateModal
+            onClose={() => setCreating(false)}
+            onCreate={async b => {
+              await addBoletim(b)
+              setCreating(false)
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </section>
+  )
+}
+
 export function HomeScreen() {
   const isDesktop = useIsDesktop()
   return isDesktop ? <HomeDesktop /> : <HomeMobile />
@@ -630,6 +724,8 @@ function HomeMobile() {
           </button>
         )}
 
+        <HomeBoletimSection compact />
+
         {/* Upcoming matches */}
         <div className="border-2 border-ink">
           <div className="px-4 py-3 border-b border-hairline flex items-baseline justify-between">
@@ -645,7 +741,7 @@ function HomeMobile() {
                 <button key={match.id} onClick={() => navigate('/prediction')}
                   className={cn('w-full flex items-center gap-3 px-4 py-3 text-left transition-colors active:scale-[0.99]',
                     hasPick ? 'bg-green/5 hover:bg-green/10' : 'hover:bg-hairline')}>
-                  <div className="font-mono text-[8px] text-ink-4 w-8 flex-shrink-0">GRP<br/>{match.group}</div>
+                  <div className="font-mono text-[8px] text-ink-3 w-12 flex-shrink-0">GRUPO<br/>{match.group}</div>
                   <Flag team={match.home} size={22} />
                   <span className="font-mono text-[11px] font-bold flex-1 truncate">{match.home.code}</span>
                   <div className="text-center flex-shrink-0">
@@ -713,8 +809,9 @@ function HomeMobile() {
           className="w-full border-2 border-ink p-4 flex items-center justify-between gap-3 text-left hover:bg-paper-deep transition-colors active:scale-[0.99]"
         >
           <div>
-            <div className="font-mono text-[9px] tracking-eyebrow text-ink-3">OITAVAS · QUARTAS · SEMI · FINAL</div>
+            <div className="font-mono text-[9px] tracking-eyebrow text-ink-3">FASE DE 32 · OITAVAS · QUARTAS · FINAL</div>
             <div className="font-display text-2xl leading-tight">MINHA CHAVE</div>
+            <div className="font-mono text-[10px] text-ink-3 mt-1">32 classificados: 2 por grupo + 8 melhores terceiros.</div>
           </div>
           <span className="font-display text-3xl text-ink-4">→</span>
         </button>
@@ -894,15 +991,20 @@ function HomeDesktop() {
             </div>
             <div className="flex-1 flex flex-col p-5 gap-4">
               <div className="grid grid-cols-2 gap-1.5">
-                {['OITAVAS', 'QUARTAS', 'SEMI', 'FINAL'].map((phase, i) => (
-                  <div key={phase} className={cn('border border-hairline p-2 text-center', i === 3 && 'col-span-2 border-ink')}>
-                    <div className="font-display text-base">{phase}</div>
-                    <div className="font-mono text-[8px] text-ink-4">{['32', '16', '8', '4'][i]} jogos</div>
+                {[
+                  { phase: 'FASE DE 32', games: '16 jogos' },
+                  { phase: 'OITAVAS', games: '8 jogos' },
+                  { phase: 'QUARTAS', games: '4 jogos' },
+                  { phase: 'FINAL', games: '1 jogo' },
+                ].map((item, i) => (
+                  <div key={item.phase} className={cn('border border-hairline p-2 text-center', i === 3 && 'col-span-2 border-ink')}>
+                    <div className="font-display text-base">{item.phase}</div>
+                    <div className="font-mono text-[8px] text-ink-3">{item.games}</div>
                   </div>
                 ))}
               </div>
               <p className="font-mono text-[10px] text-ink-3 leading-relaxed flex-1">
-                Oitavas a partir de 27 Jun. Seus palpites de grupo determinam as equipes classificadas.
+                A fase de 32 começa em 28 Jun. Passam os dois primeiros de cada grupo e os oito melhores terceiros.
               </p>
               <button onClick={() => navigate('/bracket')} className="btn-yellow w-full justify-center active:scale-95 transition-transform">MINHA CHAVE →</button>
             </div>
@@ -912,13 +1014,16 @@ function HomeDesktop() {
           <ResenhaCard />
         </div>
 
-        {/* Row 3: grupos grid */}
+        {/* Row 3: Boletim */}
+        <HomeBoletimSection />
+
+        {/* Row 4: grupos grid */}
         <GroupsGrid predictions={predictions} />
 
-        {/* Row 4: Notícias */}
+        {/* Row 5: Notícias */}
         <WC26News />
 
-        {/* Row 5: Highlights */}
+        {/* Row 6: Highlights */}
         <VideoHighlights />
 
       </div>

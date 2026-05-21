@@ -137,14 +137,14 @@ function StatusChip({ match }: { match: Match }) {
   if (match.status === 'finished') {
     return (
       <Tooltip content="Partida encerrada — resultado oficial registrado e pontos calculados" side="top">
-        <span className="font-mono text-[8px] tracking-eyebrow text-ink-4 cursor-default">ENCERRADO</span>
+        <span className="font-mono text-[8px] tracking-eyebrow text-ink-3 cursor-default">ENCERRADO</span>
       </Tooltip>
     )
   }
   if (match.status === 'locked') {
     return (
       <Tooltip content="Prazo encerrado — apostas não são mais aceitas para esta partida" side="top">
-        <span className="font-mono text-[8px] tracking-eyebrow text-ink-4 cursor-default">■ BLOQUEADO</span>
+        <span className="font-mono text-[8px] tracking-eyebrow text-ink-3 cursor-default">■ BLOQUEADO</span>
       </Tooltip>
     )
   }
@@ -238,7 +238,7 @@ function MatchRow({ match }: { match: Match }) {
           <Flag team={match.home} size={32} />
           <div className="min-w-0">
             <div className="font-mono text-[11px] font-bold leading-tight">{match.home.code}</div>
-            <div className="font-mono text-[9px] text-ink-4 truncate leading-tight">
+            <div className="font-mono text-[9px] text-ink-2 truncate leading-tight">
               {match.home.name}
             </div>
           </div>
@@ -255,7 +255,7 @@ function MatchRow({ match }: { match: Match }) {
           {isLocked && !isLive && !isDone && (
             hasPick
               ? <span className="font-display text-xl text-green">{existing.homeScore}–{existing.awayScore}</span>
-              : <span className="font-mono text-[9px] text-ink-4">sem palpite</span>
+              : <span className="font-mono text-[9px] text-ink-3">sem palpite</span>
           )}
           {!isLive && !isDone && !isLocked && hasPick && (
             <div className="flex items-center gap-1">
@@ -266,7 +266,7 @@ function MatchRow({ match }: { match: Match }) {
           {!isLive && !isDone && !isLocked && !hasPick && (
             <div className="flex flex-col items-center">
               <span className="font-mono text-[9px] text-ink-3">{formatMatchDate(match)}</span>
-              <span className="font-mono text-[8px] text-ink-4">{match.time} BRT</span>
+              <span className="font-mono text-[8px] text-ink-2 font-bold">{match.time} BRT</span>
             </div>
           )}
           <StatusChip match={match} />
@@ -276,7 +276,7 @@ function MatchRow({ match }: { match: Match }) {
         <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
           <div className="min-w-0 text-right">
             <div className="font-mono text-[11px] font-bold leading-tight">{match.away.code}</div>
-            <div className="font-mono text-[9px] text-ink-4 truncate leading-tight">
+            <div className="font-mono text-[9px] text-ink-2 truncate leading-tight">
               {match.away.name}
             </div>
           </div>
@@ -284,7 +284,7 @@ function MatchRow({ match }: { match: Match }) {
         </div>
 
         {isPickable && (
-          <span className="font-mono text-[9px] text-ink-4 flex-shrink-0 w-3 text-center">
+          <span className="font-mono text-[9px] text-ink-3 flex-shrink-0 w-3 text-center">
             {expanded ? '▲' : '▼'}
           </span>
         )}
@@ -302,10 +302,10 @@ function MatchRow({ match }: { match: Match }) {
             className="overflow-hidden"
           >
             <div className="px-4 pt-5 pb-5 bg-paper-deep border-t border-hairline">
-              <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 text-center mb-1">
+              <p className="font-mono text-[10px] tracking-eyebrow text-ink text-center mb-1 font-bold">
                 QUAL VAI SER O PLACAR?
               </p>
-              <p className="font-mono text-[8px] text-ink-4 text-center mb-5">
+              <p className="font-mono text-[9px] text-ink-2 text-center mb-5">
                 {match.venue} · {formatMatchDateTime(match)}
               </p>
 
@@ -360,7 +360,8 @@ function MiniStandings({ standings, totalMatches, filledMatches }: {
   if (filledMatches === 0) return null
 
   const classified = standings.slice(0, 2)
-  const eliminated = standings.slice(2)
+  const thirdPlace = standings[2]
+  const eliminated = standings.slice(3)
 
   return (
     <motion.div
@@ -372,7 +373,7 @@ function MiniStandings({ standings, totalMatches, filledMatches }: {
       <div className="px-3 py-2 bg-ink flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-mono text-[9px] tracking-eyebrow text-paper/70">QUEM PASSA?</span>
-          <span className="font-mono text-[8px] text-paper/40">seus palpites</span>
+          <span className="font-mono text-[8px] text-paper/50">2 diretos + melhores 3ºs</span>
         </div>
         <span className="font-mono text-[8px] text-yellow font-bold">
           {filledMatches === totalMatches ? '✓ COMPLETO' : `${filledMatches}/${totalMatches} jogos`}
@@ -381,10 +382,10 @@ function MiniStandings({ standings, totalMatches, filledMatches }: {
 
       {/* Header */}
       <div className="grid grid-cols-[1fr_36px_28px_36px] px-3 py-1.5 border-b border-hairline bg-paper-deep">
-        <span className="font-mono text-[8px] text-ink-4">SELEÇÃO</span>
-        <span className="font-mono text-[8px] text-ink-4 text-center">PTS</span>
-        <span className="font-mono text-[8px] text-ink-4 text-center">J</span>
-        <span className="font-mono text-[8px] text-ink-4 text-center">SALDO</span>
+        <span className="font-mono text-[8px] text-ink-3">SELEÇÃO</span>
+        <span className="font-mono text-[8px] text-ink-3 text-center">PTS</span>
+        <span className="font-mono text-[8px] text-ink-3 text-center">J</span>
+        <span className="font-mono text-[8px] text-ink-3 text-center">SALDO</span>
       </div>
 
       {classified.map((row, i) => (
@@ -409,9 +410,28 @@ function MiniStandings({ standings, totalMatches, filledMatches }: {
         </div>
       ))}
 
+      {thirdPlace && (
+        <div className="grid grid-cols-[1fr_36px_28px_36px] px-3 py-2.5 border-b border-hairline bg-yellow/10 items-center">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[9px] text-ink font-bold w-4">3°</span>
+            <Flag team={TEAMS[thirdPlace.code]} size={18} />
+            <span className="font-mono text-[10px] font-bold">{thirdPlace.code}</span>
+            <span className="font-mono text-[7px] text-ink border border-yellow/60 px-1 py-px">melhor 3º</span>
+          </div>
+          <span className="font-display text-sm text-ink text-center">{thirdPlace.pts}</span>
+          <span className="font-mono text-[9px] text-ink-2 text-center">{thirdPlace.mp}</span>
+          <span className={cn(
+            'font-mono text-[9px] text-center',
+            thirdPlace.gd > 0 ? 'text-green' : thirdPlace.gd < 0 ? 'text-red' : 'text-ink-3'
+          )}>
+            {thirdPlace.gd > 0 ? `+${thirdPlace.gd}` : thirdPlace.gd}
+          </span>
+        </div>
+      )}
+
       <div className="px-3 py-1 flex items-center gap-2">
         <div className="flex-1 h-px bg-hairline" />
-        <span className="font-mono text-[7px] text-ink-4 tracking-eyebrow">eliminados</span>
+        <span className="font-mono text-[7px] text-ink-3 tracking-eyebrow">fora da zona</span>
         <div className="flex-1 h-px bg-hairline" />
       </div>
 
@@ -583,13 +603,13 @@ function GroupsTab() {
                 key={g}
                 onClick={() => setSelectedGroup(g)}
                 className={cn(
-                  'flex flex-col items-center px-2.5 py-2 border-2 transition-colors min-w-[52px] gap-1',
+                  'flex flex-col items-center px-3 py-2 border-2 transition-colors min-w-[70px] gap-1',
                   active ? 'bg-ink border-ink text-paper' :
                   done  ? 'border-green text-green bg-green/5' :
                           'border-hairline text-ink-3 hover:border-ink hover:text-ink',
                 )}
               >
-                <span className="font-display text-sm leading-none">GRP {g}</span>
+                <span className="font-display text-sm leading-none">GRUPO {g}</span>
                 <div className="flex gap-px">
                   {groupTeams.map(code => (
                     <Flag key={code} team={TEAMS[code]} size={11} />
@@ -708,7 +728,7 @@ const GROUP_POINTS_GUIDE = [
 ]
 
 const KO_STAGE_LABELS: Record<string, string> = {
-  round_of_32:   'RODADA DE 32',
+  round_of_32:   'FASE DE 32',
   round_of_16:   'OITAVAS DE FINAL',
   quarter_final: 'QUARTAS DE FINAL',
   semi_final:    'SEMIFINAIS',
@@ -732,18 +752,29 @@ function KnockoutTab() {
     <div className="pb-24">
       {koMatches.length === 0 ? (
         /* ── Empty state: KO matches not in DB yet ── */
-        <div className="mx-4 mt-8 p-6 border-2 border-hairline text-center">
-          <div className="font-display text-5xl text-hairline mb-3">32</div>
-          <p className="font-display text-xl text-ink mb-2">MATA-MATA</p>
-          <p className="font-mono text-[11px] text-ink-3 leading-relaxed max-w-xs mx-auto">
-            As apostas do mata-mata abrirão a partir de <strong>27 Jun</strong>,
-            após a fase de grupos. As seleções classificadas aparecerão aqui automaticamente.
+        <div className="mx-4 mt-8 p-6 border-2 border-ink text-center bg-paper">
+          <div className="font-display text-5xl text-ink mb-3">32</div>
+          <p className="font-display text-xl text-ink mb-2">FASE DE 32</p>
+          <p className="font-mono text-[11px] text-ink-2 leading-relaxed max-w-sm mx-auto">
+            O mata-mata da Copa 2026 começa em <strong>28 Jun</strong> com 32 seleções:
+            os dois primeiros de cada grupo e os oito melhores terceiros.
           </p>
-          <div className="mt-5 pt-4 border-t border-hairline">
-            <p className="font-mono text-[9px] text-ink-4 tracking-eyebrow mb-1">ENQUANTO ISSO</p>
-            <p className="font-mono text-[10px] text-ink-3">
-              Complete os palpites da fase de grupos e veja
-              sua projeção em <strong>MINHA CHAVE</strong>.
+          <div className="mt-5 pt-4 border-t border-hairline grid grid-cols-2 gap-2 text-left">
+            {[
+              ['GRUPOS', '72 jogos'],
+              ['FASE DE 32', '16 jogos'],
+              ['OITAVAS', '8 jogos'],
+              ['FINAL', '19 Jul'],
+            ].map(([label, value]) => (
+              <div key={label} className="border border-hairline px-3 py-2">
+                <p className="font-mono text-[8px] text-ink-3 tracking-eyebrow">{label}</p>
+                <p className="font-display text-lg text-ink leading-none mt-1">{value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 border border-yellow bg-yellow/10 px-3 py-2">
+            <p className="font-mono text-[10px] text-ink-2">
+              Complete a fase de grupos para projetar os classificados. O 3º colocado entra na briga dos melhores terceiros.
             </p>
           </div>
         </div>

@@ -11,6 +11,7 @@ Estado atual do fluxo principal:
 - Usuario pode palpitar jogo a jogo ou salvar um grupo inteiro de uma vez.
 - Palpite pode ser alterado ate o kickoff individual da partida.
 - A trava de horario nao depende do frontend: o banco bloqueia insert/update fora do mercado aberto.
+- Modelo Copa 2026 revisado para 48 selecoes, 12 grupos, 104 partidas e Fase de 32 antes das oitavas.
 - Tela admin e camada operacional de excecao: bloquear/reabrir mercados, desfazer palpites se necessario e apurar resultados.
 - Pontuacao e ranking sao calculados no Supabase quando resultados sao apurados.
 - Sync externo com football-data.org roda via Edge Function, sem token no frontend.
@@ -23,6 +24,8 @@ Ultima validacao informada em 2026-05-21:
 - `41` partidas sem match, esperado para fases futuras/placeholders ainda sem times definidos.
 
 Handoff tecnico completo: [docs/TI_HANDOFF.md](docs/TI_HANDOFF.md)
+
+Formato da Copa 2026 usado pelo app: [docs/WC2026_FORMAT.md](docs/WC2026_FORMAT.md)
 
 ## Funcionalidades
 

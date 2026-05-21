@@ -21,7 +21,7 @@ const labelColor = (l: string) => LABEL_COLORS[l.toUpperCase()] ?? 'bg-ink text-
 
 // ─── Boletim card ─────────────────────────────────────────────────────────────
 
-function BoletimCard({
+export function BoletimCard({
   b,
   canEdit,
   onDelete,
@@ -165,9 +165,9 @@ function BoletimCard({
 
 const PRESET_LABELS = ['REGRAS', 'BRASIL', 'AGENDA', 'DESTAQUE', 'AVISO', 'PRÊMIO']
 
-type NewBoletim = Omit<Boletim, 'id' | 'createdAt'>
+export type NewBoletim = Omit<Boletim, 'id' | 'createdAt'>
 
-function CreateModal({
+export function CreateModal({
   onClose,
   onCreate,
 }: {

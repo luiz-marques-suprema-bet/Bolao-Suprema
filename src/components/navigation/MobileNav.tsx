@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { id: 'home',       label: 'HOME',    icon: '○',  path: '/home' },
-  { id: 'boletim',   label: 'BOLETIM', icon: '≡',  path: '/boletim' },
   { id: 'prediction',label: 'PALPITAR',icon: '✦',  path: '/prediction' },
   { id: 'mine',      label: 'MEUS',    icon: '✓',  path: '/meus-palpites' },
   { id: 'ranking',   label: 'RANKING', icon: '▲',  path: '/ranking' },

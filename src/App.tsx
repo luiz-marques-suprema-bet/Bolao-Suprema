@@ -18,7 +18,6 @@ import { PredictionScreen } from '@/screens/Prediction'
 import { RankingScreen } from '@/screens/Ranking'
 import { ResenhaScreen } from '@/screens/Resenha'
 import { AdminScreen } from '@/screens/Admin'
-import { BoletimScreen } from '@/screens/Boletim'
 import { UserProfileScreen } from '@/screens/UserProfile'
 import { RegulamentoScreen } from '@/screens/Regulamento'
 import { MyPredictionsScreen } from '@/screens/MyPredictions'
@@ -86,10 +85,11 @@ const MARQUEE_ITEMS = [
   'FAÇA JÁ SEU PALPITE →',
   'COPA DO MUNDO 2026',
   'USA · CAN · MEX',
-  '48 SELEÇÕES · 102 PARTIDAS',
+  '48 SELEÇÕES · 104 PARTIDAS',
   'FASE DE GRUPOS · 11 JUN',
-  'OITAVAS · 27 JUN',
-  'QUARTAS · 4 JUL',
+  'FASE DE 32 · 28 JUN',
+  'OITAVAS · 4 JUL',
+  'QUARTAS · 9 JUL',
   'SEMIFINAIS · 14 JUL',
   'FINAL · 19 JUL',
 ]
@@ -180,7 +180,7 @@ const router = createHashRouter([
           { path: '/regulamento', element: <RegulamentoScreen /> },
           { path: '/notificacoes', element: <NotificationsScreen /> },
           { path: '/meus-palpites', element: <MyPredictionsScreen /> },
-          { path: '/boletim', element: <BoletimScreen /> },
+          { path: '/boletim', element: <Navigate to="/home" replace /> },
           { path: '/bracket', element: <Navigate to="/prediction" state={{ tab: 'knockout' }} replace /> },
           { path: '/prediction', element: <PredictionScreen /> },
           { path: '/prediction/:matchId', element: <PredictionScreen /> },

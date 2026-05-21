@@ -166,7 +166,7 @@ function OnboardingDesktop() {
           <div>
             <div className="grid grid-cols-4 gap-4 mb-8 border-t border-hairline pt-6">
               {[
-                { val: '102',   label: 'partidas' },
+                { val: '104',   label: 'partidas' },
                 { val: '48',    label: 'seleções' },
                 { val: '16:00', label: '11 Jun · BRT' },
                 { val: '+25',   label: 'pts campeão' },

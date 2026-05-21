@@ -9,6 +9,7 @@ Este arquivo e o checklist curto. O handoff completo esta em [../TI_HANDOFF.md](
 - Palpites por jogo e por grupo.
 - Ranking, Resenha, Boletim, notificacoes e painel admin.
 - Sync esportivo via football-data.org usando Supabase Edge Function.
+- Formato Copa 2026: 48 selecoes, 12 grupos, 104 partidas e Fase de 32 antes das oitavas.
 
 ## Pontos que T.I. deve saber
 
@@ -101,4 +102,5 @@ Avisos comuns que exigem decisao operacional:
 - README principal: [../../README.md](../../README.md)
 - Handoff completo: [../TI_HANDOFF.md](../TI_HANDOFF.md)
 - Sync football-data: [../FOOTBALL_DATA_SYNC.md](../FOOTBALL_DATA_SYNC.md)
+- Formato Copa 2026: [../WC2026_FORMAT.md](../WC2026_FORMAT.md)
 - Seguranca: [../SECURITY.md](../SECURITY.md)

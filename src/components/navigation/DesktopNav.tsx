@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { id: 'home',       label: 'HOME',     path: '/home',           tip: 'Resumo do dia, boletim rápido e destaques do bolão' },
-  { id: 'boletim',   label: 'BOLETIM',  path: '/boletim',        tip: 'Posts do marketing durante a Copa — comunicados, destaques e novidades' },
   { id: 'prediction',label: 'PALPITAR', path: '/prediction',     tip: 'Faça seus palpites por grupo, mata-mata e apostas gerais' },
   { id: 'mine',      label: 'MEUS',     path: '/meus-palpites',  tip: 'Histórico de todos os seus palpites com pontuação detalhada' },
   { id: 'ranking',   label: 'RANKING',  path: '/ranking',        tip: 'Classificação geral — veja quem está na frente e a quantos pts você está' },

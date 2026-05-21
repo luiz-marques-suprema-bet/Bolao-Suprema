@@ -1005,7 +1005,7 @@ function AdminDesktop() {
                     onClick={() => openGroupMatches(g.id, showToast)}
                     className="btn-ghost text-[9px] px-2 py-1.5"
                   >
-                    ABRIR GRP {g.id}
+                    ABRIR GRUPO {g.id}
                   </button>
                 ))}
               </div>
@@ -1028,9 +1028,9 @@ function AdminDesktop() {
               <div className="space-y-2">
                 {[
                   { date: '11 JUN', label: 'Início fase de grupos' },
-                  { date: '27 JUN', label: 'Rodada de 32' },
+                  { date: '28 JUN', label: 'Fase de 32' },
                   { date: '4 JUL',  label: 'Oitavas de final' },
-                  { date: '10 JUL', label: 'Quartas de final' },
+                  { date: '9 JUL',  label: 'Quartas de final' },
                   { date: '14 JUL', label: 'Semifinais' },
                   { date: '18 JUL', label: '3° lugar' },
                   { date: '19 JUL', label: 'FINAL' },
