@@ -468,6 +468,165 @@ function MiniStandings({ standings, totalMatches, filledMatches }: {
   )
 }
 
+// ─── Compact match row (group stage) ─────────────────────────────────────────
+
+function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => void }) {
+  const { predictions, drafts, setDraft, clearDraft, confirmPrediction } = usePredictionStore()
+  const userId = useAuthStore(s => s.user?.id ?? 'me')
+  const existing = predictions[match.id]
+  const draft = drafts[match.id]
+
+  const [editing, setEditing] = useState(false)
+  const [home, setHome] = useState(draft?.home ?? existing?.homeScore ?? 0)
+  const [away, setAway] = useState(draft?.away ?? existing?.awayScore ?? 0)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const isPickable = isBetOpen(match)
+  const isLocked = match.status === 'locked' || (!isPickable && (match.status === 'open' || match.status === 'scheduled'))
+  const isLive = match.status === 'live'
+  const isDone = match.status === 'finished'
+  const hasPick = !!existing
+
+  useEffect(() => {
+    if (!hasPick) return
+    if (editing) return
+    setHome(existing?.homeScore ?? 0)
+    setAway(existing?.awayScore ?? 0)
+  }, [existing?.homeScore, existing?.awayScore, editing, hasPick])
+
+  const updateHome = (v: number) => { setHome(v); setDraft(match.id, v, away) }
+  const updateAway = (v: number) => { setAway(v); setDraft(match.id, home, v) }
+
+  const handleConfirm = async () => {
+    setSaveError(null)
+    setSaving(true)
+    const result = await confirmPrediction({
+      id: `pred-${match.id}`,
+      userId,
+      matchId: match.id,
+      homeScore: home,
+      awayScore: away,
+      submittedAt: new Date().toISOString(),
+    })
+    setSaving(false)
+    if (!result.ok) { setSaveError(result.error ?? 'Erro ao salvar.'); return }
+    clearDraft(match.id)
+    setEditing(false)
+    onConfirmed?.()
+  }
+
+  const handleHeaderClick = () => {
+    if (!isPickable || !hasPick) return
+    if (!editing) {
+      setHome(draft?.home ?? existing!.homeScore)
+      setAway(draft?.away ?? existing!.awayScore)
+    }
+    setEditing(v => !v)
+  }
+
+  const showInputs = isPickable && (!hasPick || editing)
+
+  return (
+    <div
+      id={`match-row-${match.id}`}
+      className={cn(
+        'border-b border-hairline last:border-0',
+        hasPick && isPickable ? 'bg-green/[0.03]' : '',
+      )}
+    >
+      {/* Header row */}
+      <div
+        onClick={handleHeaderClick}
+        className={cn(
+          'px-3 py-2.5 flex items-center gap-2',
+          isPickable && hasPick ? 'cursor-pointer hover:bg-paper-deep transition-colors' : '',
+        )}
+      >
+        <Flag team={match.home} size={22} />
+        <span className="font-mono text-[11px] font-bold w-8 leading-none shrink-0">{match.home.code}</span>
+
+        <div className="flex-1 flex flex-col items-center min-w-0">
+          {isLive && (
+            <>
+              <span className="font-display text-base">{match.homeScore}–{match.awayScore}</span>
+              <span className="inline-flex items-center gap-1 font-mono text-[7px] font-bold text-red">
+                <span className="w-1 h-1 rounded-full bg-red animate-pulse-live" />
+                {match.liveMinute ? `${match.liveMinute}'` : 'AO VIVO'}
+              </span>
+            </>
+          )}
+          {isDone && (
+            <>
+              <span className="font-display text-base text-ink-3">{match.homeScore}–{match.awayScore}</span>
+              <span className="font-mono text-[7px] text-ink-4 tracking-eyebrow">ENCERRADO</span>
+            </>
+          )}
+          {isLocked && !isLive && !isDone && (
+            hasPick
+              ? <span className="font-display text-base text-green">{existing.homeScore}–{existing.awayScore}</span>
+              : <span className="font-mono text-[8px] text-ink-3">sem palpite</span>
+          )}
+          {!isLive && !isDone && !isLocked && hasPick && !editing && (
+            <div className="flex items-center gap-1">
+              <span className="font-display text-base text-green">{existing.homeScore}–{existing.awayScore}</span>
+              <span className="font-mono text-[9px] text-green">✓</span>
+            </div>
+          )}
+          {!isLive && !isDone && !isLocked && hasPick && editing && (
+            <span className="font-mono text-[7px] text-ink-3 tracking-eyebrow">EDITANDO ▲</span>
+          )}
+          {!isLive && !isDone && !isLocked && !hasPick && (
+            <span className="font-mono text-[8px] text-ink-3">{formatMatchDate(match)} · {match.time}</span>
+          )}
+        </div>
+
+        <span className="font-mono text-[11px] font-bold w-8 text-right leading-none shrink-0">{match.away.code}</span>
+        <Flag team={match.away} size={22} />
+
+        {isPickable && !hasPick && (
+          <span className="font-mono text-[7px] tracking-eyebrow text-green font-bold shrink-0 w-10 text-right">ABERTO</span>
+        )}
+        {isPickable && hasPick && (
+          <span className="font-mono text-[9px] text-ink-3 shrink-0 w-4 text-center">{editing ? '▲' : '✎'}</span>
+        )}
+      </div>
+
+      {/* Compact score inputs */}
+      {showInputs && (
+        <div className="px-3 pb-2.5 flex items-center gap-1.5">
+          <div className="flex-1 flex items-center justify-end">
+            <button onClick={() => updateHome(clamp(home - 1, 0, 9))} disabled={home === 0}
+              className="w-7 h-7 flex items-center justify-center border-2 border-r-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow disabled:opacity-25 select-none">−</button>
+            <div className="w-8 h-7 flex items-center justify-center border-2 border-ink font-display text-base select-none">{home}</div>
+            <button onClick={() => updateHome(clamp(home + 1, 0, 9))}
+              className="w-7 h-7 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow select-none">+</button>
+          </div>
+          <span className="font-mono text-[10px] text-ink-3 shrink-0 px-0.5">×</span>
+          <div className="flex-1 flex items-center justify-start">
+            <button onClick={() => updateAway(clamp(away - 1, 0, 9))} disabled={away === 0}
+              className="w-7 h-7 flex items-center justify-center border-2 border-r-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow disabled:opacity-25 select-none">−</button>
+            <div className="w-8 h-7 flex items-center justify-center border-2 border-ink font-display text-base select-none">{away}</div>
+            <button onClick={() => updateAway(clamp(away + 1, 0, 9))}
+              className="w-7 h-7 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow select-none">+</button>
+          </div>
+          <button
+            onClick={handleConfirm}
+            disabled={saving}
+            className="btn-yellow text-[9px] px-3 h-7 tracking-eyebrow font-bold disabled:opacity-50 shrink-0"
+          >
+            {saving ? '···' : hasPick ? 'ATUALIZAR' : 'CONFIRMAR'}
+          </button>
+        </div>
+      )}
+
+      {saveError && (
+        <p className="font-mono text-[9px] text-red px-3 pb-2">{saveError}</p>
+      )}
+    </div>
+  )
+}
+
 // ─── Groups tab ───────────────────────────────────────────────────────────────
 
 function GroupBatchSaveBar({ selectedGroup, matches, compact = false }: {
@@ -678,7 +837,7 @@ function GroupsTab() {
               <span className="font-mono text-[9px] tracking-eyebrow text-ink-3">RODADA {md}</span>
             </div>
             {matches.map(m => (
-              <MatchRow
+              <CompactMatchRow
                 key={m.id}
                 match={m}
                 onConfirmed={() => {
@@ -920,7 +1079,7 @@ function TeamPickerGrid({
   )
 }
 
-// ─── Champion tab (accordion de etapas) ──────────────────────────────────────
+// ─── Champion tab ────────────────────────────────────────────────────────────
 
 const GENERAL_DEADLINE = getBettingDeadline(WC2026_MATCHES[0])
 
@@ -934,26 +1093,27 @@ function ChampionTab() {
   } = usePredictionStore()
 
   const [scorerInput, setScorerInput] = useState(scorerPick ?? '')
-  const [openSection, setOpenSection] = useState<GeneralSection | null>(
-    !championPick ? 'champion' : !vicePick ? 'vice' : !scorerPick ? 'scorer' : null
+  const [activeSection, setActiveSection] = useState<GeneralSection>(
+    !championPick ? 'champion' : !vicePick ? 'vice' : 'champion'
   )
 
   const championGroup = championPick ? getGroupOfTeam(championPick) : null
   const viceGroup     = vicePick     ? getGroupOfTeam(vicePick)     : null
 
-  const viceDisabledCodes    = championPick ? WC2026_GROUPS.find(g => g.id === championGroup)?.teams ?? [] : []
-  const championDisabledCodes = vicePick    ? WC2026_GROUPS.find(g => g.id === viceGroup)?.teams    ?? [] : []
+  const viceDisabledCodes     = championPick ? WC2026_GROUPS.find(g => g.id === championGroup)?.teams ?? [] : []
+  const championDisabledCodes = vicePick     ? WC2026_GROUPS.find(g => g.id === viceGroup)?.teams    ?? [] : []
 
   function handleChampionPick(code: string) {
     if (vicePick && getGroupOfTeam(vicePick) === getGroupOfTeam(code)) setVicePick('')
     setChampionPick(code)
-    setOpenSection(!vicePick ? 'vice' : !scorerPick ? 'scorer' : null)
+    if (!vicePick || (vicePick && getGroupOfTeam(vicePick) === getGroupOfTeam(code))) setActiveSection('vice')
+    else if (!scorerPick) setActiveSection('scorer')
   }
 
   function handleVicePick(code: string) {
     if (championPick && getGroupOfTeam(championPick) === getGroupOfTeam(code)) return
     setVicePick(code)
-    setOpenSection(!scorerPick ? 'scorer' : null)
+    if (!scorerPick) setActiveSection('scorer')
   }
 
   const now = new Date()
@@ -961,21 +1121,16 @@ function ChampionTab() {
   const allSet = championPick && vicePick && scorerPick
   const deadlineStr = formatMatchDateTime(WC2026_MATCHES[0])
 
-  const toggleSection = (s: GeneralSection) => {
-    if (isDeadlinePassed) return
-    setOpenSection(openSection === s ? null : s)
-  }
-
-  const steps: { id: GeneralSection; label: string; pts: number; done: boolean; pick: string | null }[] = [
-    { id: 'champion', label: 'CAMPEÃO',    pts: 25, done: !!championPick, pick: championPick },
-    { id: 'vice',     label: 'VICE',       pts: 15, done: !!vicePick,     pick: vicePick     },
-    { id: 'scorer',   label: 'ARTILHEIRO', pts: 10, done: !!scorerPick,   pick: scorerPick   },
+  const slots: { id: GeneralSection; label: string; pts: number; pick: string | null; isTeam: boolean }[] = [
+    { id: 'champion', label: 'CAMPEÃO',    pts: 25, pick: championPick, isTeam: true  },
+    { id: 'vice',     label: 'VICE',       pts: 15, pick: vicePick,     isTeam: true  },
+    { id: 'scorer',   label: 'ARTILHEIRO', pts: 10, pick: scorerPick,   isTeam: false },
   ]
 
   return (
-    <div className="px-4 py-6 pb-24">
+    <div className="px-4 py-5 pb-24">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-5">
         <div className="font-display text-4xl leading-none text-ink">APOSTAS ESPECIAIS</div>
         <div className="font-serif-it text-xl text-green-deep leading-snug mt-0.5">
           campeão, vice e artilheiro — antes de tudo
@@ -991,17 +1146,17 @@ function ChampionTab() {
       </div>
 
       {lastError && (
-        <div className="mb-5 border border-red/30 bg-red/5 px-3 py-2 flex items-center justify-between gap-3">
+        <div className="mb-4 border border-red/30 bg-red/5 px-3 py-2 flex items-center justify-between gap-3">
           <p className="font-mono text-[10px] text-red">{lastError}</p>
           <button onClick={clearError} className="font-mono text-[10px] text-red underline">OK</button>
         </div>
       )}
 
-      {/* Leitura pós-prazo */}
+      {/* Pós-prazo: só leitura */}
       {isDeadlinePassed ? (
         <div className="space-y-3">
           <div className="mb-4 border border-red/30 bg-red/5 px-3 py-2">
-            <p className="font-mono text-[10px] text-red">Apostas gerais encerradas. Registradas no início da competição.</p>
+            <p className="font-mono text-[10px] text-red">Apostas especiais encerradas. Registradas no início da competição.</p>
           </div>
           {championPick && (
             <div className="flex items-center gap-3 p-4 border-2 border-hairline">
@@ -1035,126 +1190,116 @@ function ChampionTab() {
           )}
         </div>
       ) : (
-        /* Accordion de etapas */
-        <div className="space-y-2">
-          {steps.map((step, idx) => (
-            <div key={step.id} className="border-2 border-ink overflow-hidden">
-              {/* Step header */}
-              <button
-                onClick={() => toggleSection(step.id)}
-                className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-paper-deep transition-colors"
-              >
-                <div className={cn(
-                  'w-6 h-6 flex-shrink-0 flex items-center justify-center border-2 font-mono text-[10px] font-bold',
-                  step.done ? 'border-green bg-green text-paper' : 'border-ink text-ink',
-                )}>
-                  {step.done ? '✓' : idx + 1}
-                </div>
-
-                <div className="flex-1 text-left">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-display text-xl leading-none">{step.label}</span>
-                    <span className="font-mono text-[9px] text-ink-4">+{step.pts} pts</span>
+        <>
+          {/* 3 pick slots */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {slots.map(slot => {
+              const isActive = activeSection === slot.id
+              const hasPick = !!slot.pick
+              return (
+                <button
+                  key={slot.id}
+                  onClick={() => setActiveSection(slot.id)}
+                  className={cn(
+                    'flex flex-col items-center gap-2 p-3 border-2 transition-all min-h-[108px]',
+                    isActive ? 'border-ink bg-paper-deep shadow-[3px_3px_0_0_#0a0a0a]' :
+                    hasPick  ? 'border-green bg-green/5 hover:bg-green/10' :
+                               'border-hairline hover:border-ink',
+                  )}
+                >
+                  {hasPick && slot.isTeam ? (
+                    <Flag team={TEAMS[slot.pick!]} size={36} />
+                  ) : hasPick && !slot.isTeam ? (
+                    <div className="w-9 h-9 flex items-center justify-center border-2 border-green font-mono text-base text-green">⚽</div>
+                  ) : (
+                    <div className="w-9 h-9 flex items-center justify-center border-2 border-dashed border-hairline font-mono text-xl text-ink-4">?</div>
+                  )}
+                  <span className={cn('font-mono text-[8px] font-bold leading-tight text-center line-clamp-2', hasPick ? 'text-green' : 'text-ink-4')}>
+                    {hasPick
+                      ? (slot.isTeam ? TEAMS[slot.pick!]?.name.toUpperCase() : slot.pick!.toUpperCase())
+                      : 'TOQUE PARA ESCOLHER'}
+                  </span>
+                  <div className="mt-auto text-center">
+                    <div className="font-mono text-[7px] tracking-eyebrow text-ink-3">{slot.label}</div>
+                    <div className={cn('font-mono text-[9px] font-bold', hasPick ? 'text-green' : 'text-ink-4')}>+{slot.pts} pts</div>
                   </div>
-                  {step.done && step.pick && (
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      {step.id !== 'scorer' && TEAMS[step.pick] && (
-                        <Flag team={TEAMS[step.pick]} size={14} />
-                      )}
-                      <span className="font-mono text-[9px] text-green font-bold">
-                        {step.id === 'scorer' ? step.pick : TEAMS[step.pick]?.name}
-                      </span>
-                    </div>
-                  )}
-                  {!step.done && (
-                    <span className="font-mono text-[9px] text-ink-4">toque para escolher</span>
-                  )}
-                </div>
+                </button>
+              )
+            })}
+          </div>
 
-                <span className="font-mono text-[9px] text-ink-4 flex-shrink-0">
-                  {openSection === step.id ? '▲' : '▼'}
-                </span>
-              </button>
-
-              {/* Step content */}
-              <AnimatePresence>
-                {openSection === step.id && (
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: 'auto' }}
-                    exit={{ height: 0 }}
-                    transition={{ type: 'spring', damping: 32, stiffness: 400 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-4 pb-4 pt-3 border-t border-hairline">
-                      {step.id === 'champion' && (
-                        <TeamPickerGrid
-                          pick={championPick}
-                          onPick={handleChampionPick}
-                          disabledCodes={championDisabledCodes}
-                          disabledReason={vicePick ? `Times do Grupo ${viceGroup} bloqueados — mesmo grupo que o vice.` : undefined}
-                        />
-                      )}
-                      {step.id === 'vice' && (
-                        <TeamPickerGrid
-                          pick={vicePick}
-                          onPick={handleVicePick}
-                          disabledCodes={viceDisabledCodes}
-                          disabledReason={championPick ? `Times do Grupo ${championGroup} bloqueados — mesmo grupo que o campeão.` : undefined}
-                        />
-                      )}
-                      {step.id === 'scorer' && (
-                        <div>
-                          <p className="font-mono text-[10px] text-ink-3 mb-4 leading-relaxed">
-                            Quem vai ser o artilheiro da Copa 2026? Esse palpite é critério de desempate no ranking.
-                          </p>
-                          <div className="border-2 border-ink p-4">
-                            <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-2">NOME DO JOGADOR</p>
-                            <input
-                              value={scorerInput}
-                              onChange={e => setScorerInput(e.target.value)}
-                              placeholder="ex: Mbappé, Vinicius Jr, Haaland..."
-                              className="w-full bg-paper-deep border border-line px-3 py-2.5 font-sans text-[14px] outline-none focus:border-ink placeholder:text-ink-4"
-                            />
-                            <button
-                              onClick={() => {
-                                if (scorerInput.trim()) {
-                                  setScorerPick(scorerInput.trim())
-                                  setOpenSection(null)
-                                }
-                              }}
-                              disabled={!scorerInput.trim() || scorerInput.trim() === scorerPick}
-                              className="mt-3 btn-yellow w-full text-[11px] py-3 tracking-eyebrow font-bold disabled:opacity-40"
-                            >
-                              {scorerPick ? `ALTERAR — ${scorerPick}` : 'CONFIRMAR ARTILHEIRO ✓'}
-                            </button>
-                          </div>
-                          <p className="font-mono text-[9px] text-ink-4 mt-3 leading-relaxed">
-                            Reg. 7: em caso de empate, desempata quem acertou o artilheiro com mais gols.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+          {/* Picker panel for active slot */}
+          <div className="border-2 border-ink overflow-hidden">
+            <div className="px-4 py-2.5 bg-ink text-paper flex items-center justify-between">
+              <span className="font-display text-base">
+                {activeSection === 'champion' ? 'ESCOLHA O CAMPEÃO' :
+                 activeSection === 'vice'     ? 'ESCOLHA O VICE' :
+                                               'ARTILHEIRO DA COPA'}
+              </span>
+              <span className="font-mono text-[9px] text-paper/50">
+                +{slots.find(s => s.id === activeSection)?.pts} pts
+              </span>
             </div>
-          ))}
-        </div>
-      )}
+            <div className="p-4">
+              {activeSection === 'champion' && (
+                <TeamPickerGrid
+                  pick={championPick}
+                  onPick={handleChampionPick}
+                  disabledCodes={championDisabledCodes}
+                  disabledReason={vicePick ? `Times do Grupo ${viceGroup} bloqueados — mesmo grupo que o vice.` : undefined}
+                />
+              )}
+              {activeSection === 'vice' && (
+                <TeamPickerGrid
+                  pick={vicePick}
+                  onPick={handleVicePick}
+                  disabledCodes={viceDisabledCodes}
+                  disabledReason={championPick ? `Times do Grupo ${championGroup} bloqueados — mesmo grupo que o campeão.` : undefined}
+                />
+              )}
+              {activeSection === 'scorer' && (
+                <div>
+                  <p className="font-mono text-[10px] text-ink-3 mb-4 leading-relaxed">
+                    Quem vai ser o artilheiro da Copa 2026? Esse palpite é critério de desempate no ranking.
+                  </p>
+                  <div className="border-2 border-ink p-4">
+                    <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-2">NOME DO JOGADOR</p>
+                    <input
+                      value={scorerInput}
+                      onChange={e => setScorerInput(e.target.value)}
+                      placeholder="ex: Mbappé, Vinicius Jr, Haaland..."
+                      className="w-full bg-paper-deep border border-line px-3 py-2.5 font-sans text-[14px] outline-none focus:border-ink placeholder:text-ink-4"
+                    />
+                    <button
+                      onClick={() => { if (scorerInput.trim()) setScorerPick(scorerInput.trim()) }}
+                      disabled={!scorerInput.trim() || scorerInput.trim() === scorerPick}
+                      className="mt-3 btn-yellow w-full text-[11px] py-3 tracking-eyebrow font-bold disabled:opacity-40"
+                    >
+                      {scorerPick ? `ALTERAR — ${scorerPick}` : 'CONFIRMAR ARTILHEIRO ✓'}
+                    </button>
+                  </div>
+                  <p className="font-mono text-[9px] text-ink-4 mt-3 leading-relaxed">
+                    Reg. 7: em caso de empate, desempata quem acertou o artilheiro com mais gols.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
 
-      {/* All set banner */}
-      {allSet && !isDeadlinePassed && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-6 p-4 bg-green/10 border-2 border-green text-center"
-        >
-          <p className="font-display text-xl text-green">APOSTAS GERAIS FEITAS ✓</p>
-          <p className="font-mono text-[10px] text-green/70 mt-1">
-            Campeão: {TEAMS[championPick]?.name} · Vice: {TEAMS[vicePick]?.name} · Artilheiro: {scorerPick}
-          </p>
-        </motion.div>
+          {/* All set banner */}
+          {allSet && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-5 p-4 bg-green/10 border-2 border-green text-center"
+            >
+              <p className="font-display text-xl text-green">APOSTAS ESPECIAIS FEITAS ✓</p>
+              <p className="font-mono text-[10px] text-green/70 mt-1">
+                Campeão: {TEAMS[championPick]?.name} · Vice: {TEAMS[vicePick]?.name} · Artilheiro: {scorerPick}
+              </p>
+            </motion.div>
+          )}
+        </>
       )}
     </div>
   )
@@ -1211,7 +1356,7 @@ function DesktopGroupView({
               <span className="font-mono text-[9px] tracking-eyebrow text-ink-3">RODADA {md}</span>
             </div>
             {matches.map(m => (
-              <MatchRow
+              <CompactMatchRow
                 key={m.id}
                 match={m}
                 onConfirmed={() => {
