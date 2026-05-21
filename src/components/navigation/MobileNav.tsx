@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth.store'
 import { Avatar } from '@/components/shared/Avatar'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
@@ -23,6 +24,9 @@ export function MobileNav() {
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-paper"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
+      <div className="absolute -top-12 right-3">
+        <ThemeToggle compact />
+      </div>
       <div className="grid grid-cols-7 h-14">
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.path

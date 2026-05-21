@@ -6,18 +6,26 @@ export default {
     extend: {
       colors: {
         paper: {
-          DEFAULT: '#F5F1E8',
-          deep: '#ECE6D6',
-          white: '#FFFCF5',
+          DEFAULT: 'rgb(var(--color-paper) / <alpha-value>)',
+          deep: 'rgb(var(--color-paper-deep) / <alpha-value>)',
+          white: 'rgb(var(--color-paper-white) / <alpha-value>)',
         },
         ink: {
-          DEFAULT: '#0D0D0D',
-          2: '#2A2A2A',
-          3: '#6B6B66',
-          4: '#A9A89F',
+          DEFAULT: 'rgb(var(--color-ink) / <alpha-value>)',
+          2: 'rgb(var(--color-ink-2) / <alpha-value>)',
+          3: 'rgb(var(--color-ink-3) / <alpha-value>)',
+          4: 'rgb(var(--color-ink-4) / <alpha-value>)',
         },
-        line: '#1F1F1F',
-        hairline: 'rgba(13,13,13,0.12)',
+        line: 'rgb(var(--color-line) / <alpha-value>)',
+        hairline: 'rgb(var(--color-hairline))',
+        surface: {
+          DEFAULT: 'rgb(var(--color-surface) / <alpha-value>)',
+          hover: 'rgb(var(--color-surface-hover) / <alpha-value>)',
+        },
+        inverse: {
+          DEFAULT: 'rgb(var(--color-inverse-bg) / <alpha-value>)',
+          text: 'rgb(var(--color-inverse-text) / <alpha-value>)',
+        },
         yellow: '#FFCB05',
         green: {
           DEFAULT: '#00A651',
@@ -42,13 +50,13 @@ export default {
         full: '999px',
       },
       boxShadow: {
-        btn: '4px 4px 0 #0D0D0D',
-        'btn-hover': '5px 5px 0 #0D0D0D',
-        'btn-active': '2px 2px 0 #0D0D0D',
-        card: '4px 4px 0 #0D0D0D',
+        btn: '4px 4px 0 rgb(var(--color-shadow-strong))',
+        'btn-hover': '5px 5px 0 rgb(var(--color-shadow-strong))',
+        'btn-active': '2px 2px 0 rgb(var(--color-shadow-strong))',
+        card: '4px 4px 0 rgb(var(--color-shadow-strong))',
         'card-yellow': '8px 8px 0 #FFCB05',
-        'card-live': '0 0 0 3px #E63946, 6px 6px 0 #0D0D0D',
-        device: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
+        'card-live': '0 0 0 3px #E63946, 6px 6px 0 rgb(var(--color-shadow-strong))',
+        device: '0 40px 80px rgb(var(--color-shadow-soft) / 0.28), 0 0 0 1px rgb(var(--color-hairline) / 0.9)',
       },
       letterSpacing: {
         eyebrow: '0.14em',

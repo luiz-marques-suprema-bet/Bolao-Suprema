@@ -589,18 +589,18 @@ function HomeBoletimSection({ compact = false }: { compact?: boolean }) {
   const rest = sorted.slice(1, compact ? 3 : 5)
 
   return (
-    <section className="border-2 border-ink bg-paper">
-      <div className="px-4 py-3 md:px-5 md:py-4 border-b border-hairline flex items-center justify-between gap-3 bg-ink text-paper">
+    <section className="border-2 border-line bg-paper-white">
+      <div className="px-4 py-3 md:px-5 md:py-4 border-b border-hairline flex items-center justify-between gap-3 bg-inverse text-inverse-text">
         <div>
           <div className="font-display text-xl md:text-2xl leading-none">BOLETIM DA FIRMA</div>
-          <div className="font-mono text-[9px] md:text-[10px] text-paper/50 tracking-eyebrow mt-1">
+          <div className="font-mono text-[9px] md:text-[10px] text-inverse-text/55 tracking-eyebrow mt-1">
             comunicados oficiais do marketing
           </div>
         </div>
         {canEdit && (
           <button
             onClick={() => setCreating(true)}
-            className="bg-yellow text-ink border-2 border-yellow px-3 py-2 md:px-4 font-mono text-[9px] md:text-[10px] font-bold tracking-eyebrow shadow-[3px_3px_0_0_#fff]"
+            className="bg-yellow text-[#0D0D0D] border-2 border-yellow px-3 py-2 md:px-4 font-mono text-[9px] md:text-[10px] font-bold tracking-eyebrow shadow-btn"
           >
             + PUBLICAR
           </button>

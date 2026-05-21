@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Logo } from '@/components/shared/Logo'
 import { Avatar } from '@/components/shared/Avatar'
 import { Tooltip } from '@/components/shared/Tooltip'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { useAuthStore } from '@/stores/auth.store'
 import { cn } from '@/lib/utils'
 
@@ -83,6 +84,8 @@ export function DesktopNav() {
               </button>
             </Tooltip>
           )}
+
+          <ThemeToggle />
 
           {user && (
             <div className="relative" ref={menuRef}>

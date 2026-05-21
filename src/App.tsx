@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { createHashRouter, RouterProvider, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
+import { ThemeProvider } from '@/context/ThemeContext'
 import { useAuthStore } from '@/stores/auth.store'
 import { useChatStore } from '@/stores/chat.store'
 import { useMatchStore } from '@/stores/match.store'
@@ -198,5 +199,9 @@ export function App() {
     loadSession()
   }, [loadSession])
 
-  return <RouterProvider router={router} />
+  return (
+    <ThemeProvider>
+      <RouterProvider router={router} />
+    </ThemeProvider>
+  )
 }

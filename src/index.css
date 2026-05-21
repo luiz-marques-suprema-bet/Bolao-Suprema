@@ -3,6 +3,52 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: light;
+    --color-paper: 245 241 232;
+    --color-paper-deep: 236 230 214;
+    --color-paper-white: 255 252 245;
+    --color-surface: 255 252 245;
+    --color-surface-hover: 236 230 214;
+    --color-ink: 13 13 13;
+    --color-ink-2: 42 42 42;
+    --color-ink-3: 107 107 102;
+    --color-ink-4: 169 168 159;
+    --color-line: 31 31 31;
+    --color-hairline: 13 13 13 / 0.12;
+    --color-shadow-strong: 13 13 13;
+    --color-shadow-soft: 0 0 0;
+    --color-inverse-bg: 13 13 13;
+    --color-inverse-text: 245 241 232;
+    --grain-a: rgba(120,72,0,.04);
+    --grain-b: rgba(80,60,0,.05);
+    --grain-c: rgba(100,80,20,.03);
+    --stripe-color: rgba(0,0,0,.06);
+  }
+
+  .dark {
+    color-scheme: dark;
+    --color-paper: 15 15 15;
+    --color-paper-deep: 21 21 20;
+    --color-paper-white: 26 26 25;
+    --color-surface: 24 24 23;
+    --color-surface-hover: 34 34 32;
+    --color-ink: 237 232 223;
+    --color-ink-2: 219 212 200;
+    --color-ink-3: 166 158 144;
+    --color-ink-4: 105 100 92;
+    --color-line: 237 232 223;
+    --color-hairline: 237 232 223 / 0.14;
+    --color-shadow-strong: 0 0 0;
+    --color-shadow-soft: 0 0 0;
+    --color-inverse-bg: 24 24 23;
+    --color-inverse-text: 237 232 223;
+    --grain-a: rgba(255,203,5,.025);
+    --grain-b: rgba(255,255,255,.025);
+    --grain-c: rgba(0,166,81,.018);
+    --stripe-color: rgba(255,255,255,.06);
+  }
+
   *, *::before, *::after {
     box-sizing: border-box;
   }
@@ -22,6 +68,11 @@
     -webkit-user-select: none;
   }
 
+  ::selection {
+    background: rgb(255 203 5 / 0.42);
+    color: rgb(var(--color-ink));
+  }
+
   input, textarea, [contenteditable] {
     user-select: text;
     -webkit-user-select: text;
@@ -36,7 +87,7 @@
   /* Scrollbar */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(13,13,13,0.2); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb { background: rgb(var(--color-ink) / 0.22); border-radius: 999px; }
 
   /* Hide scrollbar utility */
   .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -83,17 +134,25 @@
   /* Paper grain texture */
   .paper-grain {
     background-image:
-      radial-gradient(ellipse at 20% 50%, rgba(120,72,0,.04) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 20%, rgba(80,60,0,.05) 0%, transparent 40%),
-      radial-gradient(ellipse at 50% 80%, rgba(100,80,20,.03) 0%, transparent 60%);
+      radial-gradient(ellipse at 20% 50%, var(--grain-a) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, var(--grain-b) 0%, transparent 40%),
+      radial-gradient(ellipse at 50% 80%, var(--grain-c) 0%, transparent 60%);
   }
 
   /* Pitch turf */
   .pitch-turf {
     background-image: repeating-linear-gradient(
       0deg, transparent, transparent 24px,
-      rgba(0,0,0,.06) 24px, rgba(0,0,0,.06) 25px
+      var(--stripe-color) 24px, var(--stripe-color) 25px
     );
+  }
+
+  .ui-surface {
+    @apply bg-surface border-hairline;
+  }
+
+  .dark img {
+    color-scheme: light;
   }
 
   /* Live badge */

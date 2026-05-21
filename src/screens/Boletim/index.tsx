@@ -41,22 +41,22 @@ export function BoletimCard({
 
   if (featured) {
     return (
-      <div className="border-2 border-ink bg-ink text-paper p-6 md:p-8">
+      <div className="border-2 border-line bg-inverse text-inverse-text p-5 shadow-card md:p-8">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <span className={`inline-block font-mono text-[9px] tracking-eyebrow px-2 py-0.5 mb-3 ${labelColor(b.label)}`}>
               {b.label}
             </span>
             {b.isPinned && (
-              <span className="inline-block font-mono text-[9px] tracking-eyebrow px-2 py-0.5 mb-3 ml-2 bg-yellow text-ink">
+              <span className="inline-block font-mono text-[9px] tracking-eyebrow px-2 py-0.5 mb-3 ml-2 bg-yellow text-[#0D0D0D]">
                 · FIXADO
               </span>
             )}
-            <div className="font-display text-3xl md:text-5xl leading-tight text-paper">
+            <div className="font-display text-3xl md:text-5xl leading-tight text-inverse-text">
               {b.title.toUpperCase()}
             </div>
             {b.subtitle && (
-              <div className="font-serif-it text-lg md:text-2xl text-paper/70 mt-1">
+              <div className="font-serif-it text-lg md:text-2xl text-inverse-text/70 mt-1">
                 {b.subtitle}
               </div>
             )}
@@ -65,7 +65,7 @@ export function BoletimCard({
             <div className="flex flex-col gap-1 flex-shrink-0">
               <button
                 onClick={() => onTogglePin(b.id)}
-                className="font-mono text-[8px] px-2 py-1 border border-paper/30 hover:border-paper text-paper/60 hover:text-paper transition-colors"
+                className="font-mono text-[8px] px-2 py-1 border border-inverse-text/30 hover:border-inverse-text text-inverse-text/60 hover:text-inverse-text transition-colors"
               >
                 {b.isPinned ? 'DESAFIXAR' : 'FIXAR'}
               </button>
@@ -80,14 +80,14 @@ export function BoletimCard({
         </div>
 
         {b.imageUrl && (
-          <div className="w-full overflow-hidden mb-4 opacity-90" style={{ paddingBottom: '56.25%', position: 'relative' }}>
-            <SafeImage src={b.imageUrl} alt={b.title} fit={b.imageFitMode ?? 'contain'} className="absolute inset-0 w-full h-full bg-ink/20" />
+          <div className="relative mb-4 aspect-video w-full overflow-hidden bg-inverse-text/10">
+            <SafeImage src={b.imageUrl} alt={b.title} fit={b.imageFitMode ?? 'cover'} className="absolute inset-0 h-full w-full" />
           </div>
         )}
 
-        <p className="font-sans text-[14px] text-paper/80 leading-relaxed">{b.body}</p>
+        <p className="font-sans text-[14px] text-inverse-text/80 leading-relaxed">{b.body}</p>
 
-        <p className="font-mono text-[9px] text-paper/40 mt-4">
+        <p className="font-mono text-[9px] text-inverse-text/45 mt-4">
           {b.authorName} · {date}
         </p>
       </div>
@@ -95,7 +95,7 @@ export function BoletimCard({
   }
 
   return (
-    <div className="border-2 border-hairline hover:border-ink transition-colors">
+    <div className="border-2 border-hairline bg-paper-white hover:border-ink transition-colors">
       <button
         onClick={() => setExpanded(v => !v)}
         className="w-full p-4 text-left"
@@ -132,8 +132,8 @@ export function BoletimCard({
           >
             <div className="px-4 pb-4 border-t border-hairline pt-3">
               {b.imageUrl && (
-                <div className="w-full overflow-hidden mb-3" style={{ paddingBottom: '56.25%', position: 'relative' }}>
-                  <SafeImage src={b.imageUrl} alt={b.title} fit={b.imageFitMode ?? 'contain'} className="absolute inset-0 w-full h-full bg-paper-deep" />
+                <div className="relative mb-3 aspect-video w-full overflow-hidden bg-paper-deep">
+                  <SafeImage src={b.imageUrl} alt={b.title} fit={b.imageFitMode ?? 'contain'} className="absolute inset-0 h-full w-full" />
                 </div>
               )}
               <p className="font-sans text-[13px] text-ink-2 leading-relaxed">{b.body}</p>
