@@ -1,370 +1,614 @@
 import { create } from 'zustand'
-import type { ChatMessage } from '@/types'
+import type { ChatMessage, ChatReaction } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { sanitizeText } from '@/services/product'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface UserSnap {
-  firstName: string; lastName: string
-  dept: string; initials: string; color: string
+export interface ChatProfile {
+  id: string
+  firstName: string
+  lastName: string
+  dept: string
+  initials: string
+  color: string
   avatarUrl?: string
 }
 
 interface UserRow {
-  id: string; first_name: string | null; last_name: string | null
-  dept: string | null; initials: string | null; color: string | null; avatar_url: string | null
+  id: string
+  first_name: string | null
+  last_name: string | null
+  dept: string | null
+  initials: string | null
+  color: string | null
+  avatar_url: string | null
 }
 
 interface MessageRow {
-  id: string; user_id: string; channel_id: string | null
-  text: string | null; type: string | null; gif_url: string | null
-  image_url: string | null; audio_url: string | null; audio_duration: number | null
-  poll_data: Record<string, unknown> | null; reaction: string | null
-  reply_to: unknown | null; created_at: string
-  users?: UserRow | null
+  id: string
+  user_id: string
+  channel_id: string | null
+  text: string | null
+  type: string | null
+  gif_url: string | null
+  image_url: string | null
+  audio_url: string | null
+  audio_duration: number | null
+  media_url?: string | null
+  media_kind?: string | null
+  media_mime?: string | null
+  media_size?: number | null
+  media_duration?: number | null
+  media_thumbnail_url?: string | null
+  mentions?: string[] | null
+  poll_data: Record<string, unknown> | null
+  reaction: string | null
+  reply_to: unknown | null
+  deleted_at?: string | null
+  edited_at?: string | null
+  created_at: string
 }
 
 interface VoteRow {
-  message_id: string; user_id: string; option_id: string
+  message_id: string
+  user_id: string
+  option_id: string
+}
+
+interface ReactionRow {
+  message_id: string
+  user_id: string
+  emoji: string
+  created_at: string
 }
 
 interface PinRow {
-  channel_id: string; message_id: string | null
+  channel_id: string
+  message_id: string | null
 }
 
-// ─── User profile cache ───────────────────────────────────────────────────────
+interface PresencePayload {
+  userId?: string
+  typing?: boolean
+  onlineAt?: string
+}
 
-const _userCache = new Map<string, UserSnap>()
+const CHANNEL_ID = 'geral'
+const MESSAGE_SELECT = [
+  'id',
+  'user_id',
+  'channel_id',
+  'text',
+  'type',
+  'gif_url',
+  'image_url',
+  'audio_url',
+  'audio_duration',
+  'media_url',
+  'media_kind',
+  'media_mime',
+  'media_size',
+  'media_duration',
+  'media_thumbnail_url',
+  'mentions',
+  'poll_data',
+  'reaction',
+  'reply_to',
+  'deleted_at',
+  'edited_at',
+  'created_at',
+].join(', ')
 
-function cacheFrom(row: UserRow) {
-  _userCache.set(row.id, {
+const LEGACY_MESSAGE_SELECT = [
+  'id',
+  'user_id',
+  'channel_id',
+  'text',
+  'type',
+  'gif_url',
+  'image_url',
+  'audio_url',
+  'audio_duration',
+  'poll_data',
+  'reaction',
+  'reply_to',
+  'created_at',
+].join(', ')
+
+const profileCache = new Map<string, ChatProfile>()
+const msgTimestamps: number[] = []
+const RATE_LIMIT_MAX = 4
+const RATE_LIMIT_WINDOW = 5000
+
+function normalizeProfile(row: UserRow): ChatProfile {
+  return {
+    id: row.id,
     firstName: row.first_name ?? '',
-    lastName:  row.last_name  ?? '',
-    dept:      row.dept       ?? '',
-    initials:  row.initials   ?? '?',
-    color:     row.color      ?? '#777',
+    lastName: row.last_name ?? '',
+    dept: row.dept ?? '',
+    initials: row.initials ?? '?',
+    color: row.color ?? '#777',
     avatarUrl: row.avatar_url ?? undefined,
-  })
+  }
 }
 
-async function ensureCached(userId: string) {
-  if (_userCache.has(userId)) return
-  const { data } = await supabase
-    .from('public_profiles')
-    .select('id,first_name,last_name,dept,initials,color,avatar_url')
-    .eq('id', userId)
-    .single()
-  if (data) cacheFrom(data as UserRow)
+function cacheProfile(row: UserRow) {
+  profileCache.set(row.id, normalizeProfile(row))
 }
 
 async function fetchProfiles(ids: string[]): Promise<void> {
-  const missing = ids.filter(id => !_userCache.has(id))
+  const missing = Array.from(new Set(ids.filter(id => id && !profileCache.has(id))))
   if (missing.length === 0) return
-  const { data } = await supabase
+
+  const { data, error } = await supabase
     .from('public_profiles')
     .select('id,first_name,last_name,dept,initials,color,avatar_url')
     .in('id', missing)
-  if (data) for (const row of data as UserRow[]) cacheFrom(row)
+
+  if (error) {
+    console.error('[Chat] profiles:', error.message)
+    return
+  }
+  for (const row of (data ?? []) as UserRow[]) cacheProfile(row)
 }
 
-// ─── Row mappers ──────────────────────────────────────────────────────────────
+async function fetchDirectory(): Promise<ChatProfile[]> {
+  const { data, error } = await supabase
+    .from('public_profiles')
+    .select('id,first_name,last_name,dept,initials,color,avatar_url')
+    .order('first_name', { ascending: true })
+    .limit(120)
+
+  if (error) {
+    console.error('[Chat] directory:', error.message)
+    return Array.from(profileCache.values())
+  }
+
+  const profiles = ((data ?? []) as UserRow[]).map(normalizeProfile)
+  profiles.forEach(p => profileCache.set(p.id, p))
+  return profiles
+}
+
+async function ensureProfile(userId: string) {
+  if (profileCache.has(userId)) return
+  await fetchProfiles([userId])
+}
+
+function fullName(profile?: ChatProfile): string {
+  return profile ? `${profile.firstName} ${profile.lastName}`.trim() || profile.initials : '?'
+}
 
 function mapRow(row: MessageRow, myUserId?: string): ChatMessage {
-  const u = _userCache.get(row.user_id)
+  const profile = profileCache.get(row.user_id)
+  const kind = row.media_kind ?? row.type ?? 'text'
+  const mediaUrl = row.media_url ?? row.image_url ?? row.audio_url ?? row.gif_url ?? undefined
+
   return {
-    id:        row.id,
-    userId:    row.user_id,
-    channelId: row.channel_id ?? 'geral',
-    who:       u ? `${u.firstName} ${u.lastName}`.trim() : '?',
-    dept:      u?.dept     ?? '',
-    initials:  u?.initials ?? '?',
-    color:     u?.color    ?? '#777',
-    avatarUrl: u?.avatarUrl,
-    time:      new Date(row.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    text:          row.text ?? '',
-    type:          (row.type as ChatMessage['type']) ?? 'text',
-    gifUrl:        row.gif_url    ?? undefined,
-    imageUrl:      row.image_url  ?? undefined,
-    audioUrl:      row.audio_url  ?? undefined,
-    audioDuration: row.audio_duration ?? undefined,
-    poll:          row.poll_data as ChatMessage['poll'],
-    reaction:      row.reaction  ?? undefined,
-    replyTo:       row.reply_to  as ChatMessage['replyTo'],
-    isPinned:  false,
-    isYou:     row.user_id === myUserId,
+    id: row.id,
+    userId: row.user_id,
+    channelId: row.channel_id ?? CHANNEL_ID,
+    who: fullName(profile),
+    dept: profile?.dept ?? '',
+    initials: profile?.initials ?? '?',
+    color: profile?.color ?? '#777',
+    avatarUrl: profile?.avatarUrl,
+    time: new Date(row.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    text: row.text ?? '',
+    type: (row.type as ChatMessage['type']) ?? 'text',
+    gifUrl: row.gif_url ?? (kind === 'gif' ? mediaUrl : undefined),
+    imageUrl: row.image_url ?? (kind === 'image' ? mediaUrl : undefined),
+    audioUrl: row.audio_url ?? (kind === 'audio' ? mediaUrl : undefined),
+    videoUrl: kind === 'video' || kind === 'video_note' ? mediaUrl : undefined,
+    mediaUrl,
+    mediaKind: kind as ChatMessage['mediaKind'],
+    mediaMime: row.media_mime ?? undefined,
+    mediaSize: row.media_size ?? undefined,
+    audioDuration: row.audio_duration ?? row.media_duration ?? undefined,
+    mediaDuration: row.media_duration ?? row.audio_duration ?? undefined,
+    mediaThumbnailUrl: row.media_thumbnail_url ?? undefined,
+    mentions: row.mentions ?? [],
+    poll: row.poll_data as ChatMessage['poll'],
+    replyTo: row.reply_to as ChatMessage['replyTo'],
+    reactions: row.reaction
+      ? [{ emoji: row.reaction, userId: row.user_id, createdAt: row.created_at }]
+      : [],
+    isPinned: false,
+    isYou: row.user_id === myUserId,
     createdAt: row.created_at,
+    editedAt: row.edited_at ?? undefined,
   }
 }
 
-// ─── Rate limiting (client-side) ─────────────────────────────────────────────
-// Previne floods: máx 3 mensagens em 5 segundos por sessão.
-
-const _msgTimestamps: number[] = []
-const RATE_LIMIT_MAX = 3
-const RATE_LIMIT_WINDOW = 5000
-
-function isRateLimited(): boolean {
+function isRateLimited(type?: ChatMessage['type']): boolean {
+  if (type !== 'text') return false
   const now = Date.now()
-  while (_msgTimestamps.length > 0 && now - _msgTimestamps[0] > RATE_LIMIT_WINDOW) {
-    _msgTimestamps.shift()
+  while (msgTimestamps.length > 0 && now - msgTimestamps[0] > RATE_LIMIT_WINDOW) {
+    msgTimestamps.shift()
   }
-  if (_msgTimestamps.length >= RATE_LIMIT_MAX) return true
-  _msgTimestamps.push(now)
+  if (msgTimestamps.length >= RATE_LIMIT_MAX) return true
+  msgTimestamps.push(now)
   return false
 }
 
-// ─── Local fallback persistence ──────────────────────────────────────────────
-// GitHub Pages/dev builds can run without Supabase env vars. In that mode,
-// the chat shows an explicit configuration error instead of simulating product data.
+function sortMessages(messages: ChatMessage[]) {
+  return [...messages].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+}
 
-// ─── Store ────────────────────────────────────────────────────────────────────
+function mergeMessage(messages: ChatMessage[], msg: ChatMessage) {
+  const without = messages.filter(m => m.id !== msg.id)
+  return sortMessages([...without, msg])
+}
+
+function applyVotes(messages: ChatMessage[], votes: VoteRow[]) {
+  return messages.map(m => {
+    if (m.type !== 'poll' || !m.poll) return m
+    const nextVotes = { ...m.poll.votes }
+    for (const vote of votes) {
+      if (vote.message_id === m.id) nextVotes[vote.user_id] = vote.option_id
+    }
+    return { ...m, poll: { ...m.poll, votes: nextVotes } }
+  })
+}
+
+function applyReactions(messages: ChatMessage[], reactions: ReactionRow[]) {
+  const grouped = new Map<string, ChatReaction[]>()
+  for (const reaction of reactions) {
+    const list = grouped.get(reaction.message_id) ?? []
+    list.push({
+      emoji: reaction.emoji,
+      userId: reaction.user_id,
+      createdAt: reaction.created_at,
+    })
+    grouped.set(reaction.message_id, list)
+  }
+
+  return messages.map(m => ({ ...m, reactions: grouped.get(m.id) ?? [] }))
+}
+
+function extractPresence(state: Record<string, PresencePayload[]>, myUserId?: string) {
+  const online = new Set<string>()
+  const typing = new Set<string>()
+
+  for (const entries of Object.values(state)) {
+    for (const entry of entries) {
+      if (!entry.userId) continue
+      online.add(entry.userId)
+      if (entry.typing && entry.userId !== myUserId) typing.add(entry.userId)
+    }
+  }
+
+  return {
+    onlineUserIds: Array.from(online),
+    typingUserIds: Array.from(typing),
+  }
+}
+
+function mentionsFromText(text: string, profiles: ChatProfile[]): string[] {
+  const lowered = text.toLocaleLowerCase('pt-BR')
+  return profiles
+    .filter(profile => {
+      const first = profile.firstName.toLocaleLowerCase('pt-BR')
+      const name = fullName(profile).toLocaleLowerCase('pt-BR')
+      return (first && lowered.includes(`@${first}`)) || (name && lowered.includes(`@${name}`))
+    })
+    .map(profile => profile.id)
+}
 
 interface ChatState {
-  messages:   ChatMessage[]
-  pinnedId:   string | null
-  isLoaded:   boolean
-  lastError:  string | null
-  _myUserId:  string | undefined
-  _channel:   ReturnType<typeof supabase.channel> | null
+  messages: ChatMessage[]
+  profiles: ChatProfile[]
+  pinnedId: string | null
+  onlineUserIds: string[]
+  typingUserIds: string[]
+  isLoaded: boolean
+  lastError: string | null
+  _myUserId: string | undefined
+  _channel: ReturnType<typeof supabase.channel> | null
+  _typingTimer: ReturnType<typeof setTimeout> | null
 
-  init:        (myUserId: string) => Promise<void>
-  destroy:     () => void
-  addMessage:  (msg: ChatMessage) => void
-  clearError:  () => void
-  setPinned:     (id: string | null) => Promise<void>
-  voteOnPoll:    (msgId: string, userId: string, optionId: string) => Promise<void>
+  init: (myUserId: string) => Promise<void>
+  destroy: () => void
+  addMessage: (msg: ChatMessage) => void
+  clearError: () => void
+  setTyping: (typing: boolean) => void
+  toggleReaction: (messageId: string, emoji: string) => Promise<void>
+  setPinned: (id: string | null) => Promise<void>
+  voteOnPoll: (msgId: string, userId: string, optionId: string) => Promise<void>
   deleteMessage: (id: string) => Promise<void>
 }
 
 export const useChatStore = create<ChatState>()((set, get) => ({
-  messages:  [],
-  pinnedId:  null,
-  isLoaded:  false,
+  messages: [],
+  profiles: [],
+  pinnedId: null,
+  onlineUserIds: [],
+  typingUserIds: [],
+  isLoaded: false,
   lastError: null,
   _myUserId: undefined,
-  _channel:  null,
-
-  // ── init ──────────────────────────────────────────────────────────────────
+  _channel: null,
+  _typingTimer: null,
 
   init: async (myUserId) => {
     if (get().isLoaded && get()._myUserId === myUserId) return
-    set({ _myUserId: myUserId })
+    get().destroy()
+    set({ _myUserId: myUserId, isLoaded: false, lastError: null })
 
     if (isMockMode) {
       set({
-        messages: [],
-        pinnedId: null,
         isLoaded: true,
         lastError: 'Supabase nao esta configurado. A Resenha exige persistencia real para funcionar.',
       })
       return
     }
 
-    // 1. Load last 200 messages (ordered asc for display)
-    // Fetch messages without join — profiles loaded separately via public_profiles
-    const SELECT_WITH_REPLY    = 'id, user_id, channel_id, text, type, gif_url, image_url, audio_url, audio_duration, poll_data, reaction, reply_to, created_at'
-    const SELECT_WITHOUT_REPLY = 'id, user_id, channel_id, text, type, gif_url, image_url, audio_url, audio_duration, poll_data, reaction, created_at'
+    const directoryPromise = fetchDirectory()
 
-    let { data: rows, error: fetchError } = await supabase
+    let { data: rows, error } = await supabase
       .from('chat_messages')
-      .select(SELECT_WITH_REPLY)
-      .eq('channel_id', 'geral')
+      .select(MESSAGE_SELECT)
+      .eq('channel_id', CHANNEL_ID)
+      .is('deleted_at', null)
       .order('created_at', { ascending: true })
-      .limit(200)
+      .limit(250)
 
-    // Migration not applied yet — retry without reply_to
-    if (fetchError?.message?.includes('reply_to')) {
-      ;({ data: rows, error: fetchError } = await supabase
+    if (error) {
+      ;({ data: rows, error } = await supabase
         .from('chat_messages')
-        .select(SELECT_WITHOUT_REPLY)
-        .eq('channel_id', 'geral')
+        .select(LEGACY_MESSAGE_SELECT)
+        .eq('channel_id', CHANNEL_ID)
         .order('created_at', { ascending: true })
-        .limit(200))
+        .limit(250))
     }
 
-    if (fetchError) console.error('[Chat] init fetch error:', fetchError.message)
-
-    if (rows) {
-      // Batch-load all profiles from public_profiles (no join needed, respects RLS)
-      const ids = Array.from(new Set((rows as MessageRow[]).map(r => r.user_id)))
-      await fetchProfiles(ids)
-      set({ messages: (rows as MessageRow[]).map(r => mapRow(r, myUserId)), isLoaded: true })
-    } else {
-      set({ isLoaded: true })
+    if (error) {
+      console.error('[Chat] init:', error.message)
+      set({ isLoaded: true, lastError: `Erro ao carregar Resenha: ${error.message}` })
+      return
     }
 
-    // 2. Load existing votes so polls show correctly on mount
-    const { data: voteRows } = await supabase
-      .from('poll_votes')
-      .select('message_id, user_id, option_id')
+    const messageRows = (rows ?? []) as MessageRow[]
+    await fetchProfiles(messageRows.map(row => row.user_id))
+    let messages = messageRows.map(row => mapRow(row, myUserId))
 
-    if (voteRows?.length) {
-      set(s => ({
-        messages: s.messages.map(m => {
-          if (m.type !== 'poll' || !m.poll) return m
-          const votes = { ...m.poll.votes }
-          for (const v of voteRows as VoteRow[]) {
-            if (v.message_id === m.id) votes[v.user_id] = v.option_id
-          }
-          return { ...m, poll: { ...m.poll, votes } }
-        }),
-      }))
+    const [{ data: voteRows }, reactionsResult, { data: pinData }, profiles] = await Promise.all([
+      supabase.from('poll_votes').select('message_id, user_id, option_id'),
+      supabase.from('chat_message_reactions').select('message_id, user_id, emoji, created_at'),
+      supabase.from('channel_pins').select('message_id').eq('channel_id', CHANNEL_ID).maybeSingle(),
+      directoryPromise,
+    ])
+
+    messages = applyVotes(messages, (voteRows ?? []) as VoteRow[])
+    if (!reactionsResult.error) {
+      messages = applyReactions(messages, (reactionsResult.data ?? []) as ReactionRow[])
     }
 
-    // 3. Load current pin
-    const { data: pinData } = await supabase
-      .from('channel_pins')
-      .select('message_id')
-      .eq('channel_id', 'geral')
-      .maybeSingle()
+    set({
+      messages,
+      profiles,
+      pinnedId: (pinData as PinRow | null)?.message_id ?? null,
+      isLoaded: true,
+    })
 
-    if (pinData) {
-      set({ pinnedId: (pinData as PinRow).message_id })
-    }
-
-    // 4. Realtime subscriptions
     const channel = supabase
-      .channel('chat_geral_v2')
-      // New messages
-      .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'channel_id=eq.geral' },
+      .channel('resenha-geral', {
+        config: {
+          presence: { key: myUserId },
+          broadcast: { self: false },
+        },
+      })
+      .on('presence', { event: 'sync' }, () => {
+        set(extractPresence(channel.presenceState() as Record<string, PresencePayload[]>, get()._myUserId))
+      })
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_messages', filter: `channel_id=eq.${CHANNEL_ID}` },
         async (payload) => {
-          const row = payload.new as MessageRow
-          await ensureCached(row.user_id)
-          const msg = mapRow(row, get()._myUserId)
-          set(s => {
-            if (s.messages.some(m => m.id === msg.id)) return s
-            return { messages: [...s.messages, msg] }
-          })
-        })
-      // New votes
-      .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'poll_votes' },
+          const row = (payload.new ?? payload.old) as MessageRow
+          if (!row?.id) return
+
+          if (payload.eventType === 'DELETE' || row.deleted_at) {
+            set(s => ({
+              messages: s.messages.filter(m => m.id !== row.id),
+              pinnedId: s.pinnedId === row.id ? null : s.pinnedId,
+            }))
+            return
+          }
+
+          await ensureProfile(row.user_id)
+          const next = mapRow(row, get()._myUserId)
+          set(s => ({ messages: mergeMessage(s.messages, next) }))
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'poll_votes' },
         (payload) => {
-          const v = payload.new as VoteRow
+          const row = payload.new as VoteRow
+          if (!row?.message_id) return
+          set(s => ({ messages: applyVotes(s.messages, [row]) }))
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_message_reactions' },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as ReactionRow
+          if (!row?.message_id) return
           set(s => ({
             messages: s.messages.map(m => {
-              if (m.id !== v.message_id || !m.poll) return m
-              return { ...m, poll: { ...m.poll, votes: { ...m.poll.votes, [v.user_id]: v.option_id } } }
+              if (m.id !== row.message_id) return m
+              const without = (m.reactions ?? []).filter(r => !(r.userId === row.user_id && r.emoji === row.emoji))
+              if (payload.eventType === 'DELETE') return { ...m, reactions: without }
+              return {
+                ...m,
+                reactions: [...without, { emoji: row.emoji, userId: row.user_id, createdAt: row.created_at }],
+              }
             }),
           }))
-        })
-      // Updated votes (user changes vote)
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'poll_votes' },
-        (payload) => {
-          const v = payload.new as VoteRow
-          set(s => ({
-            messages: s.messages.map(m => {
-              if (m.id !== v.message_id || !m.poll) return m
-              return { ...m, poll: { ...m.poll, votes: { ...m.poll.votes, [v.user_id]: v.option_id } } }
-            }),
-          }))
-        })
-      // Deleted messages (no filter — channel_id not in OLD record without REPLICA IDENTITY FULL)
-      .on('postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'chat_messages' },
-        (payload) => {
-          const id = (payload.old as { id: string }).id
-          set(s => {
-            const messages = s.messages.filter(m => m.id !== id)
-            const pinnedId = s.pinnedId === id ? null : s.pinnedId
-            return { messages, pinnedId }
-          })
-        })
-      // Pin changes
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'channel_pins', filter: 'channel_id=eq.geral' },
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'channel_pins', filter: `channel_id=eq.${CHANNEL_ID}` },
         (payload) => {
           const row = (payload.new ?? payload.old) as PinRow | null
           set({ pinnedId: row?.message_id ?? null })
-        })
-      .subscribe()
+        },
+      )
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ userId: myUserId, typing: false, onlineAt: new Date().toISOString() })
+        }
+      })
 
     set({ _channel: channel })
   },
 
-  // ── destroy ───────────────────────────────────────────────────────────────
-
   destroy: () => {
-    const { _channel } = get()
+    const { _channel, _typingTimer } = get()
+    if (_typingTimer) clearTimeout(_typingTimer)
     if (_channel) supabase.removeChannel(_channel)
-    set({ _channel: null, messages: [], pinnedId: null, isLoaded: false, lastError: null, _myUserId: undefined })
+    set({
+      messages: [],
+      pinnedId: null,
+      onlineUserIds: [],
+      typingUserIds: [],
+      isLoaded: false,
+      lastError: null,
+      _myUserId: undefined,
+      _channel: null,
+      _typingTimer: null,
+    })
   },
 
   clearError: () => set({ lastError: null }),
 
-  // ── addMessage (with rate limiting) ─────────────────────────────────────
+  setTyping: (typing) => {
+    const { _channel, _myUserId, _typingTimer } = get()
+    if (!_channel || !_myUserId) return
+    if (_typingTimer) clearTimeout(_typingTimer)
+
+    void _channel.track({ userId: _myUserId, typing, onlineAt: new Date().toISOString() })
+    if (typing) {
+      const timer = setTimeout(() => get().setTyping(false), 3000)
+      set({ _typingTimer: timer })
+    } else {
+      set({ _typingTimer: null })
+    }
+  },
 
   addMessage: (msg) => {
-    if (msg.type === 'text' && isRateLimited()) {
-      console.warn('[Chat] Rate limited — mensagem descartada')
-      set({ lastError: 'Calma aí: muitas mensagens em sequência.' })
+    if (isRateLimited(msg.type)) {
+      set({ lastError: 'Calma ai: muitas mensagens em sequencia.' })
       return
     }
+
     const cleanText = sanitizeText(msg.text ?? '', 1000)
+    const mediaUrl = msg.mediaUrl ?? msg.videoUrl ?? msg.imageUrl ?? msg.audioUrl ?? msg.gifUrl
     if (msg.type === 'text' && !cleanText) {
       set({ lastError: 'Mensagem vazia ou invalida.' })
       return
     }
-    msg = { ...msg, text: cleanText }
-
+    if (msg.type !== 'text' && msg.type !== 'poll' && !mediaUrl) {
+      set({ lastError: 'Midia invalida ou nao enviada.' })
+      return
+    }
     if (isMockMode) {
       set({ lastError: 'Supabase nao esta configurado. Mensagens nao sao salvas em modo local.' })
       return
     }
 
-    set(s => {
-      const messages = [...s.messages, msg]
-      return { messages }
-    })
+    const normalized: ChatMessage = {
+      ...msg,
+      text: cleanText,
+      reactions: msg.reactions ?? [],
+      mentions: msg.mentions ?? mentionsFromText(cleanText, get().profiles),
+    }
 
-    if (msg.userId && !_userCache.has(msg.userId)) {
-      _userCache.set(msg.userId, {
-        firstName: msg.who.split(' ')[0] ?? '',
-        lastName:  msg.who.split(' ').slice(1).join(' '),
-        dept:      msg.dept,
-        initials:  msg.initials,
-        color:     msg.color,
-        avatarUrl: msg.avatarUrl,
+    if (normalized.userId && !profileCache.has(normalized.userId)) {
+      profileCache.set(normalized.userId, {
+        id: normalized.userId,
+        firstName: normalized.who.split(' ')[0] ?? '',
+        lastName: normalized.who.split(' ').slice(1).join(' '),
+        dept: normalized.dept,
+        initials: normalized.initials,
+        color: normalized.color,
+        avatarUrl: normalized.avatarUrl,
       })
     }
+
+    set(s => ({ messages: mergeMessage(s.messages, normalized) }))
+    get().setTyping(false)
 
     const row: Record<string, unknown> = {
-      id:         msg.id,
-      user_id:    msg.userId,
-      channel_id: msg.channelId ?? 'geral',
-      text:       msg.text ?? '',
-      type:       msg.type ?? 'text',
+      id: normalized.id,
+      user_id: normalized.userId,
+      channel_id: normalized.channelId ?? CHANNEL_ID,
+      text: normalized.text ?? '',
+      type: normalized.type ?? 'text',
+      mentions: normalized.mentions ?? [],
     }
-    if (msg.gifUrl)        row.gif_url        = msg.gifUrl
-    if (msg.imageUrl)      row.image_url      = msg.imageUrl
-    if (msg.audioUrl)      row.audio_url      = msg.audioUrl
-    if (msg.audioDuration) row.audio_duration = msg.audioDuration
-    if (msg.reaction)      row.reaction       = msg.reaction
-    if (msg.poll)          row.poll_data      = msg.poll
-    if (msg.replyTo)       row.reply_to       = msg.replyTo
 
-    const doInsert = (r: Record<string, unknown>) =>
-      supabase.from('chat_messages').insert(r).then(({ error }) => {
-        if (error) {
-          // Migration not applied yet — retry without reply_to so the message still sends
-          if (r.reply_to !== undefined && error.message.includes('reply_to')) {
-            const { reply_to: _rt, ...withoutReply } = r
-            return doInsert(withoutReply)
-          }
-          console.error('[Chat] Falha ao salvar mensagem:', error.message, error.code)
-          set(s => ({
-            messages: s.messages.filter(m => m.id !== msg.id),
-            lastError: `Erro ao enviar: ${error.message}`,
-          }))
-        }
-      })
-    doInsert(row)
+    if (normalized.replyTo) row.reply_to = normalized.replyTo
+    if (normalized.poll) row.poll_data = normalized.poll
+    if (normalized.gifUrl) row.gif_url = normalized.gifUrl
+    if (normalized.imageUrl) row.image_url = normalized.imageUrl
+    if (normalized.audioUrl) row.audio_url = normalized.audioUrl
+    if (normalized.audioDuration) row.audio_duration = normalized.audioDuration
+    if (mediaUrl) row.media_url = mediaUrl
+    if (normalized.mediaKind) row.media_kind = normalized.mediaKind
+    if (normalized.mediaMime) row.media_mime = normalized.mediaMime
+    if (normalized.mediaSize) row.media_size = normalized.mediaSize
+    if (normalized.mediaDuration) row.media_duration = normalized.mediaDuration
+    if (normalized.mediaThumbnailUrl) row.media_thumbnail_url = normalized.mediaThumbnailUrl
+
+    supabase.from('chat_messages').insert(row).then(({ error }) => {
+      if (!error) return
+      console.error('[Chat] send:', error.message)
+      set(s => ({
+        messages: s.messages.filter(m => m.id !== normalized.id),
+        lastError: `Erro ao enviar: ${error.message}`,
+      }))
+    })
   },
 
-  // ── setPinned (persisted) ─────────────────────────────────────────────────
+  toggleReaction: async (messageId, emoji) => {
+    const userId = get()._myUserId
+    if (!userId) return
+    if (isMockMode) {
+      set({ lastError: 'Supabase nao esta configurado. Reacoes exigem persistencia real.' })
+      return
+    }
+
+    const message = get().messages.find(m => m.id === messageId)
+    const exists = message?.reactions?.some(r => r.userId === userId && r.emoji === emoji) ?? false
+    const optimistic: ChatReaction = { emoji, userId, createdAt: new Date().toISOString() }
+
+    set(s => ({
+      messages: s.messages.map(m => {
+        if (m.id !== messageId) return m
+        const without = (m.reactions ?? []).filter(r => !(r.userId === userId && r.emoji === emoji))
+        return { ...m, reactions: exists ? without : [...without, optimistic] }
+      }),
+    }))
+
+    const request = exists
+      ? supabase.from('chat_message_reactions').delete().eq('message_id', messageId).eq('user_id', userId).eq('emoji', emoji)
+      : supabase.from('chat_message_reactions').insert({ message_id: messageId, user_id: userId, emoji })
+    const { error } = await request
+
+    if (error) {
+      console.error('[Chat] reaction:', error.message)
+      set({ lastError: `Erro na reacao: ${error.message}` })
+      set(s => ({
+        messages: s.messages.map(m => {
+          if (m.id !== messageId) return m
+          const without = (m.reactions ?? []).filter(r => !(r.userId === userId && r.emoji === emoji))
+          return { ...m, reactions: exists ? [...without, optimistic] : without }
+        }),
+      }))
+    }
+  },
 
   setPinned: async (id) => {
     const myUserId = get()._myUserId
@@ -372,19 +616,17 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       set({ lastError: 'Supabase nao esta configurado. Fixar mensagens exige persistencia real.' })
       return
     }
+
     set({ pinnedId: id })
-
-    if (id === null) {
-      await supabase.from('channel_pins').delete().eq('channel_id', 'geral')
-    } else if (myUserId) {
-      await supabase.from('channel_pins').upsert(
-        { channel_id: 'geral', message_id: id, pinned_by: myUserId },
-        { onConflict: 'channel_id' }
+    const { error } = id === null
+      ? await supabase.from('channel_pins').delete().eq('channel_id', CHANNEL_ID)
+      : await supabase.from('channel_pins').upsert(
+        { channel_id: CHANNEL_ID, message_id: id, pinned_by: myUserId },
+        { onConflict: 'channel_id' },
       )
-    }
-  },
 
-  // ── voteOnPoll (persisted) ────────────────────────────────────────────────
+    if (error) set({ lastError: `Erro ao fixar: ${error.message}` })
+  },
 
   voteOnPoll: async (msgId, userId, optionId) => {
     if (isMockMode) {
@@ -392,34 +634,19 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       return
     }
 
-    // Optimistic update
-    set(s => ({
-      messages: s.messages.map(m => {
-        if (m.id !== msgId || !m.poll) return m
-        return { ...m, poll: { ...m.poll, votes: { ...m.poll.votes, [userId]: optionId } } }
-      }),
-    }))
+    const before = get().messages
+    set(s => ({ messages: applyVotes(s.messages, [{ message_id: msgId, user_id: userId, option_id: optionId }]) }))
 
     const { error } = await supabase.from('poll_votes').upsert(
       { message_id: msgId, user_id: userId, option_id: optionId, voted_at: new Date().toISOString() },
-      { onConflict: 'message_id,user_id' }
+      { onConflict: 'message_id,user_id' },
     )
 
     if (error) {
-      console.error('[Chat] Erro ao votar:', error.message)
-      // Revert
-      set(s => ({
-        messages: s.messages.map(m => {
-          if (m.id !== msgId || !m.poll) return m
-          const votes = { ...m.poll.votes }
-          delete votes[userId]
-          return { ...m, poll: { ...m.poll, votes } }
-        }),
-      }))
+      console.error('[Chat] vote:', error.message)
+      set({ messages: before, lastError: `Erro ao votar: ${error.message}` })
     }
   },
-
-  // ── deleteMessage (admin + own — RLS enforces ownership) ─────────────────
 
   deleteMessage: async (id) => {
     if (isMockMode) {
@@ -427,14 +654,16 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       return
     }
 
-    // Optimistic remove
-    set(s => ({ messages: s.messages.filter(m => m.id !== id) }))
-    if (get().pinnedId === id) set({ pinnedId: null })
+    const before = get().messages
+    set(s => ({
+      messages: s.messages.filter(m => m.id !== id),
+      pinnedId: s.pinnedId === id ? null : s.pinnedId,
+    }))
 
     const { error } = await supabase.from('chat_messages').delete().eq('id', id)
     if (error) {
-      console.error('[Chat] Erro ao deletar mensagem:', error.message)
-      set({ lastError: 'Erro ao deletar mensagem.' })
+      console.error('[Chat] delete:', error.message)
+      set({ messages: before, lastError: `Erro ao apagar: ${error.message}` })
     }
   },
 }))

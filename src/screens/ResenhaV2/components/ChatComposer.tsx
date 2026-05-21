@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
+import type { ChatProfile } from '@/stores/chat.store'
 import { formatDuration } from '../utils/chatUi'
 import { useAudioRecorder } from '../hooks/useAudioRecorder'
 import { ReplyPreview } from './ReplyPreview'
@@ -10,43 +11,85 @@ const DRAFT_KEY = 'resenha-draft-geral'
 
 interface ChatComposerProps {
   replyingTo: ChatMessage | null
+  profiles: ChatProfile[]
   onCancelReply: () => void
   onSendText: (text: string) => void
   onToggleGif: () => void
   gifActive: boolean
   onSendImage: (file: File) => Promise<void>
   onSendAudio: (blob: Blob, duration: number) => Promise<void>
+  onSendVideo: (file: File, asNote: boolean) => Promise<void>
+  onTyping: (typing: boolean) => void
 }
 
 export function ChatComposer({
-  replyingTo, onCancelReply, onSendText, onToggleGif, gifActive, onSendImage, onSendAudio,
+  replyingTo,
+  profiles,
+  onCancelReply,
+  onSendText,
+  onToggleGif,
+  gifActive,
+  onSendImage,
+  onSendAudio,
+  onSendVideo,
+  onTyping,
 }: ChatComposerProps) {
-  const [text,         setText]         = useState(() => {
+  const [text, setText] = useState(() => {
     try { return localStorage.getItem(DRAFT_KEY) ?? '' } catch { return '' }
   })
-  const [imgUploading, setImgUploading] = useState(false)
-  const fileRef  = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState<string | null>(null)
+  const imageRef = useRef<HTMLInputElement>(null)
+  const videoRef = useRef<HTMLInputElement>(null)
+  const noteRef = useRef<HTMLInputElement>(null)
   const audioRec = useAudioRecorder()
 
-  const handleChange = (v: string) => {
-    if (v.length > MAX_CHARS) return
-    setText(v)
-    try { localStorage.setItem(DRAFT_KEY, v) } catch { /* ok */ }
+  const mentionQuery = useMemo(() => {
+    const match = text.match(/(?:^|\s)@([\p{L}\p{N}_-]{0,24})$/u)
+    return match?.[1]?.toLocaleLowerCase('pt-BR') ?? null
+  }, [text])
+
+  const mentionSuggestions = useMemo(() => {
+    if (mentionQuery === null) return []
+    return profiles
+      .filter(profile => {
+        const name = `${profile.firstName} ${profile.lastName}`.trim().toLocaleLowerCase('pt-BR')
+        return name.includes(mentionQuery) || profile.dept.toLocaleLowerCase('pt-BR').includes(mentionQuery)
+      })
+      .slice(0, 5)
+  }, [mentionQuery, profiles])
+
+  const handleChange = (value: string) => {
+    if (value.length > MAX_CHARS) return
+    setText(value)
+    onTyping(value.trim().length > 0)
+    try { localStorage.setItem(DRAFT_KEY, value) } catch { /* ignore */ }
+  }
+
+  const insertMention = (profile: ChatProfile) => {
+    const label = `@${profile.firstName || profile.initials}`
+    const next = text.replace(/(?:^|\s)@([\p{L}\p{N}_-]{0,24})$/u, match => `${match.startsWith(' ') ? ' ' : ''}${label} `)
+    handleChange(next)
   }
 
   const handleSend = () => {
     if (!text.trim()) return
     onSendText(text.trim())
     setText('')
-    try { localStorage.removeItem(DRAFT_KEY) } catch { /* ok */ }
+    onTyping(false)
+    try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
   }
 
-  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleFile = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'video_note') => {
+    const file = event.target.files?.[0]
     if (!file) return
-    e.target.value = ''
-    setImgUploading(true)
-    try { await onSendImage(file) } finally { setImgUploading(false) }
+    event.target.value = ''
+    setUploading(type)
+    try {
+      if (type === 'image') await onSendImage(file)
+      else await onSendVideo(file, type === 'video_note')
+    } finally {
+      setUploading(null)
+    }
   }
 
   const handleMic = async () => {
@@ -57,7 +100,7 @@ export function ChatComposer({
       try { await onSendAudio(result.blob, result.duration) } finally { audioRec.setUploading(false) }
     } else {
       const ok = await audioRec.start()
-      if (!ok) alert('Permissão de microfone negada.')
+      if (!ok) alert('Permissao de microfone negada.')
     }
   }
 
@@ -68,7 +111,7 @@ export function ChatComposer({
           <div className="flex items-center gap-2 flex-1">
             <span className="w-2 h-2 rounded-full bg-red animate-pulse flex-shrink-0" />
             <span className="font-mono text-[12px] text-red font-bold">{formatDuration(audioRec.seconds)}</span>
-            <span className="font-mono text-[10px] text-ink-4">GRAVANDO…</span>
+            <span className="font-mono text-[10px] text-ink-4">GRAVANDO</span>
           </div>
           <button onClick={audioRec.cancel} className="font-mono text-[10px] text-ink-3 border border-hairline px-3 py-1.5 hover:border-red hover:text-red transition-colors">
             CANCELAR
@@ -85,10 +128,32 @@ export function ChatComposer({
     <div className="border-t border-line bg-paper flex-shrink-0">
       {replyingTo && <ReplyPreview replyingTo={replyingTo} onCancel={onCancelReply} />}
 
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImage} />
+      <input ref={imageRef} type="file" accept="image/*" className="hidden" onChange={event => handleFile(event, 'image')} />
+      <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={event => handleFile(event, 'video')} />
+      <input ref={noteRef} type="file" accept="video/*" capture="user" className="hidden" onChange={event => handleFile(event, 'video_note')} />
+
+      {mentionSuggestions.length > 0 && (
+        <div className="border-b border-hairline px-2 py-2 flex gap-2 overflow-x-auto">
+          {mentionSuggestions.map(profile => (
+            <button
+              key={profile.id}
+              type="button"
+              onClick={() => insertMention(profile)}
+              className="flex min-w-0 items-center gap-2 border border-hairline bg-paper-deep px-2 py-1.5 text-left hover:border-ink"
+            >
+              <span className="h-6 w-6 shrink-0 rounded-full text-center font-mono text-[9px] leading-6 text-white" style={{ background: profile.color }}>
+                {profile.initials}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate font-mono text-[10px] font-bold text-ink">{profile.firstName} {profile.lastName}</span>
+                {profile.dept && <span className="block truncate font-mono text-[8px] text-ink-4">{profile.dept}</span>}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex items-end gap-1.5 px-2 py-2">
-        {/* GIF */}
         <button
           onClick={onToggleGif}
           className={cn(
@@ -98,44 +163,44 @@ export function ChatComposer({
         >
           GIF
         </button>
-
-        {/* Photo */}
         <button
-          onClick={() => fileRef.current?.click()}
-          disabled={imgUploading}
-          className="flex-shrink-0 w-9 h-9 mb-0.5 flex items-center justify-center border border-hairline text-ink-3 hover:border-ink hover:text-ink transition-all active:scale-90 disabled:opacity-40"
-          title="Enviar foto"
+          onClick={() => imageRef.current?.click()}
+          disabled={uploading === 'image'}
+          className="flex-shrink-0 h-9 px-2 mb-0.5 border border-hairline font-mono text-[10px] text-ink-3 hover:border-ink hover:text-ink disabled:opacity-40"
+          title="Anexar foto"
         >
-          {imgUploading
-            ? <span className="font-mono text-[10px] animate-pulse">…</span>
-            : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                <circle cx="12" cy="13" r="4"/>
-              </svg>
-            )}
+          {uploading === 'image' ? '...' : 'FOTO'}
         </button>
-
-        {/* Mic */}
+        <button
+          onClick={() => videoRef.current?.click()}
+          disabled={uploading === 'video'}
+          className="hidden sm:block flex-shrink-0 h-9 px-2 mb-0.5 border border-hairline font-mono text-[10px] text-ink-3 hover:border-ink hover:text-ink disabled:opacity-40"
+          title="Anexar video"
+        >
+          {uploading === 'video' ? '...' : 'VIDEO'}
+        </button>
+        <button
+          onClick={() => noteRef.current?.click()}
+          disabled={uploading === 'video_note'}
+          className="flex-shrink-0 h-9 w-9 rounded-full mb-0.5 border border-hairline font-mono text-[9px] text-ink-3 hover:border-ink hover:text-ink disabled:opacity-40"
+          title="Video em bolinha"
+        >
+          {uploading === 'video_note' ? '...' : 'CAM'}
+        </button>
         <button
           onClick={handleMic}
-          className="flex-shrink-0 w-9 h-9 mb-0.5 flex items-center justify-center border border-hairline text-ink-3 hover:border-red hover:text-red transition-all active:scale-90"
-          title="Gravar áudio"
+          className="flex-shrink-0 h-9 w-9 mb-0.5 flex items-center justify-center border border-hairline text-ink-3 hover:border-red hover:text-red transition-all active:scale-90"
+          title="Gravar audio"
         >
-          <svg width="16" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="9" y="2" width="6" height="11" rx="3"/>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            <line x1="12" y1="19" x2="12" y2="23"/>
-            <line x1="8" y1="23" x2="16" y2="23"/>
-          </svg>
+          <span className="font-mono text-[13px]">MIC</span>
         </button>
 
-        {/* Input */}
         <div className="flex-1 relative">
           <textarea
             value={text}
-            onChange={e => handleChange(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+            onChange={event => handleChange(event.target.value)}
+            onBlur={() => onTyping(false)}
+            onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend() } }}
             rows={1}
             placeholder="manda a sua..."
             className="w-full max-h-28 resize-none bg-transparent font-sans text-[14px] leading-5 outline-none placeholder:text-ink-4 py-1.5"
@@ -151,7 +216,6 @@ export function ChatComposer({
           )}
         </div>
 
-        {/* Send */}
         <button
           onClick={handleSend}
           disabled={!text.trim()}

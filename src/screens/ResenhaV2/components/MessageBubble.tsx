@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/components/shared/Avatar'
 import type { ChatMessage } from '@/types'
+import type { ChatProfile } from '@/stores/chat.store'
 import { MessageContent } from './MessageContent'
 import { MessageMenu } from './MessageMenu'
+import { ReactionStrip } from './ReactionStrip'
 
 export interface MessageBubbleProps {
   message: ChatMessage
@@ -11,11 +13,13 @@ export interface MessageBubbleProps {
   isAdmin: boolean
   isPinned: boolean
   currentUserId?: string
+  profiles: ChatProfile[]
   onReply: () => void
   onPin: () => void
   onDeleteRequest: () => void
   onVote: (optId: string) => void
   onOpenProfile: () => void
+  onReact: (emoji: string) => void
 }
 
 export function MessageBubble({
@@ -24,11 +28,13 @@ export function MessageBubble({
   isAdmin,
   isPinned,
   currentUserId,
+  profiles,
   onReply,
   onPin,
   onDeleteRequest,
   onVote,
   onOpenProfile,
+  onReact,
 }: MessageBubbleProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const isMine   = m.isYou ?? false
@@ -77,7 +83,13 @@ export function MessageBubble({
             </button>
           )}
 
-          <MessageContent message={m} isMine={isMine} userId={currentUserId} onVote={onVote} />
+          <MessageContent
+            message={m}
+            isMine={isMine}
+            userId={currentUserId}
+            profiles={profiles}
+            onVote={onVote}
+          />
 
           {/* Timestamp */}
           {m.type !== 'poll' && (
@@ -118,6 +130,12 @@ export function MessageBubble({
             />
           )}
         </div>
+        <ReactionStrip
+          reactions={m.reactions}
+          currentUserId={currentUserId}
+          onReact={onReact}
+          compact={isMine}
+        />
       </div>
     </div>
   )

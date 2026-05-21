@@ -178,6 +178,12 @@ export interface ChatPoll {
   votes: Record<string, string> // userId → optionId
 }
 
+export interface ChatReaction {
+  emoji: string
+  userId: string
+  createdAt: string
+}
+
 export interface ChatMessage {
   id: string
   userId: string
@@ -189,17 +195,27 @@ export interface ChatMessage {
   avatarUrl?: string
   time: string
   text: string
-  type?: 'text' | 'gif' | 'poll' | 'image' | 'audio'
+  type?: 'text' | 'gif' | 'poll' | 'image' | 'audio' | 'video' | 'video_note'
   gifUrl?: string
   imageUrl?: string
   audioUrl?: string
+  videoUrl?: string
+  mediaUrl?: string
+  mediaKind?: 'text' | 'gif' | 'poll' | 'image' | 'audio' | 'video' | 'video_note'
+  mediaMime?: string
+  mediaSize?: number
   audioDuration?: number
+  mediaDuration?: number
+  mediaThumbnailUrl?: string
+  mentions?: string[]
   isPinned?: boolean
   poll?: ChatPoll
   reaction?: string
+  reactions?: ChatReaction[]
   replyTo?: { id: string; who: string; text: string; type: string }
   isYou?: boolean
   createdAt: string
+  editedAt?: string
 }
 
 export interface ChatChannel {

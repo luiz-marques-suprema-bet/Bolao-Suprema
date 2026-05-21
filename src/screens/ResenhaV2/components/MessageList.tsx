@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { ChatMessage } from '@/types'
+import type { ChatProfile } from '@/stores/chat.store'
 import { formatDayLabel, minutesBetween } from '../utils/chatUi'
 import { DateDivider } from './DateDivider'
 import { EmptyChat, ChatSkeleton } from './EmptyChat'
@@ -9,6 +10,7 @@ interface MessageListProps {
   messages: ChatMessage[]
   isLoaded: boolean
   currentUserId?: string
+  profiles: ChatProfile[]
   pinnedId: string | null
   isAdmin: boolean
   scrollRef: React.RefObject<HTMLDivElement | null>
@@ -19,6 +21,7 @@ interface MessageListProps {
   onDeleteRequest: (id: string) => void
   onVote: (msgId: string, optId: string) => void
   onOpenProfile: (m: ChatMessage) => void
+  onReact: (msgId: string, emoji: string) => void
 }
 
 type Item =
@@ -26,9 +29,9 @@ type Item =
   | { kind: 'msg'; msg: ChatMessage; grouped: boolean }
 
 export function MessageList({
-  messages, isLoaded, currentUserId, pinnedId, isAdmin,
+  messages, isLoaded, currentUserId, profiles, pinnedId, isAdmin,
   scrollRef, bottomRef, onScroll,
-  onReply, onPin, onDeleteRequest, onVote, onOpenProfile,
+  onReply, onPin, onDeleteRequest, onVote, onOpenProfile, onReact,
 }: MessageListProps) {
   const items = useMemo<Item[]>(() => {
     const result: Item[] = []
@@ -82,11 +85,13 @@ export function MessageList({
               isAdmin={isAdmin}
               isPinned={pinnedId === m.id}
               currentUserId={currentUserId}
+              profiles={profiles}
               onReply={() => onReply(m)}
               onPin={() => onPin(m.id)}
               onDeleteRequest={() => onDeleteRequest(m.id)}
               onVote={optId => onVote(m.id, optId)}
               onOpenProfile={() => onOpenProfile(m)}
+              onReact={emoji => onReact(m.id, emoji)}
             />
           </div>
         )

@@ -17,8 +17,8 @@ import { useChatScroll } from './hooks/useChatScroll'
 
 export function ResenhaScreen() {
   const {
-    messages, pinnedId, isLoaded, lastError,
-    addMessage, clearError, setPinned, voteOnPoll, deleteMessage,
+    messages, profiles, pinnedId, onlineUserIds, typingUserIds, isLoaded, lastError,
+    addMessage, clearError, setPinned, voteOnPoll, deleteMessage, toggleReaction, setTyping,
   } = useChatStore()
   const { user }   = useAuthStore()
   const isAdmin    = user?.isAdmin ?? false
@@ -67,20 +67,27 @@ export function ResenhaScreen() {
   }, [addMessage, buildMsg, replyingTo])
 
   const sendGif = useCallback((gifUrl: string) => {
-    addMessage(buildMsg({ type: 'gif', gifUrl }))
+    addMessage(buildMsg({ type: 'gif', gifUrl, mediaUrl: gifUrl, mediaKind: 'gif' }))
     setGifOpen(false)
   }, [addMessage, buildMsg])
 
   const sendPoll = useCallback((poll: ChatPoll) => {
     setPollOpen(false)
-    addMessage(buildMsg({ text: poll.question, type: 'poll', poll, isYou: false }))
+    addMessage(buildMsg({ text: poll.question, type: 'poll', poll }))
   }, [addMessage, buildMsg])
 
   const sendImage = useCallback(async (file: File) => {
     if (!user?.id) return
     try {
       const url = await uploadChatMedia(user.id, file, 'image')
-      addMessage(buildMsg({ type: 'image', imageUrl: url }))
+      addMessage(buildMsg({
+        type: 'image',
+        imageUrl: url,
+        mediaUrl: url,
+        mediaKind: 'image',
+        mediaMime: file.type,
+        mediaSize: file.size,
+      }))
     } catch (e) {
       setMediaErr(e instanceof Error ? e.message : 'Erro ao enviar imagem.')
     }
@@ -90,9 +97,35 @@ export function ResenhaScreen() {
     if (!user?.id) return
     try {
       const url = await uploadChatMedia(user.id, blob, 'audio')
-      addMessage(buildMsg({ type: 'audio', audioUrl: url, audioDuration: duration }))
+      addMessage(buildMsg({
+        type: 'audio',
+        audioUrl: url,
+        audioDuration: duration,
+        mediaUrl: url,
+        mediaKind: 'audio',
+        mediaMime: blob.type || 'audio/webm',
+        mediaSize: blob.size,
+        mediaDuration: duration,
+      }))
     } catch (e) {
       setMediaErr(e instanceof Error ? e.message : 'Erro ao enviar áudio.')
+    }
+  }, [user, addMessage, buildMsg])
+
+  const sendVideo = useCallback(async (file: File, asNote: boolean) => {
+    if (!user?.id) return
+    try {
+      const url = await uploadChatMedia(user.id, file, asNote ? 'video_note' : 'video')
+      addMessage(buildMsg({
+        type: asNote ? 'video_note' : 'video',
+        videoUrl: url,
+        mediaUrl: url,
+        mediaKind: asNote ? 'video_note' : 'video',
+        mediaMime: file.type,
+        mediaSize: file.size,
+      }))
+    } catch (e) {
+      setMediaErr(e instanceof Error ? e.message : 'Erro ao enviar video.')
     }
   }, [user, addMessage, buildMsg])
 
@@ -106,6 +139,12 @@ export function ResenhaScreen() {
 
   const pinnedMsg      = pinnedId ? messages.find(m => m.id === pinnedId) : null
   const combinedError  = lastError || mediaErr
+  const typingLabel = typingUserIds.length
+    ? `${typingUserIds
+      .slice(0, 2)
+      .map(id => profiles.find(p => p.id === id)?.firstName || 'Alguem')
+      .join(', ')} ${typingUserIds.length > 1 ? 'estao digitando' : 'esta digitando'}...`
+    : undefined
 
   return (
     <div
@@ -124,7 +163,8 @@ export function ResenhaScreen() {
       {/* Header — full width */}
       <ChatHeader
         messageCount={messages.length}
-        isAdmin={isAdmin}
+        onlineCount={onlineUserIds.length}
+        typingLabel={typingLabel}
         onCreatePoll={() => setPollOpen(true)}
       />
 
@@ -148,6 +188,7 @@ export function ResenhaScreen() {
           messages={messages}
           isLoaded={isLoaded}
           currentUserId={user?.id}
+          profiles={profiles}
           pinnedId={pinnedId}
           isAdmin={isAdmin}
           scrollRef={scrollRef}
@@ -158,6 +199,7 @@ export function ResenhaScreen() {
           onDeleteRequest={setDeleteConfirmId}
           onVote={vote}
           onOpenProfile={setProfileMsg}
+          onReact={(msgId, emoji) => void toggleReaction(msgId, emoji)}
         />
 
         {/* Scroll-to-bottom */}
@@ -210,6 +252,9 @@ export function ResenhaScreen() {
           gifActive={gifOpen}
           onSendImage={sendImage}
           onSendAudio={sendAudio}
+          onSendVideo={sendVideo}
+          profiles={profiles}
+          onTyping={setTyping}
         />
 
       </div>

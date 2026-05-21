@@ -1,24 +1,26 @@
 import type { ChatMessage } from '@/types'
 
-export function formatDuration(s: number): string {
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+export function formatDuration(seconds: number): string {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
 export function formatDayLabel(iso: string): string {
-  const d     = new Date(iso)
+  const date = new Date(iso)
   const today = new Date()
-  const yest  = new Date(today)
-  yest.setDate(today.getDate() - 1)
-  if (d.toDateString() === today.toDateString()) return 'HOJE'
-  if (d.toDateString() === yest.toDateString())  return 'ONTEM'
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  if (date.toDateString() === today.toDateString()) return 'HOJE'
+  if (date.toDateString() === yesterday.toDateString()) return 'ONTEM'
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()
 }
 
 export function getContentPreview(msg: Pick<ChatMessage, 'type' | 'text'>): string {
-  if (msg.type === 'gif')   return '🖼 GIF'
-  if (msg.type === 'image') return '📷 Foto'
-  if (msg.type === 'audio') return '🎤 Áudio'
-  if (msg.type === 'poll')  return '📊 Enquete'
+  if (msg.type === 'gif') return 'GIF'
+  if (msg.type === 'image') return 'Foto'
+  if (msg.type === 'audio') return 'Audio'
+  if (msg.type === 'video') return 'Video'
+  if (msg.type === 'video_note') return 'Video circular'
+  if (msg.type === 'poll') return 'Enquete'
   return msg.text ?? ''
 }
 

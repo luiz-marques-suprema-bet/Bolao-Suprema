@@ -6,15 +6,19 @@ import { ReplyQuote } from './ReplyQuote'
 import { AudioBubble } from './AudioBubble'
 import { ImageViewer } from './ImageViewer'
 import { PollCard } from './PollCard'
+import { VideoBubble } from './VideoBubble'
+import { MentionText } from './MentionText'
+import type { ChatProfile } from '@/stores/chat.store'
 
 interface ContentProps {
   message: ChatMessage
   isMine: boolean
   userId?: string
+  profiles: ChatProfile[]
   onVote: (optId: string) => void
 }
 
-export function MessageContent({ message: m, isMine, userId, onVote }: ContentProps) {
+export function MessageContent({ message: m, isMine, userId, profiles, onVote }: ContentProps) {
   const [lightbox, setLightbox] = useState(false)
 
   return (
@@ -46,10 +50,10 @@ export function MessageContent({ message: m, isMine, userId, onVote }: ContentPr
         </>
       ) : m.type === 'audio' && m.audioUrl ? (
         <AudioBubble src={m.audioUrl} initialDuration={m.audioDuration} isMine={isMine} />
+      ) : (m.type === 'video' || m.type === 'video_note') && (m.videoUrl || m.mediaUrl) ? (
+        <VideoBubble src={m.videoUrl ?? m.mediaUrl} isNote={m.type === 'video_note'} />
       ) : (
-        <p className="whitespace-pre-wrap break-words pr-7 font-sans text-[14px] leading-relaxed">
-          {m.text}
-        </p>
+        <MentionText text={m.text} profiles={profiles} />
       )}
     </>
   )
