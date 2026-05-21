@@ -375,13 +375,16 @@ export function ResenhaScreen() {
         <section className="flex h-full min-h-0 flex-col">
           <header className="flex shrink-0 items-center justify-between gap-3 border-b border-black/10 bg-[#fbf7ed] px-4 py-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <h1 className="font-display text-3xl leading-none tracking-normal">RESENHA</h1>
-                <span className="rounded-full bg-green px-2 py-0.5 font-mono text-[9px] font-bold text-white">
-                  {onlineUserIds.length || 1} ONLINE
-                </span>
+              <div className="flex items-end gap-3">
+                <div className="font-display text-4xl leading-none">RESENHA</div>
+                <div className="flex items-baseline gap-2 pb-0.5">
+                  <span className="font-serif-it text-2xl text-green-deep leading-none">aí,</span>
+                  <span className="rounded-full bg-green px-2 py-0.5 font-mono text-[9px] font-bold text-white flex-shrink-0">
+                    {onlineUserIds.length || 1} ONLINE
+                  </span>
+                </div>
               </div>
-              <p className="mt-1 truncate font-mono text-[10px] text-ink-3">
+              <p className="mt-0.5 truncate font-mono text-[10px] text-ink-3">
                 {typingLabel || 'grupo oficial do bolao'}
               </p>
             </div>

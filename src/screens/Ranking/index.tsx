@@ -214,7 +214,13 @@ function RankingMobile() {
   return (
     <div className="min-h-dvh bg-paper pb-24">
       <div className="bg-paper-deep px-4 pt-6 pb-4">
-        <Eyebrow className="mb-4">RANKING · BOLÃO DA SUPREMA</Eyebrow>
+        <div className="border-b border-hairline pb-4 mb-4">
+          <div className="font-display text-5xl leading-none text-ink">RANKING</div>
+          <div className="flex items-baseline gap-3">
+            <span className="font-serif-it text-3xl text-green-deep leading-none">geral,</span>
+            <span className="font-mono text-[10px] tracking-eyebrow text-ink-3 self-end mb-1">do bolão.</span>
+          </div>
+        </div>
 
         {top3.length >= 3 ? (
           <div className="flex items-end justify-center gap-2">
@@ -317,7 +323,13 @@ function RankingDesktop() {
   return (
     <div className="min-h-dvh bg-paper">
       <div className="max-w-screen-xl mx-auto px-6 py-8">
-        <Eyebrow className="mb-6">RANKING · BOLÃO DA SUPREMA</Eyebrow>
+        <div className="border-b border-hairline pb-5 mb-6">
+          <div className="font-display text-5xl md:text-7xl leading-none text-ink">RANKING</div>
+          <div className="flex items-baseline gap-3">
+            <span className="font-serif-it text-3xl md:text-5xl text-green-deep leading-none">geral,</span>
+            <span className="font-mono text-[10px] tracking-eyebrow text-ink-3 self-end mb-1">do bolão.</span>
+          </div>
+        </div>
 
         <div className="grid grid-cols-[1.4fr_1fr] gap-6">
           {/* Left */}

@@ -28,7 +28,11 @@ export function MyPredictionsScreen() {
       <div className="max-w-5xl mx-auto space-y-5">
         <header className="border-2 border-ink p-5">
           <p className="font-mono text-[10px] tracking-eyebrow text-ink-3">MEU PAINEL</p>
-          <h1 className="font-display text-5xl md:text-7xl leading-none">MEUS PALPITES</h1>
+          <div className="font-display text-5xl md:text-7xl leading-none text-ink">PALPITES</div>
+          <div className="flex items-baseline gap-3 mb-1">
+            <span className="font-serif-it text-3xl md:text-5xl text-green-deep leading-none">seus,</span>
+            <span className="font-mono text-[10px] tracking-eyebrow text-ink-3 self-end mb-1">jogador.</span>
+          </div>
           <div className="grid grid-cols-3 gap-2 mt-4">
             <Metric label="feitos" value={done} />
             <Metric label="pendentes" value={pending} />

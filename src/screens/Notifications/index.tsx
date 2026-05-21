@@ -58,13 +58,13 @@ export function NotificationsScreen() {
   return (
     <div className="min-h-dvh bg-paper pb-24">
       <div className="max-w-screen-lg mx-auto px-5 md:px-8 py-8">
-        <Eyebrow className="mb-4">AVISOS · BOLÃO DA SUPREMA</Eyebrow>
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 border-b border-hairline pb-5 mb-5">
           <div>
-            <h1 className="font-display text-4xl md:text-6xl leading-none">AVISOS</h1>
-            <p className="font-mono text-[11px] text-ink-3 mt-2 max-w-xl">
-              Comunicados da organização e alertas do bolão.
-            </p>
+            <div className="font-display text-5xl md:text-7xl leading-none text-ink">AVISOS</div>
+            <div className="flex items-baseline gap-3">
+              <span className="font-serif-it text-3xl md:text-5xl text-green-deep leading-none">sérios,</span>
+              <span className="font-mono text-[10px] tracking-eyebrow text-ink-3 self-end mb-1">da organização.</span>
+            </div>
           </div>
           <button onClick={load} className="btn-ghost text-[10px] self-start md:self-auto">ATUALIZAR</button>
         </div>
