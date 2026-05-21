@@ -5,6 +5,7 @@
 -- messages + replies + mentions + media metadata + per-user reactions.
 
 alter table public.chat_messages
+  add column if not exists reply_to jsonb,
   add column if not exists media_url text,
   add column if not exists media_kind text,
   add column if not exists media_mime text,

@@ -29,10 +29,10 @@ interface MessageRow {
   channel_id: string | null
   text: string | null
   type: string | null
-  gif_url: string | null
-  image_url: string | null
-  audio_url: string | null
-  audio_duration: number | null
+  gif_url?: string | null
+  image_url?: string | null
+  audio_url?: string | null
+  audio_duration?: number | null
   media_url?: string | null
   media_kind?: string | null
   media_mime?: string | null
@@ -111,6 +111,18 @@ const LEGACY_MESSAGE_SELECT = [
   'poll_data',
   'reaction',
   'reply_to',
+  'created_at',
+].join(', ')
+
+const MINIMAL_MESSAGE_SELECT = [
+  'id',
+  'user_id',
+  'channel_id',
+  'text',
+  'type',
+  'gif_url',
+  'poll_data',
+  'reaction',
   'created_at',
 ].join(', ')
 
@@ -293,6 +305,79 @@ function mentionsFromText(text: string, profiles: ChatProfile[]): string[] {
     .map(profile => profile.id)
 }
 
+async function fetchMessageRows() {
+  const attempts = [
+    { select: MESSAGE_SELECT, filterDeleted: true },
+    { select: LEGACY_MESSAGE_SELECT, filterDeleted: false },
+    { select: MINIMAL_MESSAGE_SELECT, filterDeleted: false },
+  ]
+  let lastError: { message: string } | null = null
+
+  for (const attempt of attempts) {
+    let query = supabase
+      .from('chat_messages')
+      .select(attempt.select)
+      .eq('channel_id', CHANNEL_ID)
+
+    if (attempt.filterDeleted) query = query.is('deleted_at', null)
+
+    const { data, error } = await query
+      .order('created_at', { ascending: true })
+      .limit(250)
+
+    if (!error) return { rows: data as MessageRow[], error: null }
+    lastError = error
+    console.warn('[Chat] message select fallback:', error.message)
+  }
+
+  return { rows: null, error: lastError }
+}
+
+async function insertMessageRow(row: Record<string, unknown>) {
+  const attempts: Record<string, unknown>[] = [
+    row,
+    withoutKeys(row, [
+      'reply_to',
+      'mentions',
+      'media_url',
+      'media_kind',
+      'media_mime',
+      'media_size',
+      'media_duration',
+      'media_thumbnail_url',
+    ]),
+    withoutKeys(row, [
+      'reply_to',
+      'mentions',
+      'media_url',
+      'media_kind',
+      'media_mime',
+      'media_size',
+      'media_duration',
+      'media_thumbnail_url',
+      'image_url',
+      'audio_url',
+      'audio_duration',
+    ]),
+  ]
+  let lastError: { message: string } | null = null
+
+  for (const attempt of attempts) {
+    const { error } = await supabase.from('chat_messages').insert(attempt)
+    if (!error) return null
+    lastError = error
+    console.warn('[Chat] insert fallback:', error.message)
+  }
+
+  return lastError
+}
+
+function withoutKeys(row: Record<string, unknown>, keys: string[]) {
+  const next = { ...row }
+  for (const key of keys) delete next[key]
+  return next
+}
+
 interface ChatState {
   messages: ChatMessage[]
   profiles: ChatProfile[]
@@ -343,22 +428,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
     const directoryPromise = fetchDirectory()
 
-    let { data: rows, error } = await supabase
-      .from('chat_messages')
-      .select(MESSAGE_SELECT)
-      .eq('channel_id', CHANNEL_ID)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: true })
-      .limit(250)
-
-    if (error) {
-      ;({ data: rows, error } = await supabase
-        .from('chat_messages')
-        .select(LEGACY_MESSAGE_SELECT)
-        .eq('channel_id', CHANNEL_ID)
-        .order('created_at', { ascending: true })
-        .limit(250))
-    }
+    const { rows, error } = await fetchMessageRows()
 
     if (error) {
       console.error('[Chat] init:', error.message)
@@ -366,7 +436,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       return
     }
 
-    const messageRows = (rows ?? []) as MessageRow[]
+    const messageRows = rows ?? []
     await fetchProfiles(messageRows.map(row => row.user_id))
     let messages = messageRows.map(row => mapRow(row, myUserId))
 
@@ -562,7 +632,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     if (normalized.mediaDuration) row.media_duration = normalized.mediaDuration
     if (normalized.mediaThumbnailUrl) row.media_thumbnail_url = normalized.mediaThumbnailUrl
 
-    supabase.from('chat_messages').insert(row).then(({ error }) => {
+    insertMessageRow(row).then((error) => {
       if (!error) return
       console.error('[Chat] send:', error.message)
       set(s => ({

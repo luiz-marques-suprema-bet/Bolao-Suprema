@@ -113,10 +113,10 @@ export function ChatComposer({
             <span className="font-mono text-[12px] text-red font-bold">{formatDuration(audioRec.seconds)}</span>
             <span className="font-mono text-[10px] text-ink-4">GRAVANDO</span>
           </div>
-          <button onClick={audioRec.cancel} className="font-mono text-[10px] text-ink-3 border border-hairline px-3 py-1.5 hover:border-red hover:text-red transition-colors">
+          <button type="button" onClick={audioRec.cancel} className="font-mono text-[10px] text-ink-3 border border-hairline px-3 py-1.5 hover:border-red hover:text-red transition-colors">
             CANCELAR
           </button>
-          <button onClick={handleMic} disabled={audioRec.uploading} className="btn-yellow px-3 py-1.5 text-[11px] disabled:opacity-50">
+          <button type="button" onClick={handleMic} disabled={audioRec.uploading} className="btn-yellow px-3 py-1.5 text-[11px] disabled:opacity-50">
             {audioRec.uploading ? '...' : 'ENVIAR'}
           </button>
         </div>
@@ -155,6 +155,7 @@ export function ChatComposer({
 
       <div className="flex items-end gap-1.5 px-2 py-2">
         <button
+          type="button"
           onClick={onToggleGif}
           className={cn(
             'flex-shrink-0 font-mono text-[10px] font-bold px-2 py-2 border transition-all mb-0.5 active:scale-90',
@@ -164,6 +165,7 @@ export function ChatComposer({
           GIF
         </button>
         <button
+          type="button"
           onClick={() => imageRef.current?.click()}
           disabled={uploading === 'image'}
           className="flex-shrink-0 h-9 px-2 mb-0.5 border border-hairline font-mono text-[10px] text-ink-3 hover:border-ink hover:text-ink disabled:opacity-40"
@@ -172,6 +174,7 @@ export function ChatComposer({
           {uploading === 'image' ? '...' : 'FOTO'}
         </button>
         <button
+          type="button"
           onClick={() => videoRef.current?.click()}
           disabled={uploading === 'video'}
           className="hidden sm:block flex-shrink-0 h-9 px-2 mb-0.5 border border-hairline font-mono text-[10px] text-ink-3 hover:border-ink hover:text-ink disabled:opacity-40"
@@ -180,6 +183,7 @@ export function ChatComposer({
           {uploading === 'video' ? '...' : 'VIDEO'}
         </button>
         <button
+          type="button"
           onClick={() => noteRef.current?.click()}
           disabled={uploading === 'video_note'}
           className="flex-shrink-0 h-9 w-9 rounded-full mb-0.5 border border-hairline font-mono text-[9px] text-ink-3 hover:border-ink hover:text-ink disabled:opacity-40"
@@ -188,6 +192,7 @@ export function ChatComposer({
           {uploading === 'video_note' ? '...' : 'CAM'}
         </button>
         <button
+          type="button"
           onClick={handleMic}
           className="flex-shrink-0 h-9 w-9 mb-0.5 flex items-center justify-center border border-hairline text-ink-3 hover:border-red hover:text-red transition-all active:scale-90"
           title="Gravar audio"
@@ -217,6 +222,7 @@ export function ChatComposer({
         </div>
 
         <button
+          type="button"
           onClick={handleSend}
           disabled={!text.trim()}
           className="btn-yellow px-3 py-2 text-[11px] disabled:opacity-30 flex-shrink-0 mb-0.5 font-bold active:scale-95 transition-transform"
