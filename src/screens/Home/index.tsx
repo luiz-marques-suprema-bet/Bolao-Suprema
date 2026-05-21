@@ -671,6 +671,7 @@ export function HomeScreen() {
 function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void }) {
   const { predictions, drafts, setDraft, clearDraft, confirmPrediction } = usePredictionStore()
   const userId = useAuthStore(s => s.user?.id ?? 'me')
+  const isDesktop = useIsDesktop()
   const existing = predictions[match.id]
   const draft = drafts[match.id]
 
@@ -704,7 +705,10 @@ function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4">
+    <div
+      className={cn('fixed inset-0 z-[60] flex justify-center', isDesktop ? 'items-center p-4' : 'items-end px-3 pt-3')}
+      style={isDesktop ? undefined : { paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
+    >
       <div className="absolute inset-0 bg-ink/60 backdrop-blur-sm" onClick={onClose} />
       <motion.div
         initial={{ y: 40, opacity: 0 }}
