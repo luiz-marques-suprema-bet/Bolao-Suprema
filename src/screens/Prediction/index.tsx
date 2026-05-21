@@ -585,7 +585,7 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
           )}
           {!isLive && !isDone && !isLocked && !hasPick && (
             <>
-              <span className="font-mono text-[7px] text-ink-4">{formatMatchDate(match)}</span>
+              <span className="font-mono text-[9px] text-ink-3 font-bold">{formatMatchDate(match)}</span>
               <span className="font-display text-base leading-none">{match.time}</span>
               <span className="font-mono text-[7px] text-green font-bold tracking-eyebrow">ABERTO</span>
             </>
@@ -602,32 +602,38 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
         </div>
       </div>
 
-      {/* Score inputs */}
+      {/* Score inputs — mesmo grid da info row para alinhar com os times */}
       {showInputs && (
-        <div className="px-3 pb-3 flex items-center gap-2">
-          <div className="flex-1 flex items-center justify-end">
-            <button onClick={() => updateHome(clamp(home - 1, 0, 9))} disabled={home === 0}
-              className="w-8 h-8 flex items-center justify-center border-2 border-r-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow disabled:opacity-25 select-none">−</button>
-            <div className="w-9 h-8 flex items-center justify-center border-2 border-ink font-display text-lg select-none">{home}</div>
-            <button onClick={() => updateHome(clamp(home + 1, 0, 9))}
-              className="w-8 h-8 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow select-none">+</button>
+        <>
+          <div className="px-3 pb-2 grid grid-cols-[1fr_80px_1fr] gap-x-2 items-center">
+            <div className="flex items-center justify-center">
+              <button onClick={() => updateHome(clamp(home - 1, 0, 9))} disabled={home === 0}
+                className="w-8 h-8 flex items-center justify-center border-2 border-r-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow disabled:opacity-25 select-none">−</button>
+              <div className="w-9 h-8 flex items-center justify-center border-2 border-ink font-display text-lg select-none">{home}</div>
+              <button onClick={() => updateHome(clamp(home + 1, 0, 9))}
+                className="w-8 h-8 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow select-none">+</button>
+            </div>
+            <div className="flex items-center justify-center">
+              <span className="font-mono text-[11px] text-ink-3">×</span>
+            </div>
+            <div className="flex items-center justify-center">
+              <button onClick={() => updateAway(clamp(away - 1, 0, 9))} disabled={away === 0}
+                className="w-8 h-8 flex items-center justify-center border-2 border-r-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow disabled:opacity-25 select-none">−</button>
+              <div className="w-9 h-8 flex items-center justify-center border-2 border-ink font-display text-lg select-none">{away}</div>
+              <button onClick={() => updateAway(clamp(away + 1, 0, 9))}
+                className="w-8 h-8 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow select-none">+</button>
+            </div>
           </div>
-          <span className="font-mono text-[11px] text-ink-3 shrink-0">×</span>
-          <div className="flex-1 flex items-center justify-start">
-            <button onClick={() => updateAway(clamp(away - 1, 0, 9))} disabled={away === 0}
-              className="w-8 h-8 flex items-center justify-center border-2 border-r-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow disabled:opacity-25 select-none">−</button>
-            <div className="w-9 h-8 flex items-center justify-center border-2 border-ink font-display text-lg select-none">{away}</div>
-            <button onClick={() => updateAway(clamp(away + 1, 0, 9))}
-              className="w-8 h-8 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow select-none">+</button>
+          <div className="px-3 pb-3">
+            <button
+              onClick={handleConfirm}
+              disabled={saving}
+              className="btn-yellow w-full text-[10px] py-2 tracking-eyebrow font-bold disabled:opacity-50"
+            >
+              {saving ? 'SALVANDO...' : hasPick ? 'ATUALIZAR PALPITE' : 'CONFIRMAR PALPITE'}
+            </button>
           </div>
-          <button
-            onClick={handleConfirm}
-            disabled={saving}
-            className="btn-yellow text-[9px] px-3 h-8 tracking-eyebrow font-bold disabled:opacity-50 shrink-0"
-          >
-            {saving ? '···' : hasPick ? 'ATUALIZAR' : 'CONFIRMAR'}
-          </button>
-        </div>
+        </>
       )}
 
       {saveError && (
