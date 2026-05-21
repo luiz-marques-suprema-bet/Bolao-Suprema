@@ -35,6 +35,9 @@ curl -X POST "https://<project-ref>.functions.supabase.co/football-data-sync?sea
   -H "Authorization: Bearer <SUPABASE_ANON_OR_SERVICE_TOKEN>"
 ```
 
+The deployed function should keep JWT verification enabled. The function uses
+the service role key internally, so the endpoint itself must not be anonymous.
+
 ## Claude prompt for Supabase
 
 ```text
