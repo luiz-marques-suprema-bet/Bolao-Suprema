@@ -742,8 +742,8 @@ function MessageBody({
   }
   if (message.type === 'image' && isSafeHttpUrl(message.imageUrl)) {
     return (
-      <button type="button" onClick={() => onImage(message.imageUrl!)} className="block w-full">
-        <img src={message.imageUrl} alt="Foto" loading="lazy" className="max-h-80 w-full rounded-2xl object-cover transition hover:brightness-95" />
+      <button type="button" onClick={() => onImage(message.imageUrl!)} className="block overflow-hidden rounded-2xl active:scale-[0.98] transition-transform">
+        <img src={message.imageUrl} alt="Foto" loading="lazy" className="max-h-72 max-w-[260px] w-full object-cover transition hover:brightness-90" />
       </button>
     )
   }
