@@ -12,7 +12,6 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { formatMatchDate, formatMatchDateTime, getBettingDeadline } from '@/lib/matchTime'
 import { isBetOpen } from '@/lib/markets'
-import { getGroupOfTeam } from '@/lib/tournamentValidation'
 import type { Match } from '@/types'
 
 type PredTab = 'groups' | 'knockout' | 'champion'
@@ -1020,10 +1019,6 @@ export function validateGeneralPicks(
 ): { valid: boolean; error: string | null } {
   if (!champion || !vice) return { valid: true, error: null }
   if (champion === vice) return { valid: false, error: 'Campeão e vice não podem ser a mesma seleção.' }
-  const cGroup = getGroupOfTeam(champion)
-  const vGroup = getGroupOfTeam(vice)
-  if (cGroup && vGroup && cGroup === vGroup)
-    return { valid: false, error: `Campeão e vice não podem ser do mesmo grupo (Grupo ${cGroup}).` }
   return { valid: true, error: null }
 }
 
@@ -1134,21 +1129,16 @@ function ChampionTab() {
     !championPick ? 'champion' : !vicePick ? 'vice' : 'champion'
   )
 
-  const championGroup = championPick ? getGroupOfTeam(championPick) : null
-  const viceGroup     = vicePick     ? getGroupOfTeam(vicePick)     : null
-
-  const viceDisabledCodes     = championPick ? WC2026_GROUPS.find(g => g.id === championGroup)?.teams ?? [] : []
-  const championDisabledCodes = vicePick     ? WC2026_GROUPS.find(g => g.id === viceGroup)?.teams    ?? [] : []
+  const viceBlockedCodes     = championPick ? [championPick] : []
+  const championBlockedCodes = vicePick     ? [vicePick] : []
 
   function handleChampionPick(code: string) {
-    if (vicePick && getGroupOfTeam(vicePick) === getGroupOfTeam(code)) setVicePick('')
     setChampionPick(code)
-    if (!vicePick || (vicePick && getGroupOfTeam(vicePick) === getGroupOfTeam(code))) setActiveSection('vice')
+    if (!vicePick) setActiveSection('vice')
     else if (!scorerPick) setActiveSection('scorer')
   }
 
   function handleVicePick(code: string) {
-    if (championPick && getGroupOfTeam(championPick) === getGroupOfTeam(code)) return
     setVicePick(code)
     if (!scorerPick) setActiveSection('scorer')
   }
@@ -1282,16 +1272,16 @@ function ChampionTab() {
                 <TeamPickerGrid
                   pick={championPick}
                   onPick={handleChampionPick}
-                  disabledCodes={championDisabledCodes}
-                  disabledReason={vicePick ? `Times do Grupo ${viceGroup} bloqueados — mesmo grupo que o vice.` : undefined}
+                  disabledCodes={championBlockedCodes}
+                  disabledReason={vicePick ? 'Você não pode escolher a mesma seleção para campeão e vice.' : undefined}
                 />
               )}
               {activeSection === 'vice' && (
                 <TeamPickerGrid
                   pick={vicePick}
                   onPick={handleVicePick}
-                  disabledCodes={viceDisabledCodes}
-                  disabledReason={championPick ? `Times do Grupo ${championGroup} bloqueados — mesmo grupo que o campeão.` : undefined}
+                  disabledCodes={viceBlockedCodes}
+                  disabledReason={championPick ? 'Você não pode escolher a mesma seleção para campeão e vice.' : undefined}
                 />
               )}
               {activeSection === 'scorer' && (

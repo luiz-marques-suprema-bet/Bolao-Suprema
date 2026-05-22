@@ -169,7 +169,7 @@ const SCORING_SECTIONS = [
     label: 'APOSTAS ESPECIAIS',
     rules: [
       { pts: 25, label: 'Campeão',      tip: 'Acertou o campeão do mundo. Vale antes do início do torneio.' },
-      { pts: 15, label: 'Vice-campeão', tip: 'Acertou o vice-campeão. Campeão e vice não podem ser do mesmo grupo.' },
+      { pts: 15, label: 'Vice-campeão', tip: 'Acertou o vice-campeão. Não pode ser a mesma seleção escolhida como campeã.' },
       { pts: 10, label: 'Artilheiro (+ critério de desempate)', tip: 'Acertou o artilheiro da Copa. Em caso de empate nos gols, vale quem escolheu o jogador com mais gols.' },
     ],
   },

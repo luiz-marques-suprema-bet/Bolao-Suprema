@@ -26,16 +26,12 @@ const ROUNDS: { id: BracketRound; label: string; shortLabel: string }[] = [
 
 // ─── Standings engine (mirrors Prediction screen) ────────────────────────────
 
-// ─── R16 slot mapping (WC2026 format) ────────────────────────────────────────
-// 16 slots, 32 teams, 2 per group (A–L)
-// Official WC2026 bracket pairing (tentative, based on standard FIFA format):
-// Slot 1: 1A vs 2B | Slot 2: 1C vs 2D | Slot 3: 1E vs 2F | Slot 4: 1G vs 2H
-// Slot 5: 1I vs 2J | Slot 6: 1K vs 2L | Slot 7: 1B vs 2A | Slot 8: 1D vs 2C
-// Slot 9: 1F vs 2E | Slot10: 1H vs 2G | Slot11: 1J vs 2I | Slot12: 1L vs 2K
+// ─── R32 slot mapping (WC2026 format) ────────────────────────────────────────
+// 16 matches, 32 teams.
 // --- 48-team WC2026 actually has 12 groups → 32 qualifiers (8 group winners, 8 runners-up, 8 3rd-place extras)
-// Simplified for now: 1st and 2nd of each group feed into 16 R16 slots
+// Simplified for now: qualifiers feed into 16 R32 matches.
 
-interface R16SlotDef {
+interface R32SlotDef {
   slotId: string
   home: QualifierRef
   away: QualifierRef
@@ -46,10 +42,10 @@ type QualifierRef =
   | { kind: 'rank'; group: string; rank: 1 | 2 }
   | { kind: 'bestThird'; index: number }
 
-// WC2026 48-team bracket: 12 groups → 16 oitavas
+// WC2026 48-team bracket: 12 groups -> 16 Fase de 32 matches.
 // 8 group winners + 8 runners-up + 8 best 3rd place = 32 teams
 // Simplified pairing (FIFA TBD — using reasonable pairs for UX)
-const R16_SLOT_DEFS: R16SlotDef[] = [
+const R32_SLOT_DEFS: R32SlotDef[] = [
   { slotId: 'r32_1',  home: { kind: 'rank', group: 'A', rank: 1 }, away: { kind: 'bestThird', index: 0 }, label: 'M1' },
   { slotId: 'r32_2',  home: { kind: 'rank', group: 'B', rank: 1 }, away: { kind: 'bestThird', index: 1 }, label: 'M2' },
   { slotId: 'r32_3',  home: { kind: 'rank', group: 'C', rank: 1 }, away: { kind: 'bestThird', index: 2 }, label: 'M3' },
@@ -69,7 +65,7 @@ const R16_SLOT_DEFS: R16SlotDef[] = [
   { slotId: 'r32_16', home: { kind: 'rank', group: 'K', rank: 2 }, away: { kind: 'rank', group: 'L', rank: 2 }, label: 'M16' },
 ]
 
-// ─── Derive "Minha Chave" R16 teams from group predictions ───────────────────
+// ─── Derive "Minha Chave" R32 teams from group predictions ───────────────────
 
 function useMyR32Picks(
   predMap: Record<string, { homeScore: number; awayScore: number }>
@@ -87,7 +83,7 @@ function useMyR32Picks(
     }
 
     const result: Record<string, { home: string | null; away: string | null }> = {}
-    for (const def of R16_SLOT_DEFS) {
+    for (const def of R32_SLOT_DEFS) {
       result[def.slotId] = {
         home: resolve(def.home),
         away: resolve(def.away),
@@ -478,7 +474,7 @@ function BracketMobile() {
         {view === 'mine' && (
           <p className="font-mono text-[9px] text-ink-4 mt-2">
             {!hasGroupPreds
-              ? 'Palpite nos grupos para ver sua chave de oitavas se montar automaticamente'
+              ? 'Palpite nos grupos para ver sua fase de 32 se montar automaticamente'
               : !r32HasTeams
               ? 'Continue palpitando nos grupos para preencher a chave'
               : 'Classificados baseados nos seus palpites de grupo'}
@@ -527,7 +523,7 @@ function BracketMobile() {
                 )}
                 {currentSlots.map(slot => {
                   const { home, away } = resolveMySlot(slot)
-                  const def = R16_SLOT_DEFS.find(d => d.slotId === slot.slotId)
+                  const def = R32_SLOT_DEFS.find(d => d.slotId === slot.slotId)
                   const slotLabel = def ? def.label : slot.slotId.toUpperCase().replace('_', ' ')
                   return (
                     <MySlotCard
@@ -604,7 +600,7 @@ function BracketDesktop() {
 
   const allSlots = WC2026_BRACKET_SLOTS
 
-  const r16   = allSlots.filter(s => s.round === 'r32')
+  const r32   = allSlots.filter(s => s.round === 'r32')
   const qf    = allSlots.filter(s => s.round === 'qf')
   const sf    = allSlots.filter(s => s.round === 'sf')
   const third = allSlots.filter(s => s.round === 'third')
@@ -627,9 +623,9 @@ function BracketDesktop() {
     : (allSlots.find(s => s.slotId === 'final_1')?.winner ?? null)
   const champion = championCode ? TEAMS[championCode] : null
 
-  // Split r16 into two halves for left/right bracket display
-  const r16Left  = r16.slice(0, 8)
-  const r16Right = r16.slice(8)
+  // Split R32 into two halves for left/right bracket display
+  const r32Left  = r32.slice(0, 8)
+  const r32Right = r32.slice(8)
   const qfLeft   = qf.slice(0, 4)  // qf_1..qf_4 → feed sf_1, sf_2
   const qfRight  = qf.slice(4)     // qf_5..qf_8 → feed sf_3, sf_4
   const sfLeft   = sf.slice(0, 2)  // sf_1, sf_2 → feed FINAL
@@ -638,7 +634,7 @@ function BracketDesktop() {
   const renderMyColumn = (slots: BracketSlot[], compact = true) =>
     slots.map(slot => {
       const { home, away } = resolveMySlot(slot)
-      const def = R16_SLOT_DEFS.find(d => d.slotId === slot.slotId)
+      const def = R32_SLOT_DEFS.find(d => d.slotId === slot.slotId)
       const label = def ? def.label : slot.slotId.toUpperCase().replace('_', ' ')
       return (
         <MySlotCard
@@ -698,13 +694,13 @@ function BracketDesktop() {
             transition={{ duration: 0.18 }}
             className="flex gap-3 items-start justify-center"
           >
-            {/* LEFT HALF: R16 (1-8) → QF (1-2) → SF (1) */}
+            {/* LEFT HALF: R32 (1-8) -> QF (1-2) -> SF (1) */}
             <div className="flex gap-3 items-center">
-              {/* R16 left */}
+              {/* R32 left */}
               <div className="flex-shrink-0">
-                <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-2">OITAVAS</p>
+                <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-2">FASE DE 32</p>
                 <div className="flex flex-col gap-2">
-                  {view === 'mine' ? renderMyColumn(r16Left) : renderLiveColumn(r16Left)}
+                  {view === 'mine' ? renderMyColumn(r32Left) : renderLiveColumn(r32Left)}
                 </div>
               </div>
 
@@ -830,7 +826,7 @@ function BracketDesktop() {
               )}
             </div>
 
-            {/* RIGHT HALF: SF (2) → QF (3-4) → R16 (9-16) */}
+            {/* RIGHT HALF: SF (2) -> QF (3-4) -> R32 (9-16) */}
             <div className="flex gap-3 items-center">
               {/* Connector from Final */}
               <div className="flex-shrink-0 flex flex-col justify-center self-stretch">
@@ -878,11 +874,11 @@ function BracketDesktop() {
                 ))}
               </div>
 
-              {/* R16 right */}
+              {/* R32 right */}
               <div className="flex-shrink-0">
-                <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-2">OITAVAS</p>
+                <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-2">FASE DE 32</p>
                 <div className="flex flex-col gap-2">
-                  {view === 'mine' ? renderMyColumn(r16Right) : renderLiveColumn(r16Right)}
+                  {view === 'mine' ? renderMyColumn(r32Right) : renderLiveColumn(r32Right)}
                 </div>
               </div>
             </div>

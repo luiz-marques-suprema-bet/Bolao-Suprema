@@ -71,7 +71,7 @@ export function RegulamentoScreen() {
           <InfoCard title="APOSTAS ESPECIAIS" accent="border-l-4 border-l-yellow" items={[
             'Devem ser realizadas antes do início da primeira partida.',
             'Campeão · Vice-campeão · Artilheiro.',
-            'Campeão e vice não podem ser do mesmo grupo.',
+            'Campeão e vice não podem ser a mesma seleção.',
           ]} />
         </section>
 

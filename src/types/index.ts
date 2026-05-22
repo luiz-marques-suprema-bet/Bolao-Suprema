@@ -117,7 +117,7 @@ export interface PredictionWithMatch extends Prediction {
 export type BracketRound = 'r32' | 'r16' | 'qf' | 'sf' | 'third' | 'final'
 
 export interface BracketSlot {
-  slotId: string // e.g. "r16_m1", "qf_m1"
+  slotId: string // e.g. "r32_1", "r16_1", "qf_1"
   round: BracketRound
   position: number
   matchId: string | null // null = TBD (depends on prior round picks)
