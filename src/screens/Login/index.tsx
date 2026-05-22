@@ -107,7 +107,7 @@ function CodeInput({
   }
 
   const base = light
-    ? 'border-paper/30 bg-paper/10 text-paper focus:border-yellow caret-yellow placeholder:text-paper/20'
+    ? 'border-line-strong bg-card text-ink focus:border-yellow caret-yellow placeholder:text-ink-4'
     : 'border-line bg-paper-deep text-ink focus:border-ink caret-ink placeholder:text-ink-4'
 
   return (
@@ -138,18 +138,18 @@ function LoginMobile() {
   const f = useOtpFlow()
 
   return (
-    <div className="min-h-dvh flex flex-col relative bg-ink">
-      <div className="absolute inset-0">
+    <div className="min-h-dvh flex flex-col relative bg-paper text-ink">
+      <div className="absolute inset-x-0 top-0 h-[48%] overflow-hidden">
         <img
           src={asset('assets/hero-portrait.webp')}
           alt=""
-          className="w-full h-full object-cover object-center opacity-40"
+          className="w-full h-full object-cover object-center opacity-55"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/35 via-paper/25 to-paper" />
       </div>
 
       <div className="relative flex-1 flex flex-col justify-end p-5 pb-10">
-        <div className="mb-8 bg-white/90 rounded-xl px-4 py-2 self-start">
+        <div className="mb-8 border border-hairline bg-card/95 rounded-xl px-4 py-2 self-start shadow-card">
           <Logo height={44} />
         </div>
 
@@ -162,15 +162,15 @@ function LoginMobile() {
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.2 }}
             >
-              <h1 className="font-display text-5xl text-paper leading-none mb-2">
+              <h1 className="font-display text-5xl text-ink leading-none mb-2">
                 ACESSO<br />RESTRITO
               </h1>
-              <p className="font-serif-it text-yellow text-lg mb-8">
+              <p className="font-serif-it text-green-deep text-lg mb-8">
                 só pra galera da firma
               </p>
 
               <div className="mb-3">
-                <p className="font-mono text-[9px] tracking-eyebrow text-paper/50 mb-1.5">
+                <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-1.5">
                   E-MAIL CORPORATIVO
                 </p>
                 <input
@@ -181,7 +181,7 @@ function LoginMobile() {
                   placeholder="seu.nome@suprema.group"
                   autoFocus
                   autoComplete="email"
-                  className="w-full bg-paper/10 border border-paper/20 focus:border-yellow px-3 py-3 font-sans text-[14px] text-paper placeholder:text-paper/30 outline-none transition-colors"
+                  className="w-full bg-card border border-line focus:border-ink px-3 py-3 font-sans text-[14px] text-ink placeholder:text-ink-4 outline-none transition-colors"
                 />
               </div>
 
@@ -206,10 +206,10 @@ function LoginMobile() {
                   onChange={e => f.setRememberMe(e.target.checked)}
                   className="w-4 h-4 accent-yellow"
                 />
-                <span className="font-mono text-[10px] text-paper/50">Manter conectado</span>
+                <span className="font-mono text-[10px] text-ink-3">Manter conectado</span>
               </label>
 
-              <p className="font-mono text-[10px] text-paper/30 tracking-eyebrow text-center mt-5">
+              <p className="font-mono text-[10px] text-ink-4 tracking-eyebrow text-center mt-5">
                 ACESSO RESTRITO À SUPREMA GAMING · USO INTERNO
               </p>
             </motion.div>
@@ -223,23 +223,23 @@ function LoginMobile() {
             >
               <button
                 onClick={f.handleBack}
-                className="font-mono text-[10px] text-paper/50 hover:text-paper mb-6 flex items-center gap-1"
+                className="font-mono text-[10px] text-ink-3 hover:text-ink mb-6 flex items-center gap-1"
               >
                 ← VOLTAR
               </button>
 
-              <h1 className="font-display text-4xl text-paper leading-none mb-2">
+              <h1 className="font-display text-4xl text-ink leading-none mb-2">
                 CÓDIGO<br />ENVIADO
               </h1>
-              <p className="font-serif-it text-yellow text-base mb-1">
+              <p className="font-serif-it text-green-deep text-base mb-1">
                 verifique seu e-mail
               </p>
-              <p className="font-mono text-[10px] text-paper/50 mb-6 truncate">
+              <p className="font-mono text-[10px] text-ink-3 mb-6 truncate">
                 {f.email}
               </p>
 
               <div className="mb-4">
-                <p className="font-mono text-[9px] tracking-eyebrow text-paper/50 mb-2">
+                <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-2">
                   CÓDIGO DO E-MAIL
                 </p>
                 <CodeInput
@@ -267,7 +267,7 @@ function LoginMobile() {
               <button
                 onClick={f.handleResend}
                 disabled={f.resendCooldown > 0 || f.loading}
-                className="font-mono text-[10px] text-paper/40 hover:text-paper/70 disabled:opacity-40 text-center w-full transition-colors"
+                className="font-mono text-[10px] text-ink-4 hover:text-ink disabled:opacity-40 text-center w-full transition-colors"
               >
                 {f.resendCooldown > 0
                   ? `REENVIAR EM ${f.resendCooldown}S`

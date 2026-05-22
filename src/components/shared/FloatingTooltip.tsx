@@ -23,9 +23,9 @@ export function FloatingTooltip({ label, children, className }: FloatingTooltipP
       if (!trigger) return
 
       const rect    = trigger.getBoundingClientRect()
-      const tw      = tooltipRef.current?.offsetWidth  ?? 280
-      const th      = tooltipRef.current?.offsetHeight ?? 48
-      const gap     = 12
+      const tw      = tooltipRef.current?.offsetWidth  ?? 320
+      const th      = tooltipRef.current?.offsetHeight ?? 58
+      const gap     = 14
       const pad     = 8
 
       // Horizontal: center over the trigger element, clamped to viewport
@@ -73,7 +73,7 @@ export function FloatingTooltip({ label, children, className }: FloatingTooltipP
           ref={tooltipRef}
           role="tooltip"
           style={{ position: 'absolute', top: pos.top, left: pos.left }}
-          className="z-[9999] max-w-[280px] border-2 border-line-strong bg-inverse px-3 py-2 font-mono text-[10px] leading-snug text-inverse-text shadow-[4px_4px_0_#FFCB05] pointer-events-none"
+          className="z-[9999] max-w-[320px] border border-line-strong bg-inverse px-3.5 py-2.5 font-mono text-[11.5px] leading-[1.45] text-inverse-text shadow-[0_18px_50px_rgba(0,0,0,0.34),4px_4px_0_#FFCB05] pointer-events-none"
         >
           {label}
         </div>,

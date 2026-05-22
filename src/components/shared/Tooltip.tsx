@@ -10,9 +10,9 @@ interface TooltipProps {
 }
 
 // Space reserved above/below the element (includes the 6px arrow)
-const GAP = 16
+const GAP = 18
 
-export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: TooltipProps) {
+export function Tooltip({ content, children, side = 'top', maxWidth = 300 }: TooltipProps) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState({ x: 0, y: 0, arrowX: 0, actualSide: side as 'top' | 'bottom' })
   const wrapperRef = useRef<HTMLSpanElement>(null)
@@ -22,10 +22,10 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
     const r = wrapperRef.current.getBoundingClientRect()
     const mx = e.clientX
 
-    // Flip only when there is genuinely not enough room above (rough tooltip height: 64px + gap)
+    // Flip only when there is genuinely not enough room above (rough tooltip height: 76px + gap)
     const spaceAbove = r.top
     const spaceBelow = window.innerHeight - r.bottom
-    const needsSpace = 64 + GAP
+    const needsSpace = 76 + GAP
     const actualSide: 'top' | 'bottom' =
       side === 'top'    && spaceAbove < needsSpace ? 'bottom' :
       side === 'bottom' && spaceBelow < needsSpace ? 'top'    :
@@ -87,9 +87,9 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
                 pointerEvents: 'none',
               }}
             >
-              <div className="bg-ink text-paper px-3 py-2.5 border border-white/[0.08] shadow-2xl relative">
+              <div className="relative border border-line-strong bg-inverse px-3.5 py-2.5 text-inverse-text shadow-[0_18px_50px_rgba(0,0,0,0.34),4px_4px_0_#FFCB05]">
                 {typeof content === 'string' ? (
-                  <p className="font-mono text-[10px] leading-relaxed text-paper/90">{content}</p>
+                  <p className="font-mono text-[11.5px] leading-[1.45] text-inverse-text">{content}</p>
                 ) : content}
 
                 {coords.actualSide === 'top' && (
@@ -97,7 +97,7 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
                     position: 'absolute', bottom: -6, left: coords.arrowX,
                     width: 0, height: 0,
                     borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-                    borderTop: '6px solid #0D0D0D',
+                    borderTop: '6px solid rgb(var(--color-inverse-bg))',
                   }} />
                 )}
                 {coords.actualSide === 'bottom' && (
@@ -105,7 +105,7 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 240 }: Too
                     position: 'absolute', top: -6, left: coords.arrowX,
                     width: 0, height: 0,
                     borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-                    borderBottom: '6px solid #0D0D0D',
+                    borderBottom: '6px solid rgb(var(--color-inverse-bg))',
                   }} />
                 )}
               </div>

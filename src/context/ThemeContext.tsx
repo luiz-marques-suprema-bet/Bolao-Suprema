@@ -15,7 +15,7 @@ function getInitialTheme(): Theme {
   if (typeof window === 'undefined') return 'light'
   const stored = window.localStorage.getItem(STORAGE_KEY)
   if (stored === 'light' || stored === 'dark') return stored
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  return 'light'
 }
 
 function applyTheme(theme: Theme) {
@@ -42,14 +42,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       window.localStorage.setItem(STORAGE_KEY, nextTheme)
       return nextTheme
     })
-  }, [])
-
-  useEffect(() => {
-    if (window.localStorage.getItem(STORAGE_KEY)) return
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const handleChange = () => setThemeState(media.matches ? 'dark' : 'light')
-    media.addEventListener('change', handleChange)
-    return () => media.removeEventListener('change', handleChange)
   }, [])
 
   const value = useMemo(() => ({ theme, toggleTheme, setTheme }), [theme, toggleTheme, setTheme])
