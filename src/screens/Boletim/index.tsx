@@ -256,7 +256,7 @@ export function CreateModal({
   const [body, setBody] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [imageFitMode, setImageFitMode] = useState<ImageFitMode>('contain')
+  const [imageFitMode, setImageFitMode] = useState<ImageFitMode>('cover')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -366,7 +366,7 @@ export function CreateModal({
           {/* Image upload */}
           <div>
             <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-1.5">
-              IMAGEM (opcional) — proporção ideal 16:9 · máx. {USER_MEDIA_MAX_BYTES / 1024 / 1024} MB
+              IMAGEM (opcional) — ideal 4:5 ou 1:1 · estilo Instagram · máx. {USER_MEDIA_MAX_BYTES / 1024 / 1024} MB
             </p>
             <div className="flex gap-1.5 mb-2">
               {(['contain', 'cover'] as const).map(mode => (
@@ -386,12 +386,11 @@ export function CreateModal({
 
             {imagePreview ? (
               <div className="relative">
-                {/* 16:9 preview */}
-                <div className="relative w-full overflow-hidden bg-paper-deep" style={{ paddingBottom: '56.25%' }}>
+                <div className="relative mx-auto aspect-[4/5] max-h-[420px] w-full max-w-[336px] overflow-hidden border border-hairline bg-paper-deep">
                   <img
                     src={imagePreview}
                     alt="preview"
-                    className="absolute inset-0 w-full h-full"
+                    className="absolute inset-0 h-full w-full"
                     style={{ objectFit: imageFitMode }}
                   />
                   {uploading && (
@@ -400,6 +399,9 @@ export function CreateModal({
                     </div>
                   )}
                 </div>
+                <p className="mt-1.5 text-center font-mono text-[8px] text-ink-4">
+                  Preview no formato principal da Home · use COBRIR para preencher o card
+                </p>
                 <div className="flex items-center gap-2 mt-1.5">
                   {imageUrl
                     ? <span className="font-mono text-[9px] text-green">✓ Upload concluído</span>
@@ -424,7 +426,7 @@ export function CreateModal({
               >
                 <span className="font-mono text-[20px] text-ink-4">↑</span>
                 <span className="font-mono text-[10px] text-ink-3">Clique para selecionar imagem</span>
-                <span className="font-mono text-[8px] text-ink-4">JPG · PNG · WEBP · GIF · máx. {USER_MEDIA_MAX_BYTES / 1024 / 1024} MB</span>
+                <span className="font-mono text-[8px] text-ink-4">JPG · PNG · WEBP · GIF · 4:5 / 1:1 · máx. {USER_MEDIA_MAX_BYTES / 1024 / 1024} MB</span>
               </button>
             )}
 

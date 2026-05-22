@@ -165,6 +165,8 @@ export function ResenhaScreen() {
   const [messageMenuId, setMessageMenuId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
+  const actionButtonRef = useRef<HTMLButtonElement | null>(null)
+  const actionPanelRef = useRef<HTMLDivElement | null>(null)
   const videoAutoStopRef = useRef(false)
   const audio = useAudioRecorder()
   const videoNote = useVideoNoteRecorder()
@@ -223,6 +225,36 @@ export function ResenhaScreen() {
   useEffect(() => {
     return () => setTyping(false)
   }, [setTyping])
+
+  useEffect(() => {
+    if (!actionMenu) return
+
+    const handlePointerDown = (event: PointerEvent | MouseEvent) => {
+      const target = event.target as Node | null
+      if (!target) return
+      if (actionButtonRef.current?.contains(target)) return
+      if (actionPanelRef.current?.contains(target)) return
+      setActionMenu(false)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setActionMenu(false)
+    }
+    const handleScroll = () => setActionMenu(false)
+
+    document.addEventListener('pointerdown', handlePointerDown, true)
+    document.addEventListener('mousedown', handlePointerDown, true)
+    document.addEventListener('click', handlePointerDown, true)
+    document.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('scroll', handleScroll, true)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true)
+      document.removeEventListener('mousedown', handlePointerDown, true)
+      document.removeEventListener('click', handlePointerDown, true)
+      document.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('scroll', handleScroll, true)
+    }
+  }, [actionMenu])
 
   useEffect(() => {
     if (videoNote.recording && videoNote.seconds >= 10 && !videoAutoStopRef.current) {
@@ -370,6 +402,11 @@ export function ResenhaScreen() {
     setDeleteId(null)
   }
 
+  const openActionMenu = () => {
+    setMessageMenuId(null)
+    setActionMenu(value => !value)
+  }
+
   return (
     <div className="min-h-0 flex-1 bg-app text-ink">
       <div className="h-[calc(100dvh-3.5rem)] overflow-hidden lg:h-[calc(100dvh-5.75rem)]">
@@ -401,17 +438,26 @@ export function ResenhaScreen() {
 
           <AnimatePresence>
             {pinnedMsg && (
-              <motion.button
-                type="button"
+              <motion.div
                 initial={{ y: -12, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: -12, opacity: 0 }}
-                onClick={() => setReplyingTo(pinnedMsg)}
-                className="shrink-0 border-b border-yellow/60 bg-yellow/20 px-4 py-2 text-left"
+                className="flex shrink-0 items-center gap-3 border-b border-yellow/60 bg-yellow/20 px-4 py-2"
               >
-                <span className="font-mono text-[9px] font-bold text-ink">FIXADA</span>
-                <span className="ml-2 font-sans text-sm text-ink-2">{getContentPreview(pinnedMsg)}</span>
-              </motion.button>
+                <button type="button" onClick={() => setReplyingTo(pinnedMsg)} className="min-w-0 flex-1 text-left">
+                  <span className="font-mono text-[9px] font-bold text-ink">FIXADA</span>
+                  <span className="ml-2 font-sans text-sm text-ink-2">{getContentPreview(pinnedMsg)}</span>
+                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => void setPinned(null)}
+                    className="shrink-0 border border-yellow/70 bg-card px-2.5 py-1 font-mono text-[9px] font-bold text-ink transition hover:bg-yellow hover:text-[#0D0D0D]"
+                  >
+                    DESFIXAR
+                  </button>
+                )}
+              </motion.div>
             )}
           </AnimatePresence>
 
@@ -434,7 +480,7 @@ export function ResenhaScreen() {
                     isPinned={pinnedId === item.message.id}
                     menuOpen={messageMenuId === item.message.id}
                     openMenuUp={messagesAfter < 2}
-                    onToggleMenu={() => setMessageMenuId(messageMenuId === item.message.id ? null : item.message.id)}
+                    onToggleMenu={() => { setActionMenu(false); setMessageMenuId(messageMenuId === item.message.id ? null : item.message.id) }}
                     onCloseMenu={() => setMessageMenuId(null)}
                     onReact={emoji => { void toggleReaction(item.message.id, emoji); setMessageMenuId(null) }}
                     onReply={() => { setReplyingTo(item.message); setMessageMenuId(null) }}
@@ -494,14 +540,14 @@ export function ResenhaScreen() {
 
             <div className="flex items-end gap-2 px-3 py-2.5 sm:px-4">
               <div className="relative">
-                <button type="button" onClick={() => setActionMenu(value => !value)} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-line-strong bg-card font-display text-xl transition hover:bg-yellow hover:text-[#0D0D0D]', actionMenu && 'bg-yellow text-[#0D0D0D]')}>
+                <button ref={actionButtonRef} type="button" onClick={openActionMenu} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-line-strong bg-card font-display text-xl transition hover:bg-yellow hover:text-[#0D0D0D]', actionMenu && 'bg-yellow text-[#0D0D0D]')}>
                   +
                 </button>
                 <AnimatePresence>
                   {actionMenu && (
-                    <motion.div initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 8, opacity: 0 }} className="absolute bottom-full left-0 z-50 mb-2 w-56 overflow-hidden rounded-2xl ui-card">
-                      <ActionButton label="Foto" detail="imagem do celular" busy={uploading === 'image'} onClick={() => void sendMedia('image')} />
-                      <ActionButton label="Video" detail="arquivo ou camera" busy={uploading === 'video'} onClick={() => void sendMedia('video')} />
+                    <motion.div ref={actionPanelRef} initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 8, opacity: 0 }} className="absolute bottom-full left-0 z-50 mb-2 w-56 overflow-hidden rounded-2xl ui-card">
+                      <ActionButton label="Foto" detail="imagem do celular" busy={uploading === 'image'} onClick={() => { setActionMenu(false); void sendMedia('image') }} />
+                      <ActionButton label="Video" detail="arquivo ou camera" busy={uploading === 'video'} onClick={() => { setActionMenu(false); void sendMedia('video') }} />
                       <ActionButton label="Enquete" detail="votacao do grupo" onClick={() => { setPollOpen(true); setActionMenu(false) }} />
                     </motion.div>
                   )}

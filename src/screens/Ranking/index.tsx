@@ -13,23 +13,57 @@ import type { RankingBreakdown, RankingEntry, Mov, ScoringRule } from '@/types'
 const MOV_COLOR = (mov: string) =>
   mov.startsWith('+') ? 'text-green' : mov.startsWith('-') ? 'text-red' : 'text-ink-4'
 
+let rankingCache: RankingEntry[] = []
+const RANKING_TIMEOUT_MS = 4500
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error(`${label} demorou demais para responder.`)), ms)
+    }),
+  ])
+}
+
 function useRanking() {
   const me = useAuthStore(s => s.user)
-  const [ranking, setRanking] = useState<RankingEntry[]>([])
-  const [loading, setLoading] = useState(true)
+  const [ranking, setRanking] = useState<RankingEntry[]>(rankingCache)
+  const [loading, setLoading] = useState(rankingCache.length === 0)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    setLoading(true)
-    fetchRanking(me?.id).then(r => { setRanking(r); setLoading(false) })
+    let active = true
+    setLoading(rankingCache.length === 0)
+    setError(null)
+
+    withTimeout(fetchRanking(me?.id), RANKING_TIMEOUT_MS, 'Ranking')
+      .then(r => {
+        if (!active) return
+        rankingCache = r
+        setRanking(r)
+      })
+      .catch(err => {
+        if (!active) return
+        setError(err instanceof Error ? err.message : 'Erro ao carregar ranking.')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => { active = false }
   }, [me?.id])
 
-  return { ranking, loading }
+  return { ranking, loading, error }
 }
 
 function useScoring() {
   const [rules, setRules] = useState<ScoringRule[]>([])
   useEffect(() => {
-    fetchScoringRules().then(res => setRules(res.data ?? []))
+    let active = true
+    fetchScoringRules()
+      .then(res => { if (active) setRules(res.data ?? []) })
+      .catch(() => { if (active) setRules([]) })
+    return () => { active = false }
   }, [])
   return rules
 }
@@ -41,7 +75,11 @@ function useBreakdown(userId?: string) {
       setItems([])
       return
     }
-    fetchRankingBreakdown(userId).then(res => setItems(res.data ?? []))
+    let active = true
+    fetchRankingBreakdown(userId)
+      .then(res => { if (active) setItems(res.data ?? []) })
+      .catch(() => { if (active) setItems([]) })
+    return () => { active = false }
   }, [userId])
   return items
 }
@@ -195,7 +233,7 @@ function BreakdownBox({ items }: { items: RankingBreakdown[] }) {
 function RankingMobile() {
   const [tab, setTab] = useState<'geral' | 'squad' | 'semana'>('geral')
   const me = useAuthStore(s => s.user)
-  const { ranking: fullRanking, loading } = useRanking()
+  const { ranking: fullRanking, loading, error } = useRanking()
   const rules = useScoring()
   const myEntry = fullRanking.find(r => r.isYou)
 
@@ -204,12 +242,6 @@ function RankingMobile() {
     : fullRanking
 
   const top3 = fullRanking.slice(0, 3)
-
-  if (loading) return (
-    <div className="min-h-dvh bg-paper flex items-center justify-center">
-      <span className="font-mono text-[11px] tracking-eyebrow text-ink-3 animate-pulse">CARREGANDO…</span>
-    </div>
-  )
 
   return (
     <div className="min-h-dvh bg-paper pb-24">
@@ -273,6 +305,12 @@ function RankingMobile() {
         ))}
       </div>
 
+      {(loading || error) && (
+        <div className="border-b border-hairline bg-card px-4 py-2 font-mono text-[10px] text-ink-3">
+          {loading ? 'Atualizando ranking…' : error}
+        </div>
+      )}
+
       {tab === 'geral' && ranking.length === 0 && (
         <div className="mx-4 mt-4">
           <ScoringRulesBox rules={[]} />
@@ -305,7 +343,7 @@ function RankingMobile() {
 function RankingDesktop() {
   const navigate = useNavigate()
   const meUser = useAuthStore(s => s.user)
-  const { ranking, loading } = useRanking()
+  const { ranking, loading, error } = useRanking()
   const rules = useScoring()
   const top3 = ranking.slice(0, 3)
   const me = ranking.find(r => r.isYou) ?? (meUser ? {
@@ -313,12 +351,6 @@ function RankingDesktop() {
     initials: meUser.initials, color: meUser.color, pts: 0, correct: 0, exact: 0, streak: 0, mov: '—' as Mov, rank: 0, isYou: true
   } : undefined)
   const breakdown = useBreakdown(meUser?.id)
-
-  if (loading) return (
-    <div className="min-h-dvh bg-paper flex items-center justify-center">
-      <span className="font-mono text-[11px] tracking-eyebrow text-ink-3 animate-pulse">CARREGANDO…</span>
-    </div>
-  )
 
   return (
     <div className="min-h-dvh bg-paper">
@@ -330,6 +362,12 @@ function RankingDesktop() {
             <span className="font-mono text-[10px] tracking-eyebrow text-ink-3 self-end mb-1">do bolão.</span>
           </div>
         </div>
+
+        {(loading || error) && (
+          <div className="mb-4 border border-hairline bg-card px-4 py-2 font-mono text-[10px] text-ink-3">
+            {loading ? 'Atualizando ranking…' : error}
+          </div>
+        )}
 
         <div className="grid grid-cols-[1.4fr_1fr] gap-6">
           {/* Left */}

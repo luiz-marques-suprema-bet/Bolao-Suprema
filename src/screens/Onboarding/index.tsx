@@ -199,8 +199,8 @@ function OnboardingDesktop() {
         </div>
       </div>
 
-      <div className="border-t border-line bg-ink">
-        <Marquee items={MARQUEE_ITEMS} color="#FFCB05" bg="#0D0D0D" speed={30} />
+      <div className="border-t border-line bg-paper-white">
+        <Marquee items={MARQUEE_ITEMS} color="#0D0D0D" bg="#FFF8E8" speed={30} />
       </div>
     </div>
   )
