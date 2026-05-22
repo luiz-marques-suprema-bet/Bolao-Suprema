@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/context/ThemeContext'
 import { useAuthStore } from '@/stores/auth.store'
 import { useChatStore } from '@/stores/chat.store'
 import { useMatchStore } from '@/stores/match.store'
+import { canParticipate } from '@/lib/participantStatus'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { MobileNav } from '@/components/navigation/MobileNav'
 import { DesktopNav } from '@/components/navigation/DesktopNav'
@@ -61,19 +62,30 @@ function RequireAuth() {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (!profileComplete && pathname !== '/setup') return <Navigate to="/setup" replace />
-  if (user?.participantStatus === 'blocked' && pathname !== '/setup' && pathname !== '/profile') return <ParticipantStatusScreen />
+  if (!canParticipate(user?.participantStatus) && pathname !== '/setup' && pathname !== '/profile') {
+    return <ParticipantStatusScreen status={user?.participantStatus} />
+  }
 
   return <Outlet />
 }
 
-function ParticipantStatusScreen() {
+function ParticipantStatusScreen({ status }: { status?: string }) {
+  const isPending = status === 'pending'
+  const isRemoved = status === 'removed'
+
   return (
     <div className="min-h-dvh bg-paper flex items-center justify-center p-6">
       <div className="border-2 border-ink p-6 max-w-md">
-        <div className="font-mono text-[10px] tracking-eyebrow text-ink-3">ACESSO BLOQUEADO</div>
-        <h1 className="font-display text-4xl mt-2">Participante bloqueado</h1>
+        <div className="font-mono text-[10px] tracking-eyebrow text-ink-3">
+          {isPending ? 'AGUARDANDO APROVACAO' : isRemoved ? 'ACESSO REMOVIDO' : 'ACESSO BLOQUEADO'}
+        </div>
+        <h1 className="font-display text-4xl mt-2">
+          {isPending ? 'Cadastro pendente' : isRemoved ? 'Participante removido' : 'Participante bloqueado'}
+        </h1>
         <p className="font-mono text-[12px] text-ink-3 mt-3 leading-relaxed">
-          Seu acesso a palpites e Resenha esta bloqueado. Procure T.I. ou o admin do bolao.
+          {isPending
+            ? 'Seu cadastro ainda precisa ser aprovado antes de acessar palpites, ranking e Resenha.'
+            : 'Seu acesso a palpites e Resenha esta bloqueado. Procure T.I. ou o admin do bolao.'}
         </p>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { TEAMS } from './teams'
-import type { Match, MatchStatus } from '@/types'
+import type { Match, MatchStage, MatchStatus } from '@/types'
 import { formatMatchDateTime } from '@/lib/matchTime'
 import { isBetOpen } from '@/lib/markets'
 
@@ -28,6 +28,18 @@ interface RawMatch {
   awayScore?: number
   liveMinute?: string
   winner?: string
+}
+
+interface RawKnockoutMatch {
+  id: string
+  stage: Exclude<MatchStage, 'group'>
+  stageLabel: string
+  date: string
+  time: string
+  homePlaceholder: string
+  awayPlaceholder: string
+  venue: string
+  city: string
 }
 
 // ─── Groups ───────────────────────────────────────────────────────────────────
@@ -206,6 +218,75 @@ const RAW: RawMatch[] = [
   { id: 'g-j-6', date: '2026-06-27', time: '22:00', group: 'J', md: 3, home: 'JOR', away: 'ARG', venue: 'AT&T Stadium',               city: 'Dallas',           status: 'scheduled' },
 ]
 
+const KNOCKOUT_RAW: RawKnockoutMatch[] = [
+  ...Array.from({ length: 16 }, (_, i) => ({
+    id: `ko-r32-${i + 1}`,
+    stage: 'round_of_32' as const,
+    stageLabel: `32 AVOS · ${i + 1}`,
+    date: i < 8 ? '2026-06-28' : '2026-06-29',
+    time: ['13:00', '16:00', '19:00', '22:00'][i % 4],
+    homePlaceholder: `R32 ${i + 1} mandante`,
+    awayPlaceholder: `R32 ${i + 1} visitante`,
+    venue: 'A definir',
+    city: 'A definir',
+  })),
+  ...Array.from({ length: 8 }, (_, i) => ({
+    id: `ko-r16-${i + 1}`,
+    stage: 'round_of_16' as const,
+    stageLabel: `OITAVAS · ${i + 1}`,
+    date: i < 4 ? '2026-07-04' : '2026-07-05',
+    time: ['13:00', '16:00', '19:00', '22:00'][i % 4],
+    homePlaceholder: `Vencedor R32 ${i * 2 + 1}`,
+    awayPlaceholder: `Vencedor R32 ${i * 2 + 2}`,
+    venue: 'A definir',
+    city: 'A definir',
+  })),
+  ...Array.from({ length: 4 }, (_, i) => ({
+    id: `ko-qf-${i + 1}`,
+    stage: 'quarter_final' as const,
+    stageLabel: `QUARTAS · ${i + 1}`,
+    date: i < 2 ? '2026-07-09' : '2026-07-10',
+    time: ['16:00', '22:00'][i % 2],
+    homePlaceholder: `Vencedor Oitavas ${i * 2 + 1}`,
+    awayPlaceholder: `Vencedor Oitavas ${i * 2 + 2}`,
+    venue: 'A definir',
+    city: 'A definir',
+  })),
+  ...Array.from({ length: 2 }, (_, i) => ({
+    id: `ko-sf-${i + 1}`,
+    stage: 'semi_final' as const,
+    stageLabel: `SEMIFINAL · ${i + 1}`,
+    date: i === 0 ? '2026-07-14' : '2026-07-15',
+    time: '21:00',
+    homePlaceholder: `Vencedor Quartas ${i * 2 + 1}`,
+    awayPlaceholder: `Vencedor Quartas ${i * 2 + 2}`,
+    venue: 'A definir',
+    city: 'A definir',
+  })),
+  {
+    id: 'ko-third-1',
+    stage: 'third_place',
+    stageLabel: 'TERCEIRO LUGAR',
+    date: '2026-07-18',
+    time: '17:00',
+    homePlaceholder: 'Perdedor Semifinal 1',
+    awayPlaceholder: 'Perdedor Semifinal 2',
+    venue: 'A definir',
+    city: 'A definir',
+  },
+  {
+    id: 'ko-final-1',
+    stage: 'final',
+    stageLabel: 'FINAL',
+    date: '2026-07-19',
+    time: '18:00',
+    homePlaceholder: 'Vencedor Semifinal 1',
+    awayPlaceholder: 'Vencedor Semifinal 2',
+    venue: 'MetLife Stadium',
+    city: 'Nova York',
+  },
+]
+
 // ─── Resolver ─────────────────────────────────────────────────────────────────
 
 export function resolveMatch(r: RawMatch): Match {
@@ -228,6 +309,25 @@ export function resolveMatch(r: RawMatch): Match {
   }
 }
 
+export function resolveKnockoutMatch(r: RawKnockoutMatch): Match {
+  return {
+    id: r.id,
+    stage: r.stage,
+    stageLabel: r.stageLabel,
+    home: { ...TEAMS.TBD, name: r.homePlaceholder },
+    away: { ...TEAMS.TBD, name: r.awayPlaceholder },
+    homeScore: null,
+    awayScore: null,
+    date: fmtMatchDate(r.date),
+    time: toBRT(r.date, r.time),
+    kickoffUtc: toKickoffUtc(r.date, r.time),
+    venue: `${r.venue} · ${r.city}`,
+    status: 'scheduled',
+    marketStatus: 'locked',
+    lockReason: 'knockout_placeholder',
+  }
+}
+
 // Helper: returns true if bets are still open for this match
 // (kickoff is in the future — bets close at kickoff time)
 export function isBettingOpen(match: Match): boolean {
@@ -241,7 +341,9 @@ export function fmtKickoffBRT(match: Match): string {
 
 // ─── Resolved exports ─────────────────────────────────────────────────────────
 
-export const WC2026_MATCHES: Match[] = RAW.map(resolveMatch)
+export const WC2026_GROUP_MATCHES: Match[] = RAW.map(resolveMatch)
+export const WC2026_KNOCKOUT_MATCHES: Match[] = KNOCKOUT_RAW.map(resolveKnockoutMatch)
+export const WC2026_MATCHES: Match[] = [...WC2026_GROUP_MATCHES, ...WC2026_KNOCKOUT_MATCHES]
 
 export const WC2026_LIVE    = WC2026_MATCHES.filter(m => m.status === 'live')
 export const WC2026_OPEN    = WC2026_MATCHES.filter(m => m.status === 'open')

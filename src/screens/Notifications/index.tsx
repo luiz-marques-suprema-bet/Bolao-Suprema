@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Eyebrow } from '@/components/shared/Eyebrow'
 import { useAuthStore } from '@/stores/auth.store'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { fetchNotifications, markNotificationRead } from '@/services/product'

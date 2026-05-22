@@ -42,6 +42,8 @@ interface PredictionState {
   confirmPrediction: (prediction: Prediction) => Promise<PredictionResult>
   confirmPredictionBatch: (items: PredictionBatchItem[]) => Promise<PredictionBatchResult>
   removePrediction: (matchId: string) => void
+  resetLocalPredictionState: () => void
+  deleteUserPredictionsExplicitly: () => Promise<void>
   clearAllPredictions: () => Promise<void>
   clearError: () => void
   getPrediction: (matchId: string) => Prediction | undefined
@@ -86,6 +88,19 @@ function mergeMatchWithOverride(matchId: string): Match | null {
     settledAt:    override.settledAt ?? null,
     kickoffUtc:   override.kickoffUtc ?? baseMatch.kickoffUtc,
   }
+}
+
+async function saveGeneralPicks(
+  championPick: string | null,
+  vicePick: string | null,
+  scorerPick: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc('save_general_picks', {
+    p_champion: championPick,
+    p_vice: vicePick,
+    p_scorer: scorerPick,
+  })
+  if (error) throw new Error(error.message)
 }
 
 async function savePredictionFallback(userId: string, prediction: Prediction): Promise<Prediction> {
@@ -304,9 +319,13 @@ export const usePredictionStore = create<PredictionState>()(
         return { predictions }
       }),
 
-    clearAllPredictions: async () => {
+    resetLocalPredictionState: () => {
       set({ predictions: {}, drafts: {}, championPick: null, vicePick: null, scorerPick: null, lastError: null })
       useBracketStore.getState().clearAllPicks()
+    },
+
+    deleteUserPredictionsExplicitly: async () => {
+      get().resetLocalPredictionState()
       const userId = get()._userId
       if (!isMockMode && userId) {
         const [{ error: predErr }, { error: bracketErr }, { error: userErr }] = await Promise.all([
@@ -318,6 +337,10 @@ export const usePredictionStore = create<PredictionState>()(
         if (bracketErr) console.error('[clearPredictions] bracket_picks:', bracketErr.message)
         if (userErr)    console.error('[clearPredictions] users:', userErr.message)
       }
+    },
+
+    clearAllPredictions: async () => {
+      await get().deleteUserPredictionsExplicitly()
     },
 
     clearError: () => set({ lastError: null }),
@@ -335,8 +358,8 @@ export const usePredictionStore = create<PredictionState>()(
       set({ championPick: value, lastError: null })
       const uid = get()._userId
       if (!isMockMode && uid) {
-        supabase.from('users').update({ champion_pick: value }).eq('id', uid)
-          .then(({ error }) => { if (error) set({ lastError: error.message }) })
+        saveGeneralPicks(value, get().vicePick, get().scorerPick)
+          .catch((error: Error) => set({ lastError: error.message }))
       }
     },
 
@@ -350,8 +373,8 @@ export const usePredictionStore = create<PredictionState>()(
       set({ vicePick: value, lastError: null })
       const uid = get()._userId
       if (!isMockMode && uid) {
-        supabase.from('users').update({ vice_pick: value }).eq('id', uid)
-          .then(({ error }) => { if (error) set({ lastError: error.message }) })
+        saveGeneralPicks(get().championPick, value, get().scorerPick)
+          .catch((error: Error) => set({ lastError: error.message }))
       }
     },
 
@@ -359,8 +382,8 @@ export const usePredictionStore = create<PredictionState>()(
       set({ scorerPick: playerName, lastError: null })
       const uid = get()._userId
       if (!isMockMode && uid) {
-        supabase.from('users').update({ scorer_pick: playerName }).eq('id', uid)
-          .then(({ error }) => { if (error) console.error('[Predictions] scorer_pick:', error.message) })
+        saveGeneralPicks(get().championPick, get().vicePick, playerName || null)
+          .catch((error: Error) => set({ lastError: error.message }))
       }
     },
   })

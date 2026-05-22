@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Avatar } from '@/components/shared/Avatar'
-import { Eyebrow } from '@/components/shared/Eyebrow'
 import { FloatingTooltip } from '@/components/shared/FloatingTooltip'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/stores/auth.store'
@@ -234,7 +233,6 @@ function RankingMobile() {
   const [tab, setTab] = useState<'geral' | 'squad' | 'semana'>('geral')
   const me = useAuthStore(s => s.user)
   const { ranking: fullRanking, loading, error } = useRanking()
-  const rules = useScoring()
   const myEntry = fullRanking.find(r => r.isYou)
 
   const ranking = tab === 'squad' && me
@@ -471,6 +469,7 @@ function RankingDesktop() {
             )}
 
             {/* Pontuação */}
+            <BreakdownBox items={breakdown} />
             <ScoringRulesBox rules={rules} />
           </div>
         </div>

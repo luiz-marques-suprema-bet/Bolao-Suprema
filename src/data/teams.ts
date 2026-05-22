@@ -3,6 +3,7 @@ import type { Team } from '@/types'
 const flag = (iso: string) => `https://flagcdn.com/w80/${iso}.png`
 
 export const TEAMS: Record<string, Team> = {
+  TBD: { code: 'TBD', name: 'A definir', flag: '', color: '#777777', group: '-' },
   // ── Grupo A ──────────────────────────────────────────────────────────────────
   MEX: { code: 'MEX', name: 'México',        flag: flag('mx'),    color: '#006847', group: 'A' },
   RSA: { code: 'RSA', name: 'África do Sul', flag: flag('za'),    color: '#007A4D', group: 'A' },

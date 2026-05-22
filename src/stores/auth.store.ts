@@ -4,6 +4,7 @@ import type { AppUser } from '@/types'
 import { supabase, isExplicitMockMode, isSupabaseConfigured, uploadFile } from '@/lib/supabase'
 import { MOCK_ME } from '@/data/mock'
 import { getInitials } from '@/lib/utils'
+import { normalizeParticipantStatus } from '@/lib/participantStatus'
 import { usePredictionStore } from './prediction.store'
 import { useBracketStore } from './bracket.store'
 
@@ -53,7 +54,7 @@ function mapUser(row: UserRow): AppUser {
     isMarketing:       row.is_marketing ?? false,
     isOwner:           row.is_owner ?? false,
     userRole:          row.user_role ?? (row.is_admin ? 'admin' : row.is_marketing ? 'marketing' : 'user'),
-    participantStatus: row.participant_status === 'blocked' ? 'blocked' : 'active',
+    participantStatus: normalizeParticipantStatus(row.participant_status),
     privacyHideEmail:  row.privacy_hide_email ?? true,
     privacyHideProfile: row.privacy_hide_profile ?? false,
     createdAt:         row.created_at  ?? new Date().toISOString(),
@@ -169,7 +170,7 @@ export const useAuthStore = create<AuthState>()(
             isMarketing: false,
             isOwner: false,
             userRole: 'user',
-            participantStatus: 'active',
+            participantStatus: 'pending',
             privacyHideEmail: true,
             privacyHideProfile: false,
             createdAt: new Date().toISOString(),
@@ -181,8 +182,9 @@ export const useAuthStore = create<AuthState>()(
 
       signOut: async () => {
         if (isSupabaseConfigured) await supabase.auth.signOut()
-        usePredictionStore.getState().clearAllPredictions()
+        usePredictionStore.getState().resetLocalPredictionState()
         usePredictionStore.getState().setUserId(undefined)
+        useBracketStore.getState().clearAllPicks()
         useBracketStore.getState().setUserId(undefined)
         set({ user: null, isAuthenticated: false, profileComplete: false })
       },

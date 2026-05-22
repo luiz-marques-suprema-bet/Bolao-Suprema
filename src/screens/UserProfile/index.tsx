@@ -7,10 +7,10 @@ import { useAuthStore } from '@/stores/auth.store'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { TEAMS } from '@/data/teams'
 import { cn } from '@/lib/utils'
+import { normalizeParticipantStatus } from '@/lib/participantStatus'
 import type { AppUser } from '@/types'
 
 // ─── Map DB row → AppUser ─────────────────────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapUser(row: any): AppUser {
   return {
     id: row.id, email: row.email ?? '',
@@ -28,7 +28,7 @@ function mapUser(row: any): AppUser {
   isMarketing: row.is_marketing ?? false,
   isOwner: row.is_owner ?? false,
   userRole: row.user_role ?? (row.is_admin ? 'admin' : row.is_marketing ? 'marketing' : 'user'),
-  participantStatus: row.participant_status === 'blocked' ? 'blocked' : 'active',
+  participantStatus: normalizeParticipantStatus(row.participant_status),
   privacyHideEmail: row.privacy_hide_email ?? true,
   privacyHideProfile: row.privacy_hide_profile ?? false,
   createdAt: row.created_at ?? '',

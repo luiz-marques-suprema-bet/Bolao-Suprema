@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Flag } from '@/components/shared/Flag'
@@ -87,15 +87,6 @@ function computeStandings(
     if (b.gd !== a.gd) return b.gd - a.gd
     return b.gf - a.gf
   })
-}
-
-function computeGroupTop2(
-  groupCode: string,
-  predictions: Record<string, { homeScore: number; awayScore: number }>,
-  allMatches: Match[]
-): [string | null, string | null] {
-  const sorted = computeStandings(groupCode, predictions, allMatches)
-  return [sorted[0]?.code ?? null, sorted[1]?.code ?? null]
 }
 
 // ─── Score input — horizontal +/– ────────────────────────────────────────────
@@ -657,18 +648,21 @@ function GroupBatchSaveBar({ selectedGroup, matches, compact = false }: {
   const openMatches = useMemo(() => matches.filter(m => isBetOpen(m)), [matches])
   const savedCount = matches.filter(m => predictions[m.id]).length
   const draftCount = matches.filter(m => drafts[m.id]).length
-  const canSave = openMatches.length > 0 && !saving
+  const draftOpenMatches = useMemo(
+    () => openMatches.filter(match => drafts[match.id]),
+    [openMatches, drafts]
+  )
+  const canSave = draftOpenMatches.length > 0 && !saving
 
   const handleSaveGroup = async () => {
     setSaving(true)
     setNotice(null)
-    const result = await confirmPredictionBatch(openMatches.map(match => {
+    const result = await confirmPredictionBatch(draftOpenMatches.map(match => {
       const draft = drafts[match.id]
-      const existing = predictions[match.id]
       return {
         match,
-        homeScore: draft?.home ?? existing?.homeScore ?? 0,
-        awayScore: draft?.away ?? existing?.awayScore ?? 0,
+        homeScore: draft.home,
+        awayScore: draft.away,
       }
     }))
     setSaving(false)
@@ -698,7 +692,7 @@ function GroupBatchSaveBar({ selectedGroup, matches, compact = false }: {
           disabled={!canSave}
           className="btn-yellow w-full px-3 py-2 text-[10px] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
         >
-          {saving ? 'SALVANDO...' : `SALVAR GRUPO ${selectedGroup}`}
+          {saving ? 'SALVANDO...' : `SALVAR ${draftOpenMatches.length || 0} DO GRUPO ${selectedGroup}`}
         </button>
       </div>
       {notice && (
@@ -1522,7 +1516,7 @@ export function PredictionScreen() {
   }, [allMatches, predictions])
 
   const totalGroupPreds = Object.values(predictions).filter(p => !p.matchId?.startsWith('ko-')).length
-  const totalGroupMatches = allMatches.length
+  const totalGroupMatches = allMatches.filter(m => m.stage === 'group').length
 
   const tabs = [
     { id: 'groups'   as const, label: 'GRUPOS'        },

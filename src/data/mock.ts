@@ -1,5 +1,4 @@
 import type { RankingEntry, BracketSlot, AppUser } from '@/types'
-import { TEAMS } from './teams'
 import { WC2026_MATCHES } from './wc2026'
 
 // ─── Current User (mock login) ────────────────────────────────────────────────

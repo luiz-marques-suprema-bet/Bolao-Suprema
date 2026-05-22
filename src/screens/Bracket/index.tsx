@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Flag } from '@/components/shared/Flag'
 import { useBracketStore } from '@/stores/bracket.store'
 import { usePredictionStore } from '@/stores/prediction.store'
-import { MOCK_BRACKET_SLOTS } from '@/data/mock'
+import { WC2026_BRACKET_SLOTS } from '@/lib/bracket2026'
+import { computeGroupStandings, rankBestThirds } from '@/lib/groupStandings'
 import { WC2026_GROUPS, WC2026_MATCHES } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
@@ -15,6 +16,7 @@ import type { BracketSlot, BracketRound, TeamCode } from '@/types'
 type BracketView = 'mine' | 'live'
 
 const ROUNDS: { id: BracketRound; label: string; shortLabel: string }[] = [
+  { id: 'r32',   label: '32 AVOS DE FINAL',  shortLabel: '32 AVOS' },
   { id: 'r16',   label: 'OITAVAS DE FINAL', shortLabel: 'OITAVAS' },
   { id: 'qf',    label: 'QUARTAS DE FINAL', shortLabel: 'QUARTAS' },
   { id: 'sf',    label: 'SEMIFINAIS',        shortLabel: 'SEMI'    },
@@ -23,64 +25,6 @@ const ROUNDS: { id: BracketRound; label: string; shortLabel: string }[] = [
 ]
 
 // ─── Standings engine (mirrors Prediction screen) ────────────────────────────
-
-interface StandingRow {
-  code: string
-  pts: number
-  gf: number
-  ga: number
-  gd: number
-}
-
-function computeGroupTop2(
-  groupCode: string,
-  predictions: Record<string, { homeScore: number; awayScore: number }>
-): [string | null, string | null] {
-  const groupDef = WC2026_GROUPS.find(g => g.id === groupCode)
-  if (!groupDef) return [null, null]
-
-  const rows: Record<string, StandingRow> = {}
-  for (const code of groupDef.teams) {
-    rows[code] = { code, pts: 0, gf: 0, ga: 0, gd: 0 }
-  }
-
-  const matches = WC2026_MATCHES.filter(m => m.group === groupCode)
-
-  for (const m of matches) {
-    const pred = predictions[m.id]
-    let hg: number | null = null
-    let ag: number | null = null
-
-    if (m.status === 'finished' || m.status === 'live') {
-      hg = m.homeScore
-      ag = m.awayScore
-    } else if (pred) {
-      hg = pred.homeScore
-      ag = pred.awayScore
-    }
-
-    if (hg === null || ag === null) continue
-
-    const home = rows[m.home.code]
-    const away = rows[m.away.code]
-    if (!home || !away) continue
-
-    home.gf += hg; home.ga += ag; home.gd = home.gf - home.ga
-    away.gf += ag; away.ga += hg; away.gd = away.gf - away.ga
-
-    if (hg > ag)      { home.pts += 3 }
-    else if (hg === ag) { home.pts += 1; away.pts += 1 }
-    else              { away.pts += 3 }
-  }
-
-  const sorted = Object.values(rows).sort((a, b) => {
-    if (b.pts !== a.pts) return b.pts - a.pts
-    if (b.gd  !== a.gd)  return b.gd  - a.gd
-    return b.gf - a.gf
-  })
-
-  return [sorted[0]?.code ?? null, sorted[1]?.code ?? null]
-}
 
 // ─── R16 slot mapping (WC2026 format) ────────────────────────────────────────
 // 16 slots, 32 teams, 2 per group (A–L)
@@ -93,55 +37,60 @@ function computeGroupTop2(
 
 interface R16SlotDef {
   slotId: string
-  homeGroup: string
-  homeRank: 1 | 2
-  awayGroup: string
-  awayRank: 1 | 2
+  home: QualifierRef
+  away: QualifierRef
   label: string
 }
+
+type QualifierRef =
+  | { kind: 'rank'; group: string; rank: 1 | 2 }
+  | { kind: 'bestThird'; index: number }
 
 // WC2026 48-team bracket: 12 groups → 16 oitavas
 // 8 group winners + 8 runners-up + 8 best 3rd place = 32 teams
 // Simplified pairing (FIFA TBD — using reasonable pairs for UX)
 const R16_SLOT_DEFS: R16SlotDef[] = [
-  { slotId: 'r16_1',  homeGroup: 'A', homeRank: 1, awayGroup: 'B', awayRank: 2, label: 'M1' },
-  { slotId: 'r16_2',  homeGroup: 'C', homeRank: 1, awayGroup: 'D', awayRank: 2, label: 'M2' },
-  { slotId: 'r16_3',  homeGroup: 'E', homeRank: 1, awayGroup: 'F', awayRank: 2, label: 'M3' },
-  { slotId: 'r16_4',  homeGroup: 'G', homeRank: 1, awayGroup: 'H', awayRank: 2, label: 'M4' },
-  { slotId: 'r16_5',  homeGroup: 'I', homeRank: 1, awayGroup: 'J', awayRank: 2, label: 'M5' },
-  { slotId: 'r16_6',  homeGroup: 'K', homeRank: 1, awayGroup: 'L', awayRank: 2, label: 'M6' },
-  { slotId: 'r16_7',  homeGroup: 'B', homeRank: 1, awayGroup: 'A', awayRank: 2, label: 'M7' },
-  { slotId: 'r16_8',  homeGroup: 'D', homeRank: 1, awayGroup: 'C', awayRank: 2, label: 'M8' },
-  { slotId: 'r16_9',  homeGroup: 'F', homeRank: 1, awayGroup: 'E', awayRank: 2, label: 'M9' },
-  { slotId: 'r16_10', homeGroup: 'H', homeRank: 1, awayGroup: 'G', awayRank: 2, label: 'M10' },
-  { slotId: 'r16_11', homeGroup: 'J', homeRank: 1, awayGroup: 'I', awayRank: 2, label: 'M11' },
-  { slotId: 'r16_12', homeGroup: 'L', homeRank: 1, awayGroup: 'K', awayRank: 2, label: 'M12' },
+  { slotId: 'r32_1',  home: { kind: 'rank', group: 'A', rank: 1 }, away: { kind: 'bestThird', index: 0 }, label: 'M1' },
+  { slotId: 'r32_2',  home: { kind: 'rank', group: 'B', rank: 1 }, away: { kind: 'bestThird', index: 1 }, label: 'M2' },
+  { slotId: 'r32_3',  home: { kind: 'rank', group: 'C', rank: 1 }, away: { kind: 'bestThird', index: 2 }, label: 'M3' },
+  { slotId: 'r32_4',  home: { kind: 'rank', group: 'D', rank: 1 }, away: { kind: 'bestThird', index: 3 }, label: 'M4' },
+  { slotId: 'r32_5',  home: { kind: 'rank', group: 'E', rank: 1 }, away: { kind: 'bestThird', index: 4 }, label: 'M5' },
+  { slotId: 'r32_6',  home: { kind: 'rank', group: 'F', rank: 1 }, away: { kind: 'bestThird', index: 5 }, label: 'M6' },
+  { slotId: 'r32_7',  home: { kind: 'rank', group: 'G', rank: 1 }, away: { kind: 'bestThird', index: 6 }, label: 'M7' },
+  { slotId: 'r32_8',  home: { kind: 'rank', group: 'H', rank: 1 }, away: { kind: 'bestThird', index: 7 }, label: 'M8' },
+  { slotId: 'r32_9',  home: { kind: 'rank', group: 'I', rank: 1 }, away: { kind: 'rank', group: 'A', rank: 2 }, label: 'M9' },
+  { slotId: 'r32_10', home: { kind: 'rank', group: 'J', rank: 1 }, away: { kind: 'rank', group: 'B', rank: 2 }, label: 'M10' },
+  { slotId: 'r32_11', home: { kind: 'rank', group: 'K', rank: 1 }, away: { kind: 'rank', group: 'C', rank: 2 }, label: 'M11' },
+  { slotId: 'r32_12', home: { kind: 'rank', group: 'L', rank: 1 }, away: { kind: 'rank', group: 'D', rank: 2 }, label: 'M12' },
   // 3rd-place wild cards — TBD from group results
-  { slotId: 'r16_13', homeGroup: 'A', homeRank: 2, awayGroup: 'C', awayRank: 2, label: 'M13' },
-  { slotId: 'r16_14', homeGroup: 'B', homeRank: 2, awayGroup: 'D', awayRank: 2, label: 'M14' },
-  { slotId: 'r16_15', homeGroup: 'E', homeRank: 2, awayGroup: 'G', awayRank: 2, label: 'M15' },
-  { slotId: 'r16_16', homeGroup: 'I', homeRank: 2, awayGroup: 'K', awayRank: 2, label: 'M16' },
+  { slotId: 'r32_13', home: { kind: 'rank', group: 'E', rank: 2 }, away: { kind: 'rank', group: 'F', rank: 2 }, label: 'M13' },
+  { slotId: 'r32_14', home: { kind: 'rank', group: 'G', rank: 2 }, away: { kind: 'rank', group: 'H', rank: 2 }, label: 'M14' },
+  { slotId: 'r32_15', home: { kind: 'rank', group: 'I', rank: 2 }, away: { kind: 'rank', group: 'J', rank: 2 }, label: 'M15' },
+  { slotId: 'r32_16', home: { kind: 'rank', group: 'K', rank: 2 }, away: { kind: 'rank', group: 'L', rank: 2 }, label: 'M16' },
 ]
 
 // ─── Derive "Minha Chave" R16 teams from group predictions ───────────────────
 
-function useMyR16Picks(
+function useMyR32Picks(
   predMap: Record<string, { homeScore: number; awayScore: number }>
 ): Record<string, { home: string | null; away: string | null }> {
   return useMemo(() => {
-    // compute top 2 for every group
-    const groupTop2: Record<string, [string | null, string | null]> = {}
-    for (const g of ['A','B','C','D','E','F','G','H','I','J','K','L']) {
-      groupTop2[g] = computeGroupTop2(g, predMap)
+    const standingsByGroup: Record<string, ReturnType<typeof computeGroupStandings>> = {}
+    for (const group of WC2026_GROUPS) {
+      standingsByGroup[group.id] = computeGroupStandings(group, WC2026_MATCHES, predMap)
+    }
+    const bestThirds = rankBestThirds(standingsByGroup).slice(0, 8)
+
+    const resolve = (ref: QualifierRef) => {
+      if (ref.kind === 'bestThird') return bestThirds[ref.index]?.code ?? null
+      return standingsByGroup[ref.group]?.[ref.rank - 1]?.code ?? null
     }
 
     const result: Record<string, { home: string | null; away: string | null }> = {}
     for (const def of R16_SLOT_DEFS) {
-      const homeCode = def.homeRank === 1 ? groupTop2[def.homeGroup]?.[0] : groupTop2[def.homeGroup]?.[1]
-      const awayCode = def.awayRank === 1 ? groupTop2[def.awayGroup]?.[0] : groupTop2[def.awayGroup]?.[1]
       result[def.slotId] = {
-        home: homeCode ?? null,
-        away: awayCode ?? null,
+        home: resolve(def.home),
+        away: resolve(def.away),
       }
     }
     return result
@@ -176,8 +125,6 @@ function MySlotCard({
     onPick(slotId, code as TeamCode)
   }
 
-  // Comparison: my pick vs real winner
-  const myPickCorrect = realWinner && myPick && myPick === realWinner
   const myPickWrong   = realWinner && myPick && myPick !== realWinner
 
   // Show big VS card when both teams known and not yet resolved, not compact
@@ -471,17 +418,17 @@ function usePredMap() {
 
 function BracketMobile() {
   const [view, setView] = useState<BracketView>('mine')
-  const [activeRound, setActiveRound] = useState<BracketRound>('r16')
-  const { picks, setPick, isRoundLocked, lockRound, resolveSlotTeams } = useBracketStore()
+  const [activeRound, setActiveRound] = useState<BracketRound>('r32')
+  const { picks, setPick, isRoundLocked, resolveSlotTeams } = useBracketStore()
   const predMap = usePredMap()
-  const myR16Picks = useMyR16Picks(predMap)
+  const myR32Picks = useMyR32Picks(predMap)
 
-  const allSlots = MOCK_BRACKET_SLOTS
+  const allSlots = WC2026_BRACKET_SLOTS
 
   // For "Minha Chave" — resolve what teams appear in each round from picks
   const resolveMySlot = (slot: BracketSlot) => {
-    if (slot.slotId.startsWith('r16_')) {
-      const derived = myR16Picks[slot.slotId]
+    if (slot.slotId.startsWith('r32_')) {
+      const derived = myR32Picks[slot.slotId]
       return {
         home: derived?.home ?? null,
         away: derived?.away ?? null,
@@ -499,7 +446,7 @@ function BracketMobile() {
   const champion = championCode ? TEAMS[championCode] : null
 
   const hasGroupPreds = Object.keys(predMap).length > 0
-  const r16HasTeams   = Object.values(myR16Picks).some(v => v.home !== null || v.away !== null)
+  const r32HasTeams   = Object.values(myR32Picks).some(v => v.home !== null || v.away !== null)
 
   return (
     <div className="min-h-dvh bg-paper pb-28">
@@ -532,7 +479,7 @@ function BracketMobile() {
           <p className="font-mono text-[9px] text-ink-4 mt-2">
             {!hasGroupPreds
               ? 'Palpite nos grupos para ver sua chave de oitavas se montar automaticamente'
-              : !r16HasTeams
+              : !r32HasTeams
               ? 'Continue palpitando nos grupos para preencher a chave'
               : 'Classificados baseados nos seus palpites de grupo'}
           </p>
@@ -573,7 +520,7 @@ function BracketMobile() {
           >
             {view === 'mine' && (
               <>
-                {activeRound === 'r16' && (
+                {activeRound === 'r32' && (
                   <div className="mb-3">
                     <MyBracketLegend />
                   </div>
@@ -593,7 +540,7 @@ function BracketMobile() {
                       realWinner={slot.winner}
                       onPick={setPick}
                       isLocked={isRoundLocked(activeRound)}
-                      fromGroups={slot.slotId.startsWith('r16_')}
+                      fromGroups={slot.slotId.startsWith('r32_')}
                     />
                   )
                 })}
@@ -651,21 +598,21 @@ function BracketMobile() {
 
 function BracketDesktop() {
   const [view, setView] = useState<BracketView>('mine')
-  const { picks, setPick, isRoundLocked, lockRound, resolveSlotTeams } = useBracketStore()
+  const { picks, setPick, isRoundLocked, resolveSlotTeams } = useBracketStore()
   const predMap = usePredMap()
-  const myR16Picks = useMyR16Picks(predMap)
+  const myR32Picks = useMyR32Picks(predMap)
 
-  const allSlots = MOCK_BRACKET_SLOTS
+  const allSlots = WC2026_BRACKET_SLOTS
 
-  const r16   = allSlots.filter(s => s.round === 'r16')
+  const r16   = allSlots.filter(s => s.round === 'r32')
   const qf    = allSlots.filter(s => s.round === 'qf')
   const sf    = allSlots.filter(s => s.round === 'sf')
   const third = allSlots.filter(s => s.round === 'third')
   const final = allSlots.filter(s => s.round === 'final')
 
   const resolveMySlot = (slot: BracketSlot) => {
-    if (slot.slotId.startsWith('r16_')) {
-      const derived = myR16Picks[slot.slotId]
+    if (slot.slotId.startsWith('r32_')) {
+      const derived = myR32Picks[slot.slotId]
       return {
         home: derived?.home ?? null,
         away: derived?.away ?? null,
@@ -705,7 +652,7 @@ function BracketDesktop() {
           onPick={setPick}
           isLocked={isRoundLocked(slot.round)}
           compact={compact}
-          fromGroups={slot.slotId.startsWith('r16_')}
+          fromGroups={slot.slotId.startsWith('r32_')}
         />
       )
     })

@@ -39,7 +39,6 @@ function mapRow(row: BoletimRow): Boletim {
 interface BoletimState {
   bulletins:  Boletim[]
   isLoaded:   boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _channel:   any | null
 
   init:          () => Promise<void>

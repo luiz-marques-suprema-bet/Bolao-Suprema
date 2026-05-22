@@ -159,7 +159,7 @@ function ApostasGeraisSummary({ championPick, vicePick, scorerPick, onEdit }: {
 
 function useProfileForm() {
   const { user, updateProfile, signOut } = useAuthStore()
-  const { championPick, vicePick, scorerPick, clearAllPredictions } = usePredictionStore()
+  const { championPick, vicePick, scorerPick, deleteUserPredictionsExplicitly } = usePredictionStore()
   const navigate = useNavigate()
 
   const [firstName, setFirstName]               = useState(user?.firstName ?? '')
@@ -226,7 +226,7 @@ function useProfileForm() {
 
   const handleSignOut = async () => { await signOut(); navigate('/login') }
   const handleClearPredictions = () => {
-    if (window.confirm('Apagar todos os palpites? Esta ação não pode ser desfeita.')) clearAllPredictions()
+    if (window.confirm('Apagar todos os palpites? Esta acao nao pode ser desfeita.')) deleteUserPredictionsExplicitly()
   }
 
   return {

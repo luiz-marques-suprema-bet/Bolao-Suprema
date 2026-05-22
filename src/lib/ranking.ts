@@ -28,7 +28,7 @@ export async function fetchRanking(myUserId?: string): Promise<RankingEntry[]> {
   }
 
   const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values())
-    .filter(u => u.participant_status !== 'blocked')
+    .filter(u => u.participant_status === 'active')
     .filter(u => u.first_name?.trim())   // hide users who never completed profile
     .filter(u => !u.privacy_hide_profile || u.id === myUserId)
 
