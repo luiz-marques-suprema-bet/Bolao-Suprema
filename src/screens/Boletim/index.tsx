@@ -41,6 +41,79 @@ export function BoletimCard({
     day: '2-digit', month: 'short', year: 'numeric',
   }).toUpperCase()
 
+  if (featured && compactHome) {
+    return (
+      <div className="grid overflow-hidden border-2 border-line bg-inverse text-inverse-text shadow-card md:grid-cols-[minmax(220px,340px)_1fr] lg:grid-cols-[minmax(260px,380px)_1fr]">
+        <div className="relative aspect-[4/5] min-h-[260px] bg-inverse-text/10 md:min-h-0">
+          {b.imageUrl ? (
+            <SafeImage src={b.imageUrl} alt={b.title} fit={b.imageFitMode ?? 'cover'} className="absolute inset-0 h-full w-full" />
+          ) : (
+            <div className="absolute inset-0 grid place-items-center bg-yellow text-[#0D0D0D]">
+              <span className="font-display text-4xl leading-none">BS</span>
+            </div>
+          )}
+          <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+            <span className={`inline-block px-2 py-0.5 font-mono text-[9px] tracking-eyebrow ${labelColor(b.label)}`}>
+              {b.label}
+            </span>
+            {b.isPinned && (
+              <span className="inline-block bg-yellow px-2 py-0.5 font-mono text-[9px] tracking-eyebrow text-[#0D0D0D]">
+                FIXADO
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-col justify-between gap-5 p-4 md:p-5 lg:p-6">
+          <div>
+            <div className="mb-3 flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="mb-2 font-mono text-[9px] tracking-eyebrow text-inverse-text/45">BOLETIM DA FIRMA</p>
+                <div className="font-display text-3xl leading-tight text-inverse-text md:text-4xl lg:text-5xl">
+                  {b.title.toUpperCase()}
+                </div>
+                {b.subtitle && (
+                  <div className="mt-1 font-serif-it text-lg leading-snug text-inverse-text/70 md:text-xl">
+                    {b.subtitle}
+                  </div>
+                )}
+              </div>
+              {canEdit && (
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    onClick={() => onTogglePin(b.id)}
+                    className="border border-inverse-text/30 px-2 py-1 font-mono text-[8px] text-inverse-text/60 transition-colors hover:border-inverse-text hover:text-inverse-text"
+                  >
+                    {b.isPinned ? 'DESAFIXAR' : 'FIXAR'}
+                  </button>
+                  <button
+                    onClick={() => onDelete(b.id)}
+                    className="border border-red/50 px-2 py-1 font-mono text-[8px] text-red/70 transition-colors hover:border-red hover:text-red"
+                  >
+                    EXCLUIR
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <p className="font-sans text-[14px] leading-relaxed text-inverse-text/80 line-clamp-4">
+              {b.body}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-inverse-text/15 pt-3">
+            <p className="font-mono text-[9px] text-inverse-text/45">
+              {b.authorName} · {date}
+            </p>
+            <span className="font-mono text-[9px] font-bold tracking-eyebrow text-yellow">
+              LER BOLETIM
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (featured) {
     return (
       <div className={compactHome ? 'border-2 border-line bg-inverse text-inverse-text p-4 shadow-card md:p-5' : 'border-2 border-line bg-inverse text-inverse-text p-5 shadow-card md:p-8'}>

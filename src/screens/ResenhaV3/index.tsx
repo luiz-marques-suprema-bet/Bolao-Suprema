@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/auth.store'
 import { useChatStore, type ChatProfile } from '@/stores/chat.store'
@@ -434,7 +435,8 @@ export function ResenhaScreen() {
                     menuOpen={messageMenuId === item.message.id}
                     openMenuUp={messagesAfter < 2}
                     onToggleMenu={() => setMessageMenuId(messageMenuId === item.message.id ? null : item.message.id)}
-                    onReact={emoji => void toggleReaction(item.message.id, emoji)}
+                    onCloseMenu={() => setMessageMenuId(null)}
+                    onReact={emoji => { void toggleReaction(item.message.id, emoji); setMessageMenuId(null) }}
                     onReply={() => { setReplyingTo(item.message); setMessageMenuId(null) }}
                     onOpenProfile={() => setProfileMsg(item.message)}
                     onPin={() => { void setPinned(pinnedId === item.message.id ? null : item.message.id); setMessageMenuId(null) }}
@@ -448,7 +450,7 @@ export function ResenhaScreen() {
             <div ref={endRef} />
           </div>
 
-          <footer className="shrink-0 border-t border-hairline bg-paper shadow-[0_-18px_42px_rgba(var(--color-shadow-soft)/0.24)]">
+          <footer className="shrink-0 border-t border-hairline bg-paper/95 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-sm">
             <AnimatePresence>
               {gifOpen && (
                 <GifDock
@@ -509,6 +511,7 @@ export function ResenhaScreen() {
               <textarea
                 value={draft}
                 onChange={event => setDraftValue(event.target.value.slice(0, 1000))}
+                onFocus={() => setMessageMenuId(null)}
                 onBlur={() => setTyping(false)}
                 onKeyDown={event => {
                   if (event.key === 'Enter' && !event.shiftKey) {
@@ -595,6 +598,7 @@ function MessageRow({
   menuOpen,
   openMenuUp,
   onToggleMenu,
+  onCloseMenu,
   onReact,
   onReply,
   onOpenProfile,
@@ -612,6 +616,7 @@ function MessageRow({
   menuOpen: boolean
   openMenuUp: boolean
   onToggleMenu: () => void
+  onCloseMenu: () => void
   onReact: (emoji: string) => void
   onReply: () => void
   onOpenProfile: () => void
@@ -622,10 +627,50 @@ function MessageRow({
 }) {
   const mine = message.isYou ?? message.userId === currentUserId
   const canDelete = mine || isAdmin
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null)
+  const menuPanelRef = useRef<HTMLDivElement | null>(null)
+  const [menuAnchor, setMenuAnchor] = useState<DOMRect | null>(null)
   const reactions = message.reactions ?? []
   const groupedReactions = QUICK_REACTIONS
     .map(emoji => ({ emoji, count: reactions.filter(reaction => reaction.emoji === emoji).length, mine: reactions.some(reaction => reaction.userId === currentUserId && reaction.emoji === emoji) }))
     .filter(reaction => reaction.count > 0)
+
+  useEffect(() => {
+    if (!menuOpen) {
+      setMenuAnchor(null)
+      return
+    }
+
+    if (menuButtonRef.current) {
+      setMenuAnchor(menuButtonRef.current.getBoundingClientRect())
+    }
+
+    const handlePointerDown = (event: PointerEvent | MouseEvent) => {
+      const target = event.target as Node | null
+      if (!target) return
+      if (menuButtonRef.current?.contains(target)) return
+      if (menuPanelRef.current?.contains(target)) return
+      onCloseMenu()
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCloseMenu()
+    }
+    const handleScroll = () => onCloseMenu()
+
+    document.addEventListener('pointerdown', handlePointerDown, true)
+    document.addEventListener('mousedown', handlePointerDown, true)
+    document.addEventListener('click', handlePointerDown, true)
+    document.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('scroll', handleScroll, true)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true)
+      document.removeEventListener('mousedown', handlePointerDown, true)
+      document.removeEventListener('click', handlePointerDown, true)
+      document.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('scroll', handleScroll, true)
+    }
+  }, [menuOpen, onCloseMenu])
 
   return (
     <motion.div
@@ -677,6 +722,7 @@ function MessageRow({
         </div>
 
         <button
+          ref={menuButtonRef}
           type="button"
           onClick={onToggleMenu}
           className={cn(
@@ -692,6 +738,8 @@ function MessageRow({
         <AnimatePresence>
           {menuOpen && (
             <MessageActionPanel
+              anchorRect={menuAnchor}
+              panelRef={menuPanelRef}
               mine={mine}
               openUp={openMenuUp}
               isAdmin={isAdmin}
@@ -769,6 +817,8 @@ function ActionButton({ label, detail, busy, onClick }: { label: string; detail:
 }
 
 function MessageActionPanel({
+  anchorRect,
+  panelRef,
   mine,
   openUp,
   isAdmin,
@@ -779,6 +829,8 @@ function MessageActionPanel({
   onDelete,
   onReact,
 }: {
+  anchorRect: DOMRect | null
+  panelRef: RefObject<HTMLDivElement | null>
   mine: boolean
   openUp: boolean
   isAdmin: boolean
@@ -789,16 +841,25 @@ function MessageActionPanel({
   onDelete: () => void
   onReact: (emoji: string) => void
 }) {
-  return (
+  if (!anchorRect || typeof document === 'undefined') return null
+
+  const panelWidth = Math.min(288, window.innerWidth - 16)
+  const hasSpaceAbove = anchorRect.top > 280
+  const opensUp = (openUp && hasSpaceAbove) || anchorRect.bottom > window.innerHeight - 330
+  const preferredLeft = mine ? anchorRect.left - panelWidth - 10 : anchorRect.right + 10
+  const left = Math.max(8, Math.min(preferredLeft, window.innerWidth - panelWidth - 8))
+  const verticalStyle = opensUp
+    ? { bottom: Math.max(8, window.innerHeight - anchorRect.top + 8) }
+    : { top: Math.min(anchorRect.bottom + 8, window.innerHeight - 16) }
+
+  return createPortal(
     <motion.div
+      ref={panelRef}
       initial={{ opacity: 0, y: -4, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -4, scale: 0.98 }}
-      className={cn(
-        'absolute z-40 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl ui-card',
-        mine ? 'right-0' : 'left-0',
-        openUp ? 'bottom-full mb-2' : 'top-full mt-2',
-      )}
+      style={{ position: 'fixed', left, width: panelWidth, zIndex: 80, ...verticalStyle }}
+      className="overflow-hidden rounded-2xl ui-card shadow-[0_18px_42px_rgba(0,0,0,0.18)]"
     >
       <div className="border-b border-hairline p-2">
         <div className="mb-2 px-2 font-mono text-[9px] font-bold text-ink-4">REAGIR</div>
@@ -820,7 +881,8 @@ function MessageActionPanel({
         {isAdmin && <MenuAction label={isPinned ? 'Desafixar' : 'Fixar'} detail="destacar no topo" onClick={onPin} />}
         {canDelete && <MenuAction label="Apagar" detail={mine ? 'remover minha mensagem' : 'moderacao admin'} danger onClick={onDelete} />}
       </div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   )
 }
 

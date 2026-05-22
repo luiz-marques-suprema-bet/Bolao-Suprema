@@ -260,7 +260,7 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
       <button
         onClick={handleConfirm}
         disabled={saving}
-        className="btn-yellow w-full text-[11px] py-3 mt-3 tracking-eyebrow font-bold disabled:opacity-50 disabled:cursor-wait"
+        className="btn-yellow ml-auto mt-3 w-full max-w-[360px] py-2.5 text-[10px] font-bold tracking-eyebrow disabled:cursor-wait disabled:opacity-50"
       >
         {saving ? 'SALVANDO...' : hasPick ? 'ATUALIZAR PALPITE ✓' : 'CONFIRMAR PALPITE ✓'}
       </button>
@@ -624,11 +624,11 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
                 className="w-8 h-8 flex items-center justify-center border-2 border-l-0 border-ink font-mono text-base hover:bg-yellow active:bg-yellow select-none">+</button>
             </div>
           </div>
-          <div className="px-3 pb-3">
+          <div className="flex justify-center px-3 pb-3">
             <button
               onClick={handleConfirm}
               disabled={saving}
-              className="btn-yellow w-full text-[10px] py-2 tracking-eyebrow font-bold disabled:opacity-50"
+              className="btn-yellow w-full max-w-[420px] py-2 text-[10px] font-bold tracking-eyebrow disabled:opacity-50"
             >
               {saving ? 'SALVANDO...' : hasPick ? 'ATUALIZAR PALPITE' : 'CONFIRMAR PALPITE'}
             </button>
@@ -1316,7 +1316,7 @@ function ChampionTab() {
                     <button
                       onClick={() => { if (scorerInput.trim()) setScorerPick(scorerInput.trim()) }}
                       disabled={!scorerInput.trim() || scorerInput.trim() === scorerPick}
-                      className="mt-3 btn-yellow w-full text-[11px] py-3 tracking-eyebrow font-bold disabled:opacity-40"
+                      className="mt-3 btn-yellow w-full py-2.5 text-[10px] font-bold tracking-eyebrow disabled:opacity-40"
                     >
                       {scorerPick ? `ALTERAR — ${scorerPick}` : 'CONFIRMAR ARTILHEIRO ✓'}
                     </button>
@@ -1533,39 +1533,58 @@ export function PredictionScreen() {
   return (
     <div className="min-h-dvh bg-paper">
       {/* Header editorial */}
-      <div className="border-b border-hairline pt-6 pb-5 md:pt-8 md:pb-6">
-        <div className="app-shell flex items-end justify-between gap-4">
-          <div className="min-w-0">
-            <div className="font-display text-5xl md:text-7xl leading-none text-ink">PALPITA</div>
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="font-serif-it text-3xl md:text-5xl text-green-deep leading-none">tudo,</span>
-              <span className="font-mono text-[10px] tracking-eyebrow text-ink-3 self-end mb-1">jogador.</span>
-              <span className="md:hidden rounded-full border border-hairline bg-paper-white px-2.5 py-1 font-mono text-[9px] font-bold tracking-eyebrow text-ink-3">
-                {totalGroupPreds} de {totalGroupMatches}
-              </span>
+      <div className="border-b border-hairline bg-paper">
+        <div className="app-shell py-4 md:py-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+                <div className="font-display text-5xl leading-none text-ink md:text-6xl">PALPITA</div>
+                <span className="font-serif-it text-3xl leading-none text-green-deep md:text-5xl">tudo,</span>
+                <span className="mb-1 font-mono text-[10px] tracking-eyebrow text-ink-3">jogador.</span>
+              </div>
+              <p className="mt-2 max-w-xl font-mono text-[9px] font-bold tracking-eyebrow text-ink-4">
+                FASE DE GRUPOS · MATA-MATA · ESPECIAIS
+              </p>
             </div>
-          </div>
-          <div className="text-right hidden md:block">
-            <div className="font-display text-4xl text-ink">{totalGroupPreds}</div>
-            <div className="font-mono text-[9px] text-ink-3">de {totalGroupMatches} jogos</div>
+
+            <div className="w-full border border-hairline bg-card px-4 py-3 shadow-soft md:w-[360px]">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <div className="font-mono text-[9px] font-bold tracking-eyebrow text-ink-4">PROGRESSO</div>
+                  <div className="mt-1 font-sans text-sm text-ink-2">palpites da fase de grupos</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-display text-4xl leading-none text-ink">{totalGroupPreds}</div>
+                  <div className="font-mono text-[9px] text-ink-3">de {totalGroupMatches} jogos</div>
+                </div>
+              </div>
+              <div className="mt-3 h-1.5 overflow-hidden bg-surface-2">
+                <div
+                  className="h-full bg-yellow"
+                  style={{ width: `${totalGroupMatches ? Math.min(100, (totalGroupPreds / totalGroupMatches) * 100) : 0}%` }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-hairline flex sticky top-0 lg:top-14 bg-paper/95 z-20 backdrop-blur-md">
-        {tabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              'flex-1 py-3 font-mono text-[10px] font-bold tracking-eyebrow border-b-2 transition-colors',
-              tab === t.id ? 'border-ink text-ink' : 'border-transparent text-ink-3 hover:text-ink',
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="sticky top-0 z-20 border-b border-hairline bg-paper/95 backdrop-blur-md lg:top-14">
+        <div className="app-shell flex">
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                'flex-1 border-b-2 py-3 font-mono text-[10px] font-bold tracking-eyebrow transition-colors',
+                tab === t.id ? 'border-ink text-ink' : 'border-transparent text-ink-3 hover:text-ink',
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}
@@ -1579,7 +1598,7 @@ export function PredictionScreen() {
             transition={{ duration: 0.12 }}
           >
             {isDesktop ? (
-              <div className="app-shell py-6 grid grid-cols-[260px_1fr] gap-6">
+              <div className="app-shell grid grid-cols-[240px_minmax(0,1fr)] gap-5 py-5">
                 <DesktopGroupSidebar
                   selectedGroup={selectedGroup}
                   onSelect={setSelectedGroup}
