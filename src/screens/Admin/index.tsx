@@ -892,7 +892,7 @@ function AdminDesktop() {
 
   return (
     <div className="min-h-dvh bg-paper">
-      <div className="max-w-screen-xl mx-auto px-6 py-8">
+      <div className="app-shell py-8">
 
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -1049,7 +1049,7 @@ function AdminDesktop() {
                 {POINT_RULES.map(r => (
                   <div key={r.id} className="flex items-center gap-2">
                     <span className="font-display text-lg text-green w-7 flex-shrink-0">+{r.points}</span>
-                    <Tooltip content={r.description} side="top" maxWidth={240}>
+                    <Tooltip content={r.description} side="top" maxWidth={340}>
                       <span className="font-mono text-[10px] text-ink-3 cursor-default underline decoration-dotted decoration-ink-4 underline-offset-2">
                         {r.label}
                       </span>

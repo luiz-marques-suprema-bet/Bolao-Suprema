@@ -322,7 +322,7 @@ function RankingDesktop() {
 
   return (
     <div className="min-h-dvh bg-paper">
-      <div className="max-w-screen-xl mx-auto px-6 py-8">
+      <div className="app-shell py-8">
         <div className="border-b border-hairline pb-5 mb-6">
           <div className="font-display text-5xl md:text-7xl leading-none text-ink">RANKING</div>
           <div className="flex items-baseline gap-3">

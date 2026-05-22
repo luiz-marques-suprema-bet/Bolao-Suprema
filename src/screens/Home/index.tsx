@@ -653,6 +653,7 @@ function HomeBoletimSection({ compact = false }: { compact?: boolean }) {
               onDelete={deleteBoletim}
               onTogglePin={togglePin}
               featured
+              compactHome
             />
           )}
           {rest.length > 0 && (
@@ -1004,7 +1005,7 @@ function HomeDesktop() {
 
   return (
     <div className="min-h-dvh bg-paper">
-      <div className="max-w-screen-xl mx-auto px-6 py-8 space-y-5">
+      <div className="app-shell py-8 space-y-5">
 
         {/* Row 1: hero + progress + ranking */}
         <div className="grid grid-cols-[1.5fr_1fr_0.9fr] gap-5">

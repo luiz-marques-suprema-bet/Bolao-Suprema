@@ -402,7 +402,7 @@ function ProfileDesktop() {
 
   return (
     <div className="min-h-dvh bg-paper">
-      <div className="max-w-screen-lg mx-auto px-8 py-10">
+      <div className="app-shell py-10">
 
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">

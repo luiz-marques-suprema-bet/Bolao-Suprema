@@ -106,7 +106,7 @@ export function UserProfileScreen() {
         </button>
       </div>
 
-      <div className="max-w-screen-md mx-auto px-5 md:px-8">
+      <div className="app-shell">
 
         {/* Avatar + name row — relative z-10 ensures it paints above the positioned banner */}
         <div className="relative z-10 flex items-end justify-between -mt-10 md:-mt-12 mb-4">

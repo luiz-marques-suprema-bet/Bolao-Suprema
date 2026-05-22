@@ -27,12 +27,14 @@ export function BoletimCard({
   onDelete,
   onTogglePin,
   featured = false,
+  compactHome = false,
 }: {
   b: Boletim
   canEdit: boolean
   onDelete: (id: string) => void
   onTogglePin: (id: string) => void
   featured?: boolean
+  compactHome?: boolean
 }) {
   const [expanded, setExpanded] = useState(featured)
   const date = new Date(b.createdAt).toLocaleDateString('pt-BR', {
@@ -41,10 +43,10 @@ export function BoletimCard({
 
   if (featured) {
     return (
-      <div className="border-2 border-line bg-inverse text-inverse-text p-5 shadow-card md:p-8">
-        <div className="flex items-start justify-between gap-4 mb-4">
+      <div className={compactHome ? 'border-2 border-line bg-inverse text-inverse-text p-4 shadow-card md:p-5' : 'border-2 border-line bg-inverse text-inverse-text p-5 shadow-card md:p-8'}>
+        <div className={compactHome ? 'flex items-start justify-between gap-4 mb-3' : 'flex items-start justify-between gap-4 mb-4'}>
           <div>
-            <span className={`inline-block font-mono text-[9px] tracking-eyebrow px-2 py-0.5 mb-3 ${labelColor(b.label)}`}>
+            <span className={`inline-block font-mono text-[9px] tracking-eyebrow px-2 py-0.5 ${compactHome ? 'mb-2' : 'mb-3'} ${labelColor(b.label)}`}>
               {b.label}
             </span>
             {b.isPinned && (
@@ -52,11 +54,11 @@ export function BoletimCard({
                 · FIXADO
               </span>
             )}
-            <div className="font-display text-3xl md:text-5xl leading-tight text-inverse-text">
+            <div className={compactHome ? 'font-display text-2xl md:text-4xl leading-tight text-inverse-text' : 'font-display text-3xl md:text-5xl leading-tight text-inverse-text'}>
               {b.title.toUpperCase()}
             </div>
             {b.subtitle && (
-              <div className="font-serif-it text-lg md:text-2xl text-inverse-text/70 mt-1">
+              <div className={compactHome ? 'font-serif-it text-base md:text-xl text-inverse-text/70 mt-0.5' : 'font-serif-it text-lg md:text-2xl text-inverse-text/70 mt-1'}>
                 {b.subtitle}
               </div>
             )}
@@ -80,14 +82,14 @@ export function BoletimCard({
         </div>
 
         {b.imageUrl && (
-          <div className="relative mb-4 aspect-video w-full overflow-hidden bg-inverse-text/10">
+          <div className={compactHome ? 'relative mb-3 aspect-[21/8] max-h-[220px] w-full overflow-hidden bg-inverse-text/10' : 'relative mb-4 aspect-video w-full overflow-hidden bg-inverse-text/10'}>
             <SafeImage src={b.imageUrl} alt={b.title} fit={b.imageFitMode ?? 'cover'} className="absolute inset-0 h-full w-full" />
           </div>
         )}
 
-        <p className="font-sans text-[14px] text-inverse-text/80 leading-relaxed">{b.body}</p>
+        <p className={compactHome ? 'font-sans text-[13px] text-inverse-text/80 leading-relaxed line-clamp-3' : 'font-sans text-[14px] text-inverse-text/80 leading-relaxed'}>{b.body}</p>
 
-        <p className="font-mono text-[9px] text-inverse-text/45 mt-4">
+        <p className={compactHome ? 'font-mono text-[9px] text-inverse-text/45 mt-3' : 'font-mono text-[9px] text-inverse-text/45 mt-4'}>
           {b.authorName} · {date}
         </p>
       </div>
@@ -420,7 +422,7 @@ export function BoletimScreen() {
     <div className="min-h-dvh bg-paper pb-24">
       {/* ── Masthead ── */}
       <div className="border-b-2 border-line-strong bg-paper px-4 py-6 md:px-8 md:py-8">
-        <div className="max-w-screen-lg mx-auto flex items-end justify-between">
+        <div className="app-shell flex items-end justify-between">
           <div>
             <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-2">
               SUPREMA GAMING · BOLETIM OFICIAL
@@ -442,7 +444,7 @@ export function BoletimScreen() {
       </div>
 
       {/* ── Content ── */}
-      <div className="max-w-screen-lg mx-auto px-4 py-6 md:px-8 space-y-4">
+      <div className="app-shell py-6 space-y-4">
         {bulletins.length === 0 ? (
           <div className="py-20 text-center">
             <div className="font-display text-3xl text-ink-3">SEM BOLETINS</div>

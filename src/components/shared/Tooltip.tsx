@@ -12,7 +12,7 @@ interface TooltipProps {
 // Space reserved above/below the element (includes the 6px arrow)
 const GAP = 18
 
-export function Tooltip({ content, children, side = 'top', maxWidth = 300 }: TooltipProps) {
+export function Tooltip({ content, children, side = 'top', maxWidth = 340 }: TooltipProps) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState({ x: 0, y: 0, arrowX: 0, actualSide: side as 'top' | 'bottom' })
   const wrapperRef = useRef<HTMLSpanElement>(null)
@@ -22,10 +22,10 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 300 }: Too
     const r = wrapperRef.current.getBoundingClientRect()
     const mx = e.clientX
 
-    // Flip only when there is genuinely not enough room above (rough tooltip height: 76px + gap)
+    // Flip only when there is genuinely not enough room above (rough tooltip height: 84px + gap)
     const spaceAbove = r.top
     const spaceBelow = window.innerHeight - r.bottom
-    const needsSpace = 76 + GAP
+    const needsSpace = 84 + GAP
     const actualSide: 'top' | 'bottom' =
       side === 'top'    && spaceAbove < needsSpace ? 'bottom' :
       side === 'bottom' && spaceBelow < needsSpace ? 'top'    :
@@ -87,9 +87,9 @@ export function Tooltip({ content, children, side = 'top', maxWidth = 300 }: Too
                 pointerEvents: 'none',
               }}
             >
-              <div className="relative border border-line-strong bg-inverse px-3.5 py-2.5 text-inverse-text shadow-[0_18px_50px_rgba(0,0,0,0.34),4px_4px_0_#FFCB05]">
+              <div className="relative border border-line-strong bg-inverse px-4 py-3 text-inverse-text shadow-[0_18px_50px_rgba(0,0,0,0.34),4px_4px_0_#FFCB05]">
                 {typeof content === 'string' ? (
-                  <p className="font-mono text-[11.5px] leading-[1.45] text-inverse-text">{content}</p>
+                  <p className="font-mono text-[13px] leading-[1.45] text-inverse-text">{content}</p>
                 ) : content}
 
                 {coords.actualSide === 'top' && (

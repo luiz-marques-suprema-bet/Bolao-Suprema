@@ -199,6 +199,10 @@
     @apply bg-inverse text-inverse-text border-line-strong;
   }
 
+  .app-shell {
+    @apply mx-auto w-full max-w-[1500px] px-4 md:px-6 xl:px-8;
+  }
+
   .dark .bg-paper {
     background-color: rgb(var(--color-paper));
   }

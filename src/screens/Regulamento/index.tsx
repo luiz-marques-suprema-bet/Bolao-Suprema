@@ -35,7 +35,7 @@ export function RegulamentoScreen() {
 
   return (
     <div className="min-h-dvh bg-paper pb-24 md:pb-10">
-      <div className="max-w-4xl mx-auto px-4 py-6 md:px-8 md:py-8 space-y-5">
+      <div className="app-shell py-6 md:py-8 space-y-5">
 
         {/* Hero */}
         <header className="ui-inverse p-6 md:p-8 relative overflow-hidden">

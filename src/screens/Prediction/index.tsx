@@ -1534,7 +1534,7 @@ export function PredictionScreen() {
     <div className="min-h-dvh bg-paper">
       {/* Header editorial */}
       <div className="border-b border-hairline pt-6 pb-5 md:pt-8 md:pb-6">
-        <div className="mx-auto flex max-w-screen-xl items-end justify-between gap-4 px-4 md:px-6">
+        <div className="app-shell flex items-end justify-between gap-4">
           <div className="min-w-0">
             <div className="font-display text-5xl md:text-7xl leading-none text-ink">PALPITA</div>
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -1579,7 +1579,7 @@ export function PredictionScreen() {
             transition={{ duration: 0.12 }}
           >
             {isDesktop ? (
-              <div className="max-w-screen-xl mx-auto px-6 py-6 grid grid-cols-[260px_1fr] gap-6">
+              <div className="app-shell py-6 grid grid-cols-[260px_1fr] gap-6">
                 <DesktopGroupSidebar
                   selectedGroup={selectedGroup}
                   onSelect={setSelectedGroup}
@@ -1601,7 +1601,7 @@ export function PredictionScreen() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.12 }}
           >
-            <div className="md:max-w-2xl md:mx-auto">
+            <div className="app-shell py-6">
               <KnockoutTab />
             </div>
           </motion.div>
@@ -1615,7 +1615,7 @@ export function PredictionScreen() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.12 }}
           >
-            <div className="md:max-w-2xl md:mx-auto">
+            <div className="app-shell py-6">
               <ChampionTab />
             </div>
           </motion.div>

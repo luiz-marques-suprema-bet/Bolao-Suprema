@@ -25,7 +25,7 @@ export function MyPredictionsScreen() {
 
   return (
     <div className="min-h-dvh bg-paper px-4 py-6 md:px-8">
-      <div className="max-w-5xl mx-auto space-y-5">
+      <div className="app-shell space-y-5">
         <header className="ui-card p-5">
           <p className="font-mono text-[10px] tracking-eyebrow text-ink-3">MEU PAINEL</p>
           <div className="font-display text-5xl md:text-7xl leading-none text-ink">PALPITES</div>

@@ -43,7 +43,7 @@ export function DesktopNav() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-hairline bg-paper/90 shadow-[0_12px_34px_rgba(0,0,0,0.08)] backdrop-blur-md">
-      <div className="mx-auto flex max-w-screen-xl items-center gap-4 px-4 h-14 xl:gap-8 xl:px-6">
+      <div className="app-shell flex h-14 items-center gap-4 xl:gap-8">
 
         <button onClick={() => navigate('/home')} className="flex-shrink-0">
           <Logo height={48} />

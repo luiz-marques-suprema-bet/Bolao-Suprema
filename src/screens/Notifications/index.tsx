@@ -57,7 +57,7 @@ export function NotificationsScreen() {
 
   return (
     <div className="min-h-dvh bg-paper pb-24">
-      <div className="max-w-screen-lg mx-auto px-5 md:px-8 py-8">
+      <div className="app-shell py-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 border-b border-hairline pb-5 mb-5">
           <div>
             <div className="font-display text-5xl md:text-7xl leading-none text-ink">AVISOS</div>
