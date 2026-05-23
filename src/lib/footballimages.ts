@@ -14,8 +14,8 @@ const PEXELS_KEY = import.meta.env.VITE_PEXELS_API_KEY as string | undefined
 const localAsset = (file: string) => `${import.meta.env.BASE_URL}assets/${file}`
 
 export const FOOTBALL_FALLBACKS: FootballImage[] = [
-  { url: localAsset('hero-jogadores.webp'), alt: 'Jogadores brasileiros', credit: 'Bolão Suprema' },
-  { url: localAsset('hero-portrait.webp'), alt: 'Torcedor em clima de Copa', credit: 'Bolão Suprema' },
+  { url: localAsset('hero-onboarding.png'), alt: 'Jogadores brasileiros', credit: 'Bolão Suprema' },
+  { url: localAsset('hero-portrait.png'), alt: 'Torcedor em clima de Copa', credit: 'Bolão Suprema' },
   { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/MetLife_Stadium_New_York_Giants_vs._New_York_Jets.jpg/1280px-MetLife_Stadium_New_York_Giants_vs._New_York_Jets.jpg',  alt: 'MetLife Stadium', credit: 'Wikimedia' },
   { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/AT%26T_Stadium_-_Aerial.jpg/1280px-AT%26T_Stadium_-_Aerial.jpg', alt: 'AT&T Stadium Dallas', credit: 'Wikimedia' },
   { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/SoFi_Stadium_-_Inglewood_CA.jpg/1280px-SoFi_Stadium_-_Inglewood_CA.jpg', alt: 'SoFi Stadium Los Angeles', credit: 'Wikimedia' },

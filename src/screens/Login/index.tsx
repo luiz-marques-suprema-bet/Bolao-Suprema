@@ -141,7 +141,7 @@ function LoginMobile() {
     <div className="min-h-dvh flex flex-col relative bg-paper text-ink">
       <div className="absolute inset-x-0 top-0 h-[48%] overflow-hidden">
         <img
-          src={asset('assets/hero-portrait.webp')}
+          src={asset('assets/hero-portrait.png')}
           alt=""
           className="w-full h-full object-cover object-center opacity-55"
         />
@@ -291,7 +291,7 @@ function LoginDesktop() {
       {/* Left — Photo */}
       <div className="relative flex-1 hidden lg:flex flex-col justify-end p-10 overflow-hidden">
         <img
-          src={asset('assets/hero-portrait.webp')}
+          src={asset('assets/hero-portrait.png')}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
         />
