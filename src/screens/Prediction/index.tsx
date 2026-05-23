@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { formatMatchDate, formatMatchDateTime, getBettingDeadline } from '@/lib/matchTime'
 import { isBetOpen } from '@/lib/markets'
+import { isPlaceholderMatch, isPlaceholderTeam } from '@/lib/matchGuards'
 import type { Match } from '@/types'
 
 type PredTab = 'groups' | 'knockout' | 'champion'
@@ -114,6 +115,13 @@ function ScoreInput({ value, onChange }: { value: number; onChange: (n: number) 
 // ─── Status chip ──────────────────────────────────────────────────────────────
 
 function StatusChip({ match }: { match: Match }) {
+  if (isPlaceholderMatch(match)) {
+    return (
+      <Tooltip content="Este jogo sera liberado quando os classificados forem definidos." side="top">
+        <span className="font-mono text-[8px] tracking-eyebrow text-ink-4 font-bold cursor-default">A DEFINIR</span>
+      </Tooltip>
+    )
+  }
   if (match.status === 'live') {
     return (
       <Tooltip content="Partida em andamento — palpites encerrados" side="top">
@@ -145,6 +153,30 @@ function StatusChip({ match }: { match: Match }) {
   )
 }
 
+function TeamSide({ match, side, flagSize = 32 }: { match: Match; side: 'home' | 'away'; flagSize?: number }) {
+  const team = match[side]
+  const placeholder = isPlaceholderTeam(team)
+  const alignRight = side === 'away'
+
+  return (
+    <div className={cn('flex items-center gap-2 flex-1 min-w-0', alignRight && 'justify-end')}>
+      {!alignRight && <Flag team={team} size={flagSize} placeholderLabel="A definir" />}
+      <div className={cn('min-w-0', alignRight && 'text-right')}>
+        <div className={cn(
+          'font-mono text-[11px] font-bold leading-tight',
+          placeholder && 'text-ink-4',
+        )}>
+          {placeholder ? 'A definir' : team.code}
+        </div>
+        <div className="font-mono text-[9px] text-ink-2 truncate leading-tight">
+          {placeholder ? team.name || 'Classificado a definir' : team.name}
+        </div>
+      </div>
+      {alignRight && <Flag team={team} size={flagSize} placeholderLabel="A definir" />}
+    </div>
+  )
+}
+
 // ─── Match row ────────────────────────────────────────────────────────────────
 
 function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => void }) {
@@ -160,6 +192,7 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
   const [saving, setSaving] = useState(false)
 
   const isPickable = isBetOpen(match)
+  const isPlaceholder = isPlaceholderMatch(match)
   const isLocked = match.status === 'locked' || (!isPickable && (match.status === 'open' || match.status === 'scheduled'))
   const isLive = match.status === 'live'
   const isDone = match.status === 'finished'
@@ -215,7 +248,7 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
   const pickerContent = (
     <div className="px-4 pt-5 pb-5 bg-paper-deep border-t border-hairline">
       <p className="font-mono text-[10px] tracking-eyebrow text-ink text-center mb-1 font-bold">
-        QUAL VAI SER O PLACAR?
+        {isPlaceholder ? 'JOGO A DEFINIR' : 'QUAL VAI SER O PLACAR?'}
       </p>
       <p className="font-mono text-[9px] text-ink-2 text-center mb-5">
         {match.venue} · {formatMatchDateTime(match)}
@@ -225,7 +258,7 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
         <div className="flex flex-col items-center gap-2 flex-1">
           <Flag team={match.home} size={44} />
           <span className="font-mono text-[9px] font-bold text-center leading-tight">
-            {match.home.name.toUpperCase()}
+            {isPlaceholderTeam(match.home) ? match.home.name : match.home.name.toUpperCase()}
           </span>
           <ScoreInput value={home} onChange={updateHome} />
         </div>
@@ -235,7 +268,7 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
         <div className="flex flex-col items-center gap-2 flex-1">
           <Flag team={match.away} size={44} />
           <span className="font-mono text-[9px] font-bold text-center leading-tight">
-            {match.away.name.toUpperCase()}
+            {isPlaceholderTeam(match.away) ? match.away.name : match.away.name.toUpperCase()}
           </span>
           <ScoreInput value={away} onChange={updateAway} />
         </div>
@@ -274,15 +307,7 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
         )}
       >
         {/* Home */}
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Flag team={match.home} size={32} />
-          <div className="min-w-0">
-            <div className="font-mono text-[11px] font-bold leading-tight">{match.home.code}</div>
-            <div className="font-mono text-[9px] text-ink-2 truncate leading-tight">
-              {match.home.name}
-            </div>
-          </div>
-        </div>
+        <TeamSide match={match} side="home" />
 
         {/* Center */}
         <div className="flex flex-col items-center gap-0.5 flex-shrink-0 min-w-[80px]">
@@ -292,7 +317,10 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
           {isDone && (
             <span className="font-display text-xl text-ink-3">{match.homeScore}–{match.awayScore}</span>
           )}
-          {isLocked && !isLive && !isDone && (
+          {isPlaceholder && (
+            <span className="font-mono text-[8px] text-ink-4 text-center leading-tight">aguardando<br/>classificados</span>
+          )}
+          {!isPlaceholder && isLocked && !isLive && !isDone && (
             hasPick
               ? <span className="font-display text-xl text-green">{existing.homeScore}–{existing.awayScore}</span>
               : <span className="font-mono text-[9px] text-ink-3">sem palpite</span>
@@ -313,15 +341,7 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
         </div>
 
         {/* Away */}
-        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-          <div className="min-w-0 text-right">
-            <div className="font-mono text-[11px] font-bold leading-tight">{match.away.code}</div>
-            <div className="font-mono text-[9px] text-ink-2 truncate leading-tight">
-              {match.away.name}
-            </div>
-          </div>
-          <Flag team={match.away} size={32} />
-        </div>
+        <TeamSide match={match} side="away" />
 
         {isPickable && hasPick && (
           <span className="font-mono text-[9px] text-ink-3 flex-shrink-0 w-3 text-center">
@@ -473,6 +493,7 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const isPickable = isBetOpen(match)
+  const isPlaceholder = isPlaceholderMatch(match)
   const isLocked = match.status === 'locked' || (!isPickable && (match.status === 'open' || match.status === 'scheduled'))
   const isLive = match.status === 'live'
   const isDone = match.status === 'finished'
@@ -537,7 +558,9 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
         <div className="flex items-center gap-2 min-w-0">
           <Flag team={match.home} size={28} className="shrink-0" />
           <div className="min-w-0">
-            <div className="font-mono text-[12px] font-bold leading-none">{match.home.code}</div>
+            <div className={cn('font-mono text-[12px] font-bold leading-none', isPlaceholderTeam(match.home) && 'text-ink-4')}>
+              {isPlaceholderTeam(match.home) ? 'A definir' : match.home.code}
+            </div>
             <div className="font-mono text-[9px] text-ink-3 truncate leading-none mt-0.5">{match.home.name}</div>
           </div>
         </div>
@@ -559,7 +582,10 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
               <span className="font-mono text-[7px] text-ink-4 tracking-eyebrow">ENCERRADO</span>
             </>
           )}
-          {isLocked && !isLive && !isDone && (
+          {isPlaceholder && (
+            <span className="font-mono text-[8px] text-ink-4 text-center leading-tight">a<br/>definir</span>
+          )}
+          {!isPlaceholder && isLocked && !isLive && !isDone && (
             hasPick
               ? <><span className="font-display text-lg leading-none text-ink-3">{existing.homeScore}–{existing.awayScore}</span><span className="font-mono text-[7px] text-ink-4 tracking-eyebrow">BLOQUEADO</span></>
               : <span className="font-mono text-[8px] text-ink-4 text-center leading-tight">sem<br/>palpite</span>
@@ -585,7 +611,9 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
         {/* Away */}
         <div className="flex items-center gap-2 min-w-0 justify-end">
           <div className="min-w-0 text-right">
-            <div className="font-mono text-[12px] font-bold leading-none">{match.away.code}</div>
+            <div className={cn('font-mono text-[12px] font-bold leading-none', isPlaceholderTeam(match.away) && 'text-ink-4')}>
+              {isPlaceholderTeam(match.away) ? 'A definir' : match.away.code}
+            </div>
             <div className="font-mono text-[9px] text-ink-3 truncate leading-none mt-0.5">{match.away.name}</div>
           </div>
           <Flag team={match.away} size={28} className="shrink-0" />
@@ -1228,10 +1256,10 @@ function ChampionTab() {
                   key={slot.id}
                   onClick={() => setActiveSection(slot.id)}
                   className={cn(
-                    'flex flex-col items-center gap-2 p-3 border-2 transition-all min-h-[108px]',
-                    isActive ? 'border-line-strong bg-surface-2 shadow-card' :
-                    hasPick  ? 'border-green bg-green/5 hover:bg-green/10' :
-                               'border-hairline hover:border-ink',
+                    'flex flex-col items-center gap-2 p-3 border transition-all min-h-[108px] bg-card',
+                    isActive ? 'border-green bg-green/5 shadow-[0_10px_24px_rgba(0,0,0,0.08)]' :
+                    hasPick  ? 'border-green/60 bg-green/5 hover:bg-green/10' :
+                               'border-hairline hover:border-line-strong',
                   )}
                 >
                   {hasPick && slot.isTeam ? (
@@ -1256,14 +1284,14 @@ function ChampionTab() {
           </div>
 
           {/* Picker panel for active slot */}
-          <div className="ui-panel overflow-hidden">
-            <div className="ui-panel-header flex items-center justify-between">
+          <div className="overflow-hidden border border-line bg-card shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center justify-between border-b border-hairline bg-surface-2 px-4 py-3 text-ink">
               <span className="font-display text-base">
                 {activeSection === 'champion' ? 'ESCOLHA O CAMPEÃO' :
                  activeSection === 'vice'     ? 'ESCOLHA O VICE' :
                                                'ARTILHEIRO DA COPA'}
               </span>
-              <span className="font-mono text-[9px] text-paper/50">
+              <span className="font-mono text-[9px] text-ink-3">
                 +{slots.find(s => s.id === activeSection)?.pts} pts
               </span>
             </div>

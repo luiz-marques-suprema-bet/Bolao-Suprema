@@ -16,7 +16,7 @@ import type { BracketSlot, BracketRound, TeamCode } from '@/types'
 type BracketView = 'mine' | 'live'
 
 const ROUNDS: { id: BracketRound; label: string; shortLabel: string }[] = [
-  { id: 'r32',   label: '32 AVOS DE FINAL',  shortLabel: '32 AVOS' },
+  { id: 'r32',   label: 'FASE DE 32',  shortLabel: 'F32' },
   { id: 'r16',   label: 'OITAVAS DE FINAL', shortLabel: 'OITAVAS' },
   { id: 'qf',    label: 'QUARTAS DE FINAL', shortLabel: 'QUARTAS' },
   { id: 'sf',    label: 'SEMIFINAIS',        shortLabel: 'SEMI'    },
@@ -482,7 +482,7 @@ function BracketMobile() {
         )}
         {view === 'live' && (
           <p className="font-mono text-[9px] text-ink-4 mt-2">
-            Resultado real do torneio · atualizado em tempo real
+            Resultado oficial · atualiza quando admin ou sync registra mudanças
           </p>
         )}
       </div>
@@ -672,7 +672,7 @@ function BracketDesktop() {
             <p className="font-mono text-[9px] text-ink-4 mt-2 text-center">
               {view === 'mine'
                 ? 'Baseado nos seus palpites de grupo · clique para escolher vencedor'
-                : 'Resultado oficial do torneio · atualizado em tempo real'}
+                : 'Resultado oficial do torneio · admin/sync'}
             </p>
           </div>
         </div>

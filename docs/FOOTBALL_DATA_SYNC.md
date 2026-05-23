@@ -49,3 +49,5 @@ Apply the SQL migration in supabase/migrations/20260521103000_prediction_batch_a
 - User predictions are still locked by kickoff in Postgres.
 - Admin locks are respected by the sync function: it will not reopen a manually locked match just because the API says it is scheduled.
 - The sync function updates rows by `football_data_id` first. If a row does not have that ID yet, it tries to match by home TLA, away TLA, and `kickoff_utc`.
+- Checked on 2026-05-22: the `football-data-sync` Edge Function is deployed and active with JWT verification enabled, and a `pg_cron` job named `football-data-sync` runs every 5 minutes. However, the required database settings `app.football_sync_url` and `app.supabase_anon_key` are not configured in the project, so the cron job currently exits with `0 rows` and does not invoke the Edge Function automatically.
+- Until those settings and the `FOOTBALL_DATA_TOKEN` secret are confirmed, live scores/statuses should be treated as admin-driven/manual. Frontend clients receive `matches` changes through Supabase Realtime once the database row changes.

@@ -191,7 +191,7 @@ export const useAuthStore = create<AuthState>()(
 
       loadSession: async () => {
         if (isExplicitMockMode) {
-          const stored = get().user
+          const stored = get().user ?? MOCK_ME
           set({
             user: stored,
             isAuthenticated: !!stored,

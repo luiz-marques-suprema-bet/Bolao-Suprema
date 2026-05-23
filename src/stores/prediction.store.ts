@@ -3,6 +3,7 @@ import type { Match, Prediction } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { WC2026_MATCHES } from '@/data/wc2026'
 import { isBetOpen } from '@/lib/markets'
+import { isPlaceholderMatch } from '@/lib/matchGuards'
 import { validateChampionVice } from '@/lib/tournamentValidation'
 import { useMatchStore } from '@/stores/match.store'
 import { useBracketStore } from '@/stores/bracket.store'
@@ -204,6 +205,11 @@ export const usePredictionStore = create<PredictionState>()(
 
     confirmPrediction: async (prediction) => {
       const match = mergeMatchWithOverride(prediction.matchId)
+      if (match && isPlaceholderMatch(match)) {
+        const error = 'Jogo aguardando classificados. Este palpite ainda nao pode ser salvo.'
+        set({ lastError: error })
+        return { ok: false, error }
+      }
       if (match && !isBetOpen(match)) {
         const error = 'Mercado fechado ou bloqueado. Este palpite nao foi salvo.'
         set({ lastError: error })
@@ -243,7 +249,7 @@ export const usePredictionStore = create<PredictionState>()(
     confirmPredictionBatch: async (items) => {
       const userId = get()._userId
       const submittedAt = new Date().toISOString()
-      const pickable = items.filter(item => isBetOpen(item.match))
+      const pickable = items.filter(item => !isPlaceholderMatch(item.match) && isBetOpen(item.match))
       const skipped = items.length - pickable.length
 
       if (!pickable.length) {

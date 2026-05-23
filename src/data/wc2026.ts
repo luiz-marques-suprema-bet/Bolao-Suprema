@@ -218,15 +218,34 @@ const RAW: RawMatch[] = [
   { id: 'g-j-6', date: '2026-06-27', time: '22:00', group: 'J', md: 3, home: 'JOR', away: 'ARG', venue: 'AT&T Stadium',               city: 'Dallas',           status: 'scheduled' },
 ]
 
+const R32_PLACEHOLDERS = [
+  ['Vencedor Grupo A', 'Melhor 3o colocado'],
+  ['Vencedor Grupo B', 'Melhor 3o colocado'],
+  ['Vencedor Grupo C', 'Melhor 3o colocado'],
+  ['Vencedor Grupo D', 'Melhor 3o colocado'],
+  ['Vencedor Grupo E', 'Melhor 3o colocado'],
+  ['Vencedor Grupo F', 'Melhor 3o colocado'],
+  ['Vencedor Grupo G', 'Melhor 3o colocado'],
+  ['Vencedor Grupo H', 'Melhor 3o colocado'],
+  ['Vencedor Grupo I', '2o Grupo A'],
+  ['Vencedor Grupo J', '2o Grupo B'],
+  ['Vencedor Grupo K', '2o Grupo C'],
+  ['Vencedor Grupo L', '2o Grupo D'],
+  ['2o Grupo E', '2o Grupo F'],
+  ['2o Grupo G', '2o Grupo H'],
+  ['2o Grupo I', '2o Grupo J'],
+  ['2o Grupo K', '2o Grupo L'],
+] as const
+
 const KNOCKOUT_RAW: RawKnockoutMatch[] = [
   ...Array.from({ length: 16 }, (_, i) => ({
     id: `ko-r32-${i + 1}`,
     stage: 'round_of_32' as const,
-    stageLabel: `32 AVOS · ${i + 1}`,
+    stageLabel: `FASE DE 32 · ${i + 1}`,
     date: i < 8 ? '2026-06-28' : '2026-06-29',
     time: ['13:00', '16:00', '19:00', '22:00'][i % 4],
-    homePlaceholder: `R32 ${i + 1} mandante`,
-    awayPlaceholder: `R32 ${i + 1} visitante`,
+    homePlaceholder: R32_PLACEHOLDERS[i][0],
+    awayPlaceholder: R32_PLACEHOLDERS[i][1],
     venue: 'A definir',
     city: 'A definir',
   })),
@@ -236,8 +255,8 @@ const KNOCKOUT_RAW: RawKnockoutMatch[] = [
     stageLabel: `OITAVAS · ${i + 1}`,
     date: i < 4 ? '2026-07-04' : '2026-07-05',
     time: ['13:00', '16:00', '19:00', '22:00'][i % 4],
-    homePlaceholder: `Vencedor R32 ${i * 2 + 1}`,
-    awayPlaceholder: `Vencedor R32 ${i * 2 + 2}`,
+    homePlaceholder: `Vencedor Fase de 32 ${i * 2 + 1}`,
+    awayPlaceholder: `Vencedor Fase de 32 ${i * 2 + 2}`,
     venue: 'A definir',
     city: 'A definir',
   })),
@@ -309,11 +328,16 @@ export function resolveMatch(r: RawMatch): Match {
   }
 }
 
+function resolveKnockoutStageLabel(r: RawKnockoutMatch): string {
+  if (r.stage !== 'round_of_32') return r.stageLabel
+  return `FASE DE 32 · ${r.id.replace('ko-r32-', '')}`
+}
+
 export function resolveKnockoutMatch(r: RawKnockoutMatch): Match {
   return {
     id: r.id,
     stage: r.stage,
-    stageLabel: r.stageLabel,
+    stageLabel: resolveKnockoutStageLabel(r),
     home: { ...TEAMS.TBD, name: r.homePlaceholder },
     away: { ...TEAMS.TBD, name: r.awayPlaceholder },
     homeScore: null,

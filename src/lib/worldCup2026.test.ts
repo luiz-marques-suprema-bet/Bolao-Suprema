@@ -14,7 +14,10 @@ describe('World Cup 2026 model', () => {
   })
 
   it('has the expected knockout round shape', () => {
-    expect(WC2026_KNOCKOUT_MATCHES.filter(match => match.stage === 'round_of_32')).toHaveLength(16)
+    const roundOf32 = WC2026_KNOCKOUT_MATCHES.filter(match => match.stage === 'round_of_32')
+    expect(roundOf32).toHaveLength(16)
+    expect(roundOf32.every(match => match.stageLabel.includes('FASE DE 32'))).toBe(true)
+    expect(roundOf32.every(match => !match.home.name.includes('R32') && !match.away.name.includes('R32'))).toBe(true)
     expect(WC2026_KNOCKOUT_MATCHES.filter(match => match.stage === 'round_of_16')).toHaveLength(8)
     expect(WC2026_KNOCKOUT_MATCHES.filter(match => match.stage === 'quarter_final')).toHaveLength(4)
     expect(WC2026_KNOCKOUT_MATCHES.filter(match => match.stage === 'semi_final')).toHaveLength(2)

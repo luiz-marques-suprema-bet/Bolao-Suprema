@@ -65,4 +65,24 @@ describe('prediction store flow safeguards', () => {
     expect(state.predictions[match.id]).toBeUndefined()
     expect(state.drafts[match.id]).toEqual({ home: 1, away: 1 })
   })
+
+  it('rejects placeholder knockout matches and keeps the draft', async () => {
+    const match = WC2026_MATCHES.find(item => item.id === 'ko-r32-1')!
+    usePredictionStore.getState().setDraft(match.id, 1, 0)
+
+    const result = await usePredictionStore.getState().confirmPrediction({
+      id: `pred-${match.id}`,
+      userId: 'me',
+      matchId: match.id,
+      homeScore: 1,
+      awayScore: 0,
+      submittedAt: new Date().toISOString(),
+    })
+
+    const state = usePredictionStore.getState()
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('aguardando classificados')
+    expect(state.predictions[match.id]).toBeUndefined()
+    expect(state.drafts[match.id]).toEqual({ home: 1, away: 0 })
+  })
 })

@@ -14,6 +14,9 @@ export const MOCK_ME: AppUser = {
   color: '#00A651',
   since: '2026',
   isAdmin: true,
+  isMarketing: false,
+  userRole: 'admin',
+  participantStatus: 'active',
   createdAt: '2026-05-09',
 }
 
