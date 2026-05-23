@@ -5,6 +5,7 @@ import { Logo } from '@/components/shared/Logo'
 import { TourneyMark } from '@/components/shared/TourneyMark'
 import { useAuthStore } from '@/stores/auth.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
+import { useForceLightMode } from '@/hooks/useForceLightMode'
 import { asset } from '@/lib/utils'
 
 // ─── OTP logic (shared) ───────────────────────────────────────────────────────
@@ -128,6 +129,7 @@ function CodeInput({
 // ─── Screen router ────────────────────────────────────────────────────────────
 
 export function LoginScreen() {
+  useForceLightMode()
   const isDesktop = useIsDesktop()
   return isDesktop ? <LoginDesktop /> : <LoginMobile />
 }

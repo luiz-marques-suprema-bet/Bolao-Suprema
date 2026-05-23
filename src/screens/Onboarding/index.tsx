@@ -6,6 +6,7 @@ import { Stamp } from '@/components/shared/Stamp'
 import { Marquee } from '@/components/shared/Marquee'
 import { TourneyMark } from '@/components/shared/TourneyMark'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
+import { useForceLightMode } from '@/hooks/useForceLightMode'
 import { asset } from '@/lib/utils'
 
 const slides = [
@@ -45,6 +46,7 @@ const MARQUEE_ITEMS = [
 ]
 
 export function OnboardingScreen() {
+  useForceLightMode()
   const isDesktop = useIsDesktop()
   return isDesktop ? <OnboardingDesktop /> : <OnboardingMobile />
 }
