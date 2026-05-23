@@ -197,7 +197,7 @@ function OnboardingDesktop() {
           <img
             src={asset('assets/hero-onboarding.png')}
             alt="Copa do Mundo 2026"
-            className="absolute inset-0 w-full h-full object-cover object-center"
+            className="absolute inset-0 w-full h-full object-cover object-left"
           />
           <div
             className="absolute inset-y-0 left-0 bg-gradient-to-r from-paper to-transparent"
