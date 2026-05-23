@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Logo } from '@/components/shared/Logo'
 import { Avatar } from '@/components/shared/Avatar'
 import { Tooltip } from '@/components/shared/Tooltip'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { useAuthStore } from '@/stores/auth.store'
 import { cn } from '@/lib/utils'
 
@@ -70,6 +71,7 @@ export function DesktopNav() {
         </nav>
 
         <div className="flex items-center gap-3 flex-shrink-0">
+          <ThemeToggle />
           {user?.isAdmin && (
             <Tooltip content="Painel de controle — gerenciar partidas, participantes e regras" side="bottom">
               <button
