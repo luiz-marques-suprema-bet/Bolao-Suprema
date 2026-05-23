@@ -56,7 +56,7 @@ function OnboardingMobile() {
   const slide = slides[step]
 
   return (
-    <div className="min-h-dvh flex flex-col bg-paper">
+    <div className="h-dvh flex flex-col bg-paper overflow-hidden">
       <div className="relative h-72 overflow-hidden flex-shrink-0">
         <img
           src={asset('assets/hero-jogadores.webp')}
@@ -141,8 +141,8 @@ function OnboardingDesktop() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-dvh flex flex-col bg-paper">
-      <div className="flex flex-1">
+    <div className="h-dvh flex flex-col bg-paper overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-col justify-between p-12 flex-1 max-w-[52%]">
           <div>
             <Logo height={72} />
@@ -156,9 +156,8 @@ function OnboardingDesktop() {
                 <span className="block text-green-deep" style={{ transform: 'translateX(12px)' }}>DA</span>
                 <span className="block">SUPREMA</span>
               </h1>
-              <p className="text-ink-2 text-lg leading-relaxed max-w-md">
+                      <p className="text-ink-2 text-lg leading-relaxed max-w-md">
                 Palpite nos jogos, monte sua chave e dispute com toda a firma quem manja mais de bola.
-                72 jogos na fase de grupos. 48 seleções. 1 campeão.
               </p>
             </div>
           </div>
@@ -166,7 +165,7 @@ function OnboardingDesktop() {
           <div>
             <div className="grid grid-cols-4 gap-4 mb-8 border-t border-hairline pt-6">
               {[
-                { val: '104',   label: 'partidas' },
+                { val: '72',    label: 'na fase de grupos' },
                 { val: '48',    label: 'seleções' },
                 { val: '16:00', label: '11 Jun · BRT' },
                 { val: '+25',   label: 'pts campeão' },
