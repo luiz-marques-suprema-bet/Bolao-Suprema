@@ -50,8 +50,8 @@ Dashboard > Authentication > Providers > Email:
 
 Dashboard > Authentication > URL Configuration:
 
-- Site URL: `https://ojozinho.github.io/Bolao-Suprema/`
-- Redirect URLs: `https://ojozinho.github.io/Bolao-Suprema/**`
+- Site URL: `https://bolao.suprema.group`
+- Redirect URLs: `https://bolao.suprema.group/**`
 
 Para desenvolvimento local adicionar também:
 - `http://localhost:5173/**`

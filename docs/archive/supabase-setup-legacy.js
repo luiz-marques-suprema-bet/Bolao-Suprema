@@ -19,7 +19,7 @@ const path  = require('path')
 // ─── Configuração ─────────────────────────────────────────────────────────────
 
 const PROJECT_REF = 'mklmnxquvslfgljhgqn'
-const SITE_URL    = 'https://ojozinho.github.io/Bolao-Suprema'
+const SITE_URL    = 'https://bolao.suprema.group'
 const PAT         = process.argv[2]
 
 if (!PAT) {
@@ -490,7 +490,7 @@ Próximo passo obrigatório:
   3. Marque "Enable Email OTP" (ou Magic Link)
   4. Salve
 
-Deploy: https://ojozinho.github.io/Bolao-Suprema
+Deploy: https://bolao.suprema.group
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `)
 }

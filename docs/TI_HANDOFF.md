@@ -35,7 +35,7 @@ Esses jogos provavelmente correspondem a fases eliminatorias, placeholders ou re
 - Repositorio: `https://github.com/ojozinho/Bolao-Suprema`
 - Branch principal: `main`
 - Deploy: GitHub Actions para GitHub Pages
-- URL: `https://ojozinho.github.io/Bolao-Suprema/`
+- URL: `https://bolao.suprema.group/`
 - Rotas: HashRouter, por exemplo `/#/home`, `/#/prediction`, `/#/admin`
 - Referencia de formato do torneio: [WC2026_FORMAT.md](WC2026_FORMAT.md)
 

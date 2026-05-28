@@ -194,7 +194,7 @@ O deploy e automatico via GitHub Actions em push para `main`.
 - Workflow: `.github/workflows/deploy.yml`
 - Output: `dist/`
 - Publicacao: GitHub Pages
-- URL: `https://ojozinho.github.io/Bolao-Suprema/`
+- URL: `https://bolao.suprema.group/`
 
 ## Checklist rapido para T.I.
 

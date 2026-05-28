@@ -4,7 +4,7 @@
 
 O deploy é automático via GitHub Actions. A cada push para `main`, o workflow executa o build e publica o artefato na branch `gh-pages`, que é servida pelo GitHub Pages.
 
-URL de produção: `https://ojozinho.github.io/Bolao-Suprema/`
+URL de produção: `https://bolao.suprema.group/`
 
 ## Variáveis de ambiente no GitHub
 
@@ -54,18 +54,18 @@ No Supabase Dashboard > Authentication > URL Configuration:
 
 | Campo | Valor |
 |-------|-------|
-| Site URL | `https://ojozinho.github.io/Bolao-Suprema/` |
-| Redirect URLs | `https://ojozinho.github.io/Bolao-Suprema/**` |
+| Site URL | `https://bolao.suprema.group` |
+| Redirect URLs | `https://bolao.suprema.group/**` |
 
 Sem essa configuração, o redirecionamento após OTP não funciona.
 
 ## Base path no Vite
 
-O `vite.config.ts` deve ter `base: '/Bolao-Suprema/'` para que os assets sejam carregados corretamente no subpath do GitHub Pages. Verificar antes de qualquer mudança no nome do repositório.
+O `vite.config.ts` deve ter `base: '/'` porque o app é servido na raiz do domínio customizado `bolao.suprema.group`. Se voltar para o subpath do GitHub Pages, restaurar o base path antigo.
 
 ## Checklist pós-deploy
 
-- [ ] Acessar `https://ojozinho.github.io/Bolao-Suprema/` e verificar carregamento.
+- [ ] Acessar `https://bolao.suprema.group/` e verificar carregamento.
 - [ ] Testar login com OTP.
 - [ ] Verificar rota `/#/home`, `/#/prediction`, `/#/ranking`.
 - [ ] Verificar que `/#/admin` exige perfil de admin.
