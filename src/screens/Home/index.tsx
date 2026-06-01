@@ -18,7 +18,7 @@ import { fetchFeaturedVideos } from '@/lib/scorebat'
 import type { ScorebatVideo } from '@/lib/scorebat'
 import { formatMatchDate, formatMatchTime, getBettingDeadline } from '@/lib/matchTime'
 import { getEffectiveMarketStatus } from '@/lib/markets'
-import { fetchWC26News, isConfigured as newsConfigured } from '@/lib/footballnews'
+import { fetchWC26News, getCachedWC26News, isConfigured as newsConfigured } from '@/lib/footballnews'
 import type { FootballNewsItem } from '@/lib/footballnews'
 import type { RankingEntry, Match } from '@/types'
 
@@ -165,6 +165,17 @@ function timeAgo(iso: string): string {
 }
 
 const NEWS_SLIDE_MS = 9000
+const NEWS_REFRESH_MS = 5 * 60 * 1000
+
+function CarouselIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 7h11a4 4 0 0 1 0 8H8" />
+      <path d="m11 4 4 3-4 3" />
+      <path d="m8 12-4 3 4 3" />
+    </svg>
+  )
+}
 
 function NewsFallbackVisual({ title }: { title: string }) {
   const seed = title.length % 4
@@ -190,38 +201,43 @@ function NewsFallbackVisual({ title }: { title: string }) {
 function WC26News({
   compact = false,
   className,
-  deferUntilLoaded = false,
-  onAvailabilityChange,
 }: {
   compact?: boolean
   className?: string
-  deferUntilLoaded?: boolean
-  onAvailabilityChange?: (available: boolean) => void
 }) {
-  const [news, setNews] = useState<FootballNewsItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const limit = compact ? 6 : 10
+  const initialNews = getCachedWC26News(limit)
+  const [news, setNews] = useState<FootballNewsItem[]>(initialNews)
+  const [loading, setLoading] = useState(initialNews.length === 0)
   const [activeIndex, setActiveIndex] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     if (!newsConfigured()) {
       setLoading(false)
-      onAvailabilityChange?.(false)
       return
     }
-    fetchWC26News(compact ? 6 : 10).then(items => {
-      if (cancelled) return
-      setNews(items)
-      setActiveIndex(0)
-      setLoading(false)
-      onAvailabilityChange?.(items.length > 0)
-    }).catch(() => {
-      if (cancelled) return
-      setLoading(false)
-      onAvailabilityChange?.(false)
-    })
-    return () => { cancelled = true }
-  }, [compact, onAvailabilityChange])
+
+    const refresh = () => {
+      fetchWC26News(limit).then(items => {
+        if (cancelled) return
+        if (items.length > 0) {
+          setNews(items)
+          setActiveIndex(index => Math.min(index, items.length - 1))
+        }
+        setLoading(false)
+      }).catch(() => {
+        if (!cancelled) setLoading(false)
+      })
+    }
+
+    refresh()
+    const id = window.setInterval(refresh, NEWS_REFRESH_MS)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
+  }, [limit])
 
   useEffect(() => {
     if (loading || news.length <= 1) return undefined
@@ -231,11 +247,12 @@ function WC26News({
     return () => window.clearInterval(id)
   }, [loading, news.length])
 
-  if (!newsConfigured() || (!loading && news.length === 0)) return null
-  if (loading && deferUntilLoaded) return null
+  if (!newsConfigured()) return null
 
   const featured = news[activeIndex] ?? news[0]
   const nextItems = news.filter((_, index) => index !== activeIndex).slice(0, compact ? 4 : 5)
+  const showLoading = loading && news.length === 0
+  const showEmpty = !showLoading && !featured
 
   return (
     <div className={cn('ui-panel overflow-hidden', className)}>
@@ -244,17 +261,26 @@ function WC26News({
           <span className="font-display text-base">COPA 2026</span>
           <span className="font-mono text-[10px] text-paper/40">radar da copa</span>
         </div>
-        <span className="font-mono text-[8px] text-paper/30 tracking-eyebrow">ao vivo</span>
+        <div className="flex items-center gap-2 font-mono text-[8px] text-paper/30 tracking-eyebrow">
+          <CarouselIcon className="h-3.5 w-3.5" />
+          <span>{showLoading ? 'buscando' : 'auto'}</span>
+        </div>
       </div>
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
+      {showLoading ? (
+        <div className="flex min-h-[360px] items-center justify-center py-12">
           <span className="font-mono text-[10px] text-ink-4 animate-pulse tracking-eyebrow">CARREGANDO…</span>
+        </div>
+      ) : showEmpty ? (
+        <div className="flex min-h-[360px] items-center justify-center px-4 py-12 text-center">
+          <div>
+            <CarouselIcon className="mx-auto mb-3 h-5 w-5 text-ink-4" />
+            <p className="font-mono text-[10px] tracking-eyebrow text-ink-4">RADAR AGUARDANDO NOVAS NOTICIAS</p>
+          </div>
         </div>
       ) : (
         <div>
           {featured && (
-            <a href={featured.url} target="_blank" rel="noopener noreferrer"
-              className="relative block overflow-hidden border-b border-hairline bg-ink text-paper group">
+            <article className="relative block overflow-hidden border-b border-hairline bg-ink text-paper group">
               <div className="absolute left-0 right-0 top-0 h-1 bg-white/20">
                 <div
                   key={activeIndex}
@@ -287,17 +313,25 @@ function WC26News({
                 )}>
                   {featured.title}
                 </h3>
-                <div className="mt-3 inline-flex items-center gap-2 border border-paper/40 px-3 py-2 font-mono text-[9px] font-bold tracking-eyebrow text-paper">
+                <a
+                  href={featured.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 border border-paper/40 px-3 py-2 font-mono text-[9px] font-bold tracking-eyebrow text-paper transition-colors hover:border-yellow hover:text-yellow"
+                >
                   LER MATERIA <span>→</span>
-                </div>
+                </a>
               </div>
-            </a>
+            </article>
           )}
           <div className="divide-y divide-hairline">
             {nextItems.map((item, index) => (
-              <a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer"
-                onMouseEnter={() => setActiveIndex(news.findIndex(n => n.url === item.url))}
-                className="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors group">
+              <button
+                key={item.url}
+                type="button"
+                onClick={() => setActiveIndex(news.findIndex(n => n.url === item.url))}
+                className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover group"
+              >
                 <span className="font-display text-base text-ink-4 tabular-nums">{index + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="font-mono text-[10px] font-bold text-ink leading-tight line-clamp-2 group-hover:underline">{item.title}</p>
@@ -307,23 +341,26 @@ function WC26News({
                     <span className="font-mono text-[7px] text-ink-4">{timeAgo(item.publishedAt)}</span>
                   </div>
                 </div>
-              </a>
+              </button>
             ))}
           </div>
           {news.length > 1 && (
-            <div className="flex gap-1.5 px-3 py-3">
-              {news.slice(0, 8).map((item, index) => (
-                <button
-                  key={item.url}
-                  type="button"
-                  aria-label={`Noticia ${index + 1}`}
-                  onClick={() => setActiveIndex(index)}
-                  className={cn(
-                    'h-1 flex-1 transition-colors',
-                    index === activeIndex ? 'bg-ink' : 'bg-hairline hover:bg-ink-4',
-                  )}
-                />
-              ))}
+            <div className="flex items-center gap-2 px-3 py-3">
+              <CarouselIcon className="h-4 w-4 flex-shrink-0 text-ink-4" />
+              <div className="flex flex-1 gap-1.5">
+                {news.slice(0, 8).map((item, index) => (
+                  <button
+                    key={item.url}
+                    type="button"
+                    aria-label={`Noticia ${index + 1}`}
+                    onClick={() => setActiveIndex(index)}
+                    className={cn(
+                      'h-1 flex-1 transition-colors',
+                      index === activeIndex ? 'bg-ink' : 'bg-hairline hover:bg-ink-4',
+                    )}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -778,22 +815,15 @@ function HomeBoletimSection({ compact = false, className }: { compact?: boolean;
 }
 
 function HomeBoletimNewsSection({ compact = false }: { compact?: boolean }) {
-  const [newsAvailable, setNewsAvailable] = useState(false)
-
   return (
     <div className={cn(
       'grid gap-4',
-      compact || !newsAvailable
+      compact
         ? 'grid-cols-1'
         : 'grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.75fr)]',
     )}>
       <HomeBoletimSection compact={compact} />
-      <WC26News
-        compact
-        className="min-h-full"
-        deferUntilLoaded
-        onAvailabilityChange={setNewsAvailable}
-      />
+      <WC26News compact className="min-h-full" />
     </div>
   )
 }
