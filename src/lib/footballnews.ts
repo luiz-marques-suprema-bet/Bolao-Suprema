@@ -2,11 +2,12 @@
 //
 // H5: a chave da World News API e PAGA e NAO pode ir para o bundle do cliente.
 // Toda a chamada acontece no Edge Function `news-proxy` (secret server-side
-// WORLD_NEWS_API_KEY). O cliente apenas invoca o proxy via supabase-js — nenhum
-// segredo de noticias e exposto no navegador.
+// WORLD_NEWS_API_KEY) quando configurada. Sem chave paga, o proxy usa fallback
+// server-side via Google News RSS. O cliente apenas invoca o proxy via
+// supabase-js — nenhum segredo de noticias e exposto no navegador.
 //
-// Sem chave configurada no servidor, o proxy retorna { news: [] } e a secao de
-// noticias some sozinha (ver Home/index.tsx).
+// Se o proxy nao trouxer resultados, a secao de noticias some sozinha
+// (ver Home/index.tsx).
 
 import { supabase, isMockMode } from '@/lib/supabase'
 
@@ -48,9 +49,9 @@ export async function fetchWC26News(limit = 10): Promise<FootballNewsItem[]> {
   }
 }
 
-// A disponibilidade real depende do secret server-side (WORLD_NEWS_API_KEY), que
-// o cliente nao conhece nem deve conhecer. A secao de noticias se esconde sozinha
-// quando `fetchWC26News` retorna lista vazia (sem chave, sem resultados ou erro).
+// A disponibilidade real depende do proxy server-side; o cliente nao conhece nem
+// deve conhecer chaves externas. A secao de noticias se esconde sozinha quando
+// `fetchWC26News` retorna lista vazia (sem resultados ou erro).
 export function isConfigured(): boolean {
   return !isMockMode
 }

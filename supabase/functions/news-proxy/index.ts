@@ -9,11 +9,10 @@
 // (WORLD_NEWS_API_KEY) e nunca chega ao cliente. O frontend chama via
 // supabase.functions.invoke('news-proxy').
 //
-// Sem a chave configurada -> responde { news: [] } (HTTP 200) e a secao de
-// noticias simplesmente nao aparece (estado honesto, sem fingir sucesso).
+// Sem a chave configurada -> usa Google News RSS como fallback server-side.
 //
 // Secrets:
-//   supabase secrets set WORLD_NEWS_API_KEY=...      (obrigatorio p/ ter noticias)
+//   supabase secrets set WORLD_NEWS_API_KEY=...      (opcional; World News API)
 //   supabase secrets set WORLD_NEWS_URL=...          (opcional; default abaixo)
 // ============================================================================
 
@@ -44,6 +43,17 @@ const WC26_KEYWORDS = [
   'mundial 2026',
   'fifa 2026',
 ]
+
+function decodeXml(input: string): string {
+  return input
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .trim()
+}
 
 function isWC26Related(item: FootballNewsItem): boolean {
   const haystack = `${item.title} ${item.tags.join(' ')}`.toLowerCase()
@@ -98,6 +108,51 @@ async function fetchFromWorldNews(
     .filter((item): item is FootballNewsItem => Boolean(item))
 }
 
+function tagValue(xml: string, tag: string): string {
+  const match = xml.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, 'i'))
+  return match ? decodeXml(match[1]) : ''
+}
+
+function stripSourceSuffix(title: string, source: string): string {
+  if (!source) return title
+  return title
+    .replace(new RegExp(`\\s+-\\s+${source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'), '')
+    .trim()
+}
+
+async function fetchFromGoogleNews(language: 'pt' | 'en', limit: number): Promise<FootballNewsItem[]> {
+  const params = new URLSearchParams({
+    q: language === 'pt'
+      ? '"Copa do Mundo 2026" OR "Copa 2026" OR "FIFA 2026"'
+      : '"World Cup 2026" OR "FIFA 2026"',
+    hl: language === 'pt' ? 'pt-BR' : 'en-US',
+    gl: language === 'pt' ? 'BR' : 'US',
+    ceid: language === 'pt' ? 'BR:pt-419' : 'US:en',
+  })
+  const res = await fetch(`https://news.google.com/rss/search?${params.toString()}`)
+  if (!res.ok) return []
+  const xml = await res.text()
+  return [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)]
+    .map((match): FootballNewsItem | null => {
+      const item = match[1]
+      const source = tagValue(item, 'source') || 'Google News'
+      const rawTitle = tagValue(item, 'title')
+      const url = tagValue(item, 'link')
+      if (!rawTitle || !url) return null
+      return {
+        title: stripSourceSuffix(rawTitle, source),
+        url,
+        image: '',
+        source,
+        tags: ['World Cup 2026', 'Copa do Mundo 2026'],
+        publishedAt: new Date(tagValue(item, 'pubDate') || Date.now()).toISOString(),
+      }
+    })
+    .filter((item): item is FootballNewsItem => Boolean(item))
+    .filter(isWC26Related)
+    .slice(0, limit)
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -122,18 +177,21 @@ Deno.serve(async (req) => {
     // body opcional; mantem default
   }
 
-  // Sem chave -> estado honesto: nenhuma noticia, sem erro falso.
-  if (!key) {
-    return Response.json({ news: [] }, { headers: corsHeaders })
-  }
-
   try {
-    const portuguese = await fetchFromWorldNews(key, baseUrl, 'pt', limit)
+    const portuguese = key ? await fetchFromWorldNews(key, baseUrl, 'pt', limit) : []
     const english =
       portuguese.length >= Math.min(3, limit)
         ? []
-        : await fetchFromWorldNews(key, baseUrl, 'en', limit)
-    const news = [...portuguese, ...english].filter(isWC26Related).slice(0, limit)
+        : key ? await fetchFromWorldNews(key, baseUrl, 'en', limit) : []
+    let news = [...portuguese, ...english].filter(isWC26Related).slice(0, limit)
+    if (news.length === 0) {
+      const rssPortuguese = await fetchFromGoogleNews('pt', limit)
+      const rssEnglish =
+        rssPortuguese.length >= Math.min(3, limit)
+          ? []
+          : await fetchFromGoogleNews('en', limit)
+      news = [...rssPortuguese, ...rssEnglish].slice(0, limit)
+    }
     return Response.json({ news }, { headers: corsHeaders })
   } catch {
     return Response.json({ news: [] }, { headers: corsHeaders })

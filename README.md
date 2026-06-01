@@ -149,8 +149,9 @@ Essas variaveis sao publicas para o build do app. Apenas chaves publishable pode
 | `VITE_THESPORTSDB_KEY` | Nao | Busca de jogadores |
 | `VITE_MOCK_AUTH` | Nao | `true` apenas para desenvolvimento local |
 
-Noticias da Copa 2026 nao usam chave `VITE_*`. A chave paga fica somente no
-secret da Edge Function `news-proxy`.
+Noticias da Copa 2026 nao usam chave `VITE_*`. Se houver chave paga, ela fica
+somente no secret da Edge Function `news-proxy`; sem chave, o proxy usa fallback
+server-side via Google News RSS.
 
 ### Supabase Edge Function secrets
 
