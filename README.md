@@ -128,6 +128,10 @@ Edge Function:
 - Nome: `football-data-sync`
 - Deploy esperado: `verify_jwt=true`
 - Endpoint: `https://<project-ref>.functions.supabase.co/football-data-sync?season=2026`
+- Codigo: [supabase/functions/news-proxy/index.ts](supabase/functions/news-proxy/index.ts)
+- Nome: `news-proxy`
+- Deploy esperado: `verify_jwt=true`
+- Funcao: proxy server-side para noticias da Copa 2026
 
 Documentacao da integracao: [docs/FOOTBALL_DATA_SYNC.md](docs/FOOTBALL_DATA_SYNC.md)
 
@@ -143,10 +147,10 @@ Essas variaveis sao publicas para o build do app. Apenas chaves publishable pode
 | `VITE_SUPABASE_ANON_KEY` | Sim | Anon/publishable key do Supabase |
 | `VITE_TENOR_KEY` | Nao | GIFs da Resenha |
 | `VITE_THESPORTSDB_KEY` | Nao | Busca de jogadores |
-| `VITE_FNEWS_URL` | Nao | API externa de noticias |
-| `VITE_FNEWS_KEY` | Nao | Chave da API externa de noticias |
-| `VITE_FNEWS_HOST` | Nao | Host da API externa de noticias |
 | `VITE_MOCK_AUTH` | Nao | `true` apenas para desenvolvimento local |
+
+Noticias da Copa 2026 nao usam chave `VITE_*`. A chave paga fica somente no
+secret da Edge Function `news-proxy`.
 
 ### Supabase Edge Function secrets
 
@@ -156,6 +160,8 @@ Esses secrets ficam no Supabase. Nunca entram no frontend, GitHub Pages ou repos
 |--------|-----------|
 | `FOOTBALL_DATA_TOKEN` | Token da football-data.org |
 | `SUPABASE_SERVICE_ROLE_KEY` | Secret interno para Edge Functions, nunca usar no frontend |
+| `WORLD_NEWS_API_KEY` | Opcional; chave server-side para `news-proxy` |
+| `WORLD_NEWS_URL` | Opcional; endpoint alternativo da API de noticias |
 
 ## Desenvolvimento local
 
