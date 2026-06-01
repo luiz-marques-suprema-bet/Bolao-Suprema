@@ -235,7 +235,7 @@ function WC26News({
   if (loading && deferUntilLoaded) return null
 
   const featured = news[activeIndex] ?? news[0]
-  const nextItems = news.filter((_, index) => index !== activeIndex).slice(0, compact ? 2 : 4)
+  const nextItems = news.filter((_, index) => index !== activeIndex).slice(0, compact ? 4 : 5)
 
   return (
     <div className={cn('ui-panel overflow-hidden', className)}>
@@ -254,18 +254,7 @@ function WC26News({
         <div>
           {featured && (
             <a href={featured.url} target="_blank" rel="noopener noreferrer"
-              className="relative block min-h-[280px] overflow-hidden border-b border-hairline bg-ink text-paper group">
-              {featured.image ? (
-                <img
-                  src={featured.image}
-                  alt={featured.title}
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                  onError={e => (e.currentTarget.style.display = 'none')}
-                />
-              ) : (
-                <NewsFallbackVisual title={featured.title} />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/5" />
+              className="relative block overflow-hidden border-b border-hairline bg-ink text-paper group">
               <div className="absolute left-0 right-0 top-0 h-1 bg-white/20">
                 <div
                   key={activeIndex}
@@ -273,19 +262,32 @@ function WC26News({
                   style={{ animation: `news-progress ${NEWS_SLIDE_MS}ms linear forwards` }}
                 />
               </div>
-              <div className="absolute inset-x-0 bottom-0 p-4 md:p-5">
+              <div className={cn('relative overflow-hidden bg-ink', compact ? 'h-40' : 'h-64')}>
+                {featured.image ? (
+                  <img
+                    src={featured.image}
+                    alt={featured.title}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                    onError={e => (e.currentTarget.style.display = 'none')}
+                  />
+                ) : (
+                  <NewsFallbackVisual title={featured.title} />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/25" />
+              </div>
+              <div className="bg-ink p-4">
                 <div className="mb-2 flex items-center gap-2 font-mono text-[8px] tracking-eyebrow text-yellow">
                   <span>{featured.source}</span>
                   <span className="text-paper/45">·</span>
                   <span className="text-paper/60">{timeAgo(featured.publishedAt)}</span>
                 </div>
                 <h3 className={cn(
-                  'font-display leading-[0.95] text-paper transition-colors group-hover:text-yellow',
-                  compact ? 'text-3xl' : 'text-4xl',
+                  'font-display leading-[1.02] text-paper break-words transition-colors group-hover:text-yellow',
+                  compact ? 'text-xl' : 'text-4xl',
                 )}>
                   {featured.title}
                 </h3>
-                <div className="mt-4 inline-flex items-center gap-2 border border-paper/40 px-3 py-2 font-mono text-[9px] font-bold tracking-eyebrow text-paper">
+                <div className="mt-3 inline-flex items-center gap-2 border border-paper/40 px-3 py-2 font-mono text-[9px] font-bold tracking-eyebrow text-paper">
                   LER MATERIA <span>→</span>
                 </div>
               </div>
@@ -295,8 +297,8 @@ function WC26News({
             {nextItems.map((item, index) => (
               <a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer"
                 onMouseEnter={() => setActiveIndex(news.findIndex(n => n.url === item.url))}
-                className="flex items-center gap-3 px-3 py-3 hover:bg-surface-hover transition-colors group">
-                <span className="font-display text-lg text-ink-4 tabular-nums">{index + 1}</span>
+                className="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors group">
+                <span className="font-display text-base text-ink-4 tabular-nums">{index + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="font-mono text-[10px] font-bold text-ink leading-tight line-clamp-2 group-hover:underline">{item.title}</p>
                   <div className="flex items-center gap-1 mt-1">

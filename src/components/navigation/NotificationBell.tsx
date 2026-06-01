@@ -49,7 +49,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 border-2 border-line-strong bg-card shadow-card">
+        <div className="absolute right-0 top-full z-50 mt-2 w-80 border-2 border-line-strong bg-card shadow-none">
           <div className="border-b border-hairline bg-inverse px-4 py-3 text-inverse-text">
             <div className="font-display text-xl leading-none">ALERTAS</div>
             <div className="mt-1 font-mono text-[9px] text-inverse-text/55">
@@ -107,4 +107,3 @@ export function NotificationBell() {
     </div>
   )
 }
-

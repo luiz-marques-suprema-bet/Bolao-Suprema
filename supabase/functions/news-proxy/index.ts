@@ -150,7 +150,91 @@ function absoluteUrl(url: string, base: string): string {
 }
 
 function looksLikeImage(url: string): boolean {
-  return /^https?:\/\//i.test(url) && !url.includes('gstatic.com/favicon') && !url.includes('/favicon')
+  return /^https?:\/\//i.test(url)
+    && !url.includes('gstatic.com/favicon')
+    && !url.includes('gnews/logo')
+    && !url.includes('/favicon')
+}
+
+function googleNewsArticleId(url: string): string {
+  try {
+    const parsed = new URL(url)
+    const parts = parsed.pathname.split('/')
+    if (parsed.hostname !== 'news.google.com') return ''
+    if (!['articles', 'read'].includes(parts[parts.length - 2])) return ''
+    return parts[parts.length - 1] ?? ''
+  } catch {
+    return ''
+  }
+}
+
+async function fetchGoogleNewsDecodingParams(articleId: string): Promise<{ signature: string; timestamp: string } | null> {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), 1800)
+  const urls = [
+    `https://news.google.com/articles/${articleId}`,
+    `https://news.google.com/rss/articles/${articleId}`,
+  ]
+
+  try {
+    for (const url of urls) {
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'user-agent': 'Mozilla/5.0 (compatible; BolaoSupremaNews/1.0)' },
+      })
+      if (!res.ok) continue
+      const html = await res.text()
+      const signature = html.match(/data-n-a-sg=["']([^"']+)["']/i)?.[1] ?? ''
+      const timestamp = html.match(/data-n-a-ts=["']([^"']+)["']/i)?.[1] ?? ''
+      if (signature && timestamp) return { signature, timestamp }
+    }
+    return null
+  } catch {
+    return null
+  } finally {
+    clearTimeout(id)
+  }
+}
+
+async function resolveGoogleNewsUrl(url: string): Promise<string> {
+  const articleId = googleNewsArticleId(url)
+  if (!articleId) return url
+
+  const params = await fetchGoogleNewsDecodingParams(articleId)
+  if (!params) return url
+
+  const payload = [
+    'Fbv4je',
+    `["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"${articleId}",${params.timestamp},"${params.signature}"]`,
+  ]
+
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), 1800)
+  try {
+    const res = await fetch('https://news.google.com/_/DotsSplashUi/data/batchexecute', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        'user-agent': 'Mozilla/5.0 (compatible; BolaoSupremaNews/1.0)',
+      },
+      body: `f.req=${encodeURIComponent(JSON.stringify([[payload]]))}`,
+    })
+    if (!res.ok) return url
+    const text = await res.text()
+    const data = text.split('\n\n')[1]
+    if (!data) return url
+    const outer = JSON.parse(data) as Array<Array<string>>
+    const inner = outer?.[0]?.[2]
+    if (!inner) return url
+    const decoded = JSON.parse(inner) as unknown[]
+    const resolved = typeof decoded?.[1] === 'string' ? decoded[1] : ''
+    return resolved.startsWith('http') ? resolved : url
+  } catch {
+    return url
+  } finally {
+    clearTimeout(id)
+  }
 }
 
 async function fetchArticleImage(url: string): Promise<string> {
@@ -240,10 +324,14 @@ async function fetchFromGoogleNews(language: 'pt' | 'en', limit: number): Promis
   }
 
   const enriched = await Promise.all(
-    results.slice(0, limit).map(async (item) => ({
-      ...item,
-      image: item.image || await fetchArticleImage(item.url),
-    })),
+    results.slice(0, limit).map(async (item) => {
+      const articleUrl = await resolveGoogleNewsUrl(item.url)
+      return {
+        ...item,
+        url: articleUrl,
+        image: item.image || await fetchArticleImage(articleUrl),
+      }
+    }),
   )
   return enriched
 }
