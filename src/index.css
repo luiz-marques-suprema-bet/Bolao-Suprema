@@ -177,6 +177,7 @@
 
   .ui-panel-header {
     @apply border-b border-hairline bg-inverse px-4 py-3 text-inverse-text;
+    box-shadow: none;
   }
 
   .ui-section {
@@ -197,6 +198,7 @@
 
   .ui-inverse {
     @apply bg-inverse text-inverse-text border-line-strong;
+    box-shadow: none;
   }
 
   .app-shell {
@@ -288,6 +290,11 @@
 
   .dark img {
     color-scheme: light;
+  }
+
+  @keyframes news-progress {
+    from { width: 0%; }
+    to { width: 100%; }
   }
 
   /* Live badge */

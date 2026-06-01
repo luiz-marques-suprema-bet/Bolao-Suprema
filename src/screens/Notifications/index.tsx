@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { fetchNotifications, markNotificationRead } from '@/services/product'
+import { markGlobalNoticesSeen, useNavAlerts } from '@/hooks/useNavAlerts'
 import type { Notification } from '@/types'
 
 interface GlobalNotice {
@@ -27,6 +28,7 @@ export function NotificationsScreen() {
   const [items, setItems]       = useState<Notification[]>([])
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState<string | null>(null)
+  const { urgentPicks } = useNavAlerts()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -45,6 +47,9 @@ export function NotificationsScreen() {
   }, [user?.id])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => {
+    if (!loading) markGlobalNoticesSeen()
+  }, [loading])
 
   async function markRead(id: string) {
     const res = await markNotificationRead(id)
@@ -52,7 +57,7 @@ export function NotificationsScreen() {
     setItems(current => current.map(item => item.id === id ? { ...item, readAt: new Date().toISOString() } : item))
   }
 
-  const hasContent = notices.length > 0 || items.length > 0
+  const hasContent = urgentPicks.length > 0 || notices.length > 0 || items.length > 0
 
   return (
     <div className="min-h-dvh bg-paper pb-24">
@@ -84,6 +89,23 @@ export function NotificationsScreen() {
           </div>
         ) : (
           <div className="space-y-6">
+            {urgentPicks.length > 0 && (
+              <div>
+                <p className="font-mono text-[9px] tracking-eyebrow text-red mb-3">PALPITES PERTO DE FECHAR</p>
+                <div className="ui-panel divide-y divide-hairline">
+                  {urgentPicks.map(item => (
+                    <a key={item.matchId} href={`#/prediction/${item.matchId}`} className="flex items-center justify-between gap-4 p-4 hover:bg-red/5">
+                      <div>
+                        <div className="font-mono text-[9px] tracking-eyebrow text-ink-4">{item.detail}</div>
+                        <h2 className="font-display text-2xl leading-tight mt-1">{item.label}</h2>
+                      </div>
+                      <span className="bg-red px-2 py-1 font-mono text-[9px] font-bold text-white">{item.hoursLeft}h</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Global notices from admin */}
             {notices.length > 0 && (
               <div>

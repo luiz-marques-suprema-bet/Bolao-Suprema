@@ -17,6 +17,8 @@ import {
   adminBulkMatchStatus,
   adminDeletePrediction,
   adminSetUserRole,
+  fetchAuditLogs,
+  fetchSystemHealth,
 } from '@/services/product'
 import { Tooltip } from '@/components/shared/Tooltip'
 import type { MarketStatus, MatchStatus, MatchStage } from '@/types'
@@ -783,10 +785,117 @@ function useAdminData() {
   return { kpis, filtered, allMatches, overrides, filter, setFilter, selectedGroup, setSelectedGroup, toast, showToast }
 }
 
+type AdminTab = 'operation' | 'people' | 'comms' | 'health'
+
+const ADMIN_TABS: Array<{ id: AdminTab; label: string; detail: string }> = [
+  { id: 'operation', label: 'OPERAÇÃO', detail: 'partidas, mercados e resultados' },
+  { id: 'people', label: 'PESSOAS', detail: 'participantes, bloqueios e papéis' },
+  { id: 'comms', label: 'COMUNICAÇÃO', detail: 'avisos globais' },
+  { id: 'health', label: 'SAÚDE', detail: 'status do sistema e auditoria' },
+]
+
+function AdminTabBar({ active, onChange }: { active: AdminTab; onChange: (tab: AdminTab) => void }) {
+  return (
+    <div className="mb-5 grid grid-cols-2 gap-2 md:grid-cols-4">
+      {ADMIN_TABS.map(tab => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => onChange(tab.id)}
+          className={cn(
+            'border-2 px-3 py-3 text-left transition-colors',
+            active === tab.id ? 'border-ink bg-ink text-paper' : 'border-hairline bg-card hover:border-line-strong',
+          )}
+        >
+          <div className="font-display text-lg leading-none">{tab.label}</div>
+          <div className={cn('mt-1 font-mono text-[8px] leading-tight', active === tab.id ? 'text-paper/55' : 'text-ink-4')}>
+            {tab.detail}
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function AdminHealthPanel() {
+  const [health, setHealth] = useState<Array<{ label: string; value: string | number; sub: string }>>([])
+  const [logs, setLogs] = useState<Array<{ id?: string; action?: string; entity_type?: string; entity_id?: string; created_at?: string }>>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const [healthRes, auditRes] = await Promise.all([
+      fetchSystemHealth(),
+      fetchAuditLogs(12),
+    ])
+    if (healthRes.data) {
+      setHealth([
+        { label: 'USUARIOS', value: healthRes.data.usersTotal, sub: `${healthRes.data.usersPending} pendentes` },
+        { label: 'PALPITES', value: healthRes.data.predictionsTotal, sub: 'total salvo' },
+        { label: 'MERCADOS ABERTOS', value: healthRes.data.marketsOpen, sub: `${healthRes.data.marketsLocked} travados` },
+        { label: 'SEM KICKOFF', value: healthRes.data.matchesWithoutKickoff, sub: 'deve ser 0 em jogos reais' },
+      ])
+    }
+    setLogs((auditRes.data ?? []) as Array<{ id?: string; action?: string; entity_type?: string; entity_id?: string; created_at?: string }>)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { if (!isMockMode) load() }, [load])
+
+  return (
+    <section className="space-y-4">
+      <div className="ui-panel">
+        <div className="ui-panel-header flex items-center justify-between gap-3">
+          <div>
+            <div className="font-display text-xl">SAÚDE OPERACIONAL</div>
+            <div className="font-mono text-[9px] text-paper/50">visao rapida do backend e trilha de auditoria</div>
+          </div>
+          <button disabled={loading} onClick={load} className="btn-yellow text-[10px]">↺</button>
+        </div>
+        {loading ? (
+          <div className="px-4 py-6 font-mono text-[11px] text-ink-4 animate-pulse">CARREGANDO...</div>
+        ) : (
+          <div className="grid gap-3 p-4 md:grid-cols-4">
+            {health.map(item => (
+              <KpiCard key={item.label} label={item.label} value={item.value} sub={item.sub} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="ui-panel">
+        <div className="ui-panel-header">
+          <div className="font-display text-xl">AUDITORIA RECENTE</div>
+        </div>
+        {logs.length === 0 ? (
+          <div className="px-4 py-5 font-mono text-[11px] text-ink-4">Nenhum evento recente carregado.</div>
+        ) : (
+          <div className="divide-y divide-hairline">
+            {logs.map((log, index) => (
+              <div key={log.id ?? index} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="truncate font-mono text-[11px] font-bold">{log.action ?? 'evento'}</div>
+                  <div className="truncate font-mono text-[9px] text-ink-4">
+                    {log.entity_type ?? 'sistema'} {log.entity_id ? `- ${log.entity_id}` : ''}
+                  </div>
+                </div>
+                <span className="shrink-0 font-mono text-[9px] text-ink-4">
+                  {log.created_at ? new Date(log.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 // ─── Mobile ───────────────────────────────────────────────────────────────────
 
 function AdminMobile() {
   const { kpis, filtered, filter, setFilter, selectedGroup, setSelectedGroup, toast, showToast } = useAdminData()
+  const [activeTab, setActiveTab] = useState<AdminTab>('operation')
 
   return (
     <div className="min-h-dvh bg-paper pb-24">
@@ -816,78 +925,99 @@ function AdminMobile() {
       )}
 
       <div className="px-4 pt-3">
-        <NoticesPanel onToast={showToast} />
-        <ParticipantsPanel onToast={showToast} />
-        <AdminRolesPanel onToast={showToast} />
+        <AdminTabBar active={activeTab} onChange={setActiveTab} />
       </div>
 
-      <div className="px-4 pt-3 space-y-2">
-        <button onClick={() => openAllMatches(showToast)} className="btn-ghost w-full justify-center text-[10px] border-green/60 text-green">
-          ABRIR TODAS AS APOSTAS
-        </button>
-        <button onClick={() => lockAllOpenMatches(showToast)} className="btn-ghost w-full justify-center text-[10px]">
-          BLOQUEAR TODAS AS APOSTAS ABERTAS
-        </button>
-      </div>
+      {activeTab === 'comms' && (
+        <div className="px-4 pt-3">
+          <NoticesPanel onToast={showToast} />
+        </div>
+      )}
 
-      <div className="px-4 pt-3">
-        <div className="flex gap-1.5 flex-wrap mb-2">
-          {(['all', 'scheduled', 'open', 'locked', 'finished'] as const).map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={cn(
-                'font-mono text-[9px] px-2.5 py-1.5 border-2 uppercase transition-colors',
-                filter === f ? 'bg-ink border-ink text-paper' : 'border-hairline text-ink-3 hover:border-ink'
-              )}
-            >
-              {f === 'all' ? 'TODOS' : f === 'scheduled' ? 'AGEND.' : f === 'open' ? 'ABERTOS' : f === 'locked' ? 'BLOQ.' : 'ENCERR.'}
+      {activeTab === 'people' && (
+        <div className="px-4 pt-3">
+          <ParticipantsPanel onToast={showToast} />
+          <AdminRolesPanel onToast={showToast} />
+        </div>
+      )}
+
+      {activeTab === 'health' && (
+        <div className="px-4 pt-3">
+          <AdminHealthPanel />
+        </div>
+      )}
+
+      {activeTab === 'operation' && (
+        <>
+          <div className="px-4 pt-3 space-y-2">
+            <button onClick={() => openAllMatches(showToast)} className="btn-ghost w-full justify-center text-[10px] border-green/60 text-green">
+              ABRIR TODAS AS APOSTAS
             </button>
-          ))}
-        </div>
-        <div className="flex gap-1 flex-wrap">
-          <button
-            onClick={() => setSelectedGroup('all')}
-            className={cn('font-mono text-[8px] px-2 py-1 border', selectedGroup === 'all' ? 'bg-ink text-paper border-ink' : 'border-hairline text-ink-3')}
-          >
-            TODOS GRUPOS
-          </button>
-          {WC2026_GROUPS.map(g => (
-            <button
-              key={g.id}
-              onClick={() => setSelectedGroup(g.id)}
-              className={cn('font-mono text-[8px] px-2 py-1 border', selectedGroup === g.id ? 'bg-ink text-paper border-ink' : 'border-hairline text-ink-3')}
-            >
-              {g.id}
+            <button onClick={() => lockAllOpenMatches(showToast)} className="btn-ghost w-full justify-center text-[10px]">
+              BLOQUEAR TODAS AS APOSTAS ABERTAS
             </button>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      <div className="ui-panel mx-4 mt-3">
-        <div className="px-3 py-2 border-b border-hairline font-mono text-[10px] tracking-eyebrow text-ink-3">
-          PARTIDAS ({filtered.length})
-        </div>
-        {filtered.length === 0 ? (
-          <div className="px-4 py-6 text-center font-mono text-[11px] text-ink-4">Nenhuma partida com esse filtro</div>
-        ) : (
-          filtered.map(m => (
-            <MatchRowAdmin
-              key={m.id}
-              matchCode={m.id}
-              homeCode={m.home.code}
-              awayCode={m.away.code}
-              dateStr={formatMatchDateTime(m)}
-              group={m.group}
-              currentStatus={m.status}
-              currentHomeScore={m.homeScore}
-              currentAwayScore={m.awayScore}
-              stage={m.stage}
-              onAction={showToast}
-            />
-          ))
-        )}
-      </div>
+          <div className="px-4 pt-3">
+            <div className="flex gap-1.5 flex-wrap mb-2">
+              {(['all', 'scheduled', 'open', 'locked', 'finished'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={cn(
+                    'font-mono text-[9px] px-2.5 py-1.5 border-2 uppercase transition-colors',
+                    filter === f ? 'bg-ink border-ink text-paper' : 'border-hairline text-ink-3 hover:border-ink'
+                  )}
+                >
+                  {f === 'all' ? 'TODOS' : f === 'scheduled' ? 'AGEND.' : f === 'open' ? 'ABERTOS' : f === 'locked' ? 'BLOQ.' : 'ENCERR.'}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1 flex-wrap">
+              <button
+                onClick={() => setSelectedGroup('all')}
+                className={cn('font-mono text-[8px] px-2 py-1 border', selectedGroup === 'all' ? 'bg-ink text-paper border-ink' : 'border-hairline text-ink-3')}
+              >
+                TODOS GRUPOS
+              </button>
+              {WC2026_GROUPS.map(g => (
+                <button
+                  key={g.id}
+                  onClick={() => setSelectedGroup(g.id)}
+                  className={cn('font-mono text-[8px] px-2 py-1 border', selectedGroup === g.id ? 'bg-ink text-paper border-ink' : 'border-hairline text-ink-3')}
+                >
+                  {g.id}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="ui-panel mx-4 mt-3">
+            <div className="px-3 py-2 border-b border-hairline font-mono text-[10px] tracking-eyebrow text-ink-3">
+              PARTIDAS ({filtered.length})
+            </div>
+            {filtered.length === 0 ? (
+              <div className="px-4 py-6 text-center font-mono text-[11px] text-ink-4">Nenhuma partida com esse filtro</div>
+            ) : (
+              filtered.map(m => (
+                <MatchRowAdmin
+                  key={m.id}
+                  matchCode={m.id}
+                  homeCode={m.home.code}
+                  awayCode={m.away.code}
+                  dateStr={formatMatchDateTime(m)}
+                  group={m.group}
+                  currentStatus={m.status}
+                  currentHomeScore={m.homeScore}
+                  currentAwayScore={m.awayScore}
+                  stage={m.stage}
+                  onAction={showToast}
+                />
+              ))
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -896,6 +1026,7 @@ function AdminMobile() {
 
 function AdminDesktop() {
   const { kpis, filtered, filter, setFilter, selectedGroup, setSelectedGroup, toast, showToast } = useAdminData()
+  const [activeTab, setActiveTab] = useState<AdminTab>('operation')
 
   return (
     <div className="min-h-dvh bg-paper">
@@ -935,12 +1066,19 @@ function AdminDesktop() {
           </div>
         )}
 
-        <NoticesPanel onToast={showToast} />
-        <ParticipantsPanel onToast={showToast} />
-        <AdminRolesPanel onToast={showToast} />
+        <AdminTabBar active={activeTab} onChange={setActiveTab} />
 
+        {activeTab === 'comms' && <NoticesPanel onToast={showToast} />}
+        {activeTab === 'people' && (
+          <div className="grid gap-5 xl:grid-cols-2">
+            <ParticipantsPanel onToast={showToast} />
+            <AdminRolesPanel onToast={showToast} />
+          </div>
+        )}
+        {activeTab === 'health' && <AdminHealthPanel />}
+
+        {activeTab === 'operation' && (
         <div className="grid grid-cols-[1.6fr_1fr] gap-5">
-
           <div className="space-y-4">
             <div className="ui-panel">
               <div className="px-4 py-3 border-b border-hairline flex items-center gap-3 flex-wrap">
@@ -1067,6 +1205,7 @@ function AdminDesktop() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   )

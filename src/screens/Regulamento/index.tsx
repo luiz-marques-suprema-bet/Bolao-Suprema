@@ -77,9 +77,9 @@ export function RegulamentoScreen() {
 
         {/* Pontuação */}
         <section>
-          <div className="ui-panel-header flex items-baseline gap-3">
+          <div className="border-2 border-line-strong border-b-0 bg-card px-4 py-3 text-ink flex items-baseline gap-3">
             <h2 className="font-display text-3xl">PONTUAÇÃO</h2>
-            <span className="font-mono text-[10px] text-paper/40 tracking-eyebrow">COMO GANHAR PTS</span>
+            <span className="font-mono text-[10px] text-ink-4 tracking-eyebrow">COMO GANHAR PTS</span>
           </div>
           <div className="ui-panel border-t-0 divide-y divide-hairline">
             <RulesBlock title="FASE DE GRUPOS" rules={GROUP_RULES} />
@@ -102,9 +102,9 @@ export function RegulamentoScreen() {
 
         {/* Desempate */}
         <section>
-          <div className="ui-panel-header flex items-baseline gap-3">
+          <div className="border-2 border-line-strong border-b-0 bg-card px-4 py-3 text-ink flex items-baseline gap-3">
             <h2 className="font-display text-3xl">DESEMPATE</h2>
-            <span className="font-mono text-[10px] text-paper/40 tracking-eyebrow">APLICADOS NESTA ORDEM</span>
+            <span className="font-mono text-[10px] text-ink-4 tracking-eyebrow">APLICADOS NESTA ORDEM</span>
           </div>
           <div className="ui-panel border-t-0">
             {TIEBREAKERS.map((t, i) => (

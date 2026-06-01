@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTheme } from '@/context/ThemeContext'
 import { Avatar } from '@/components/shared/Avatar'
+import { useNavAlerts } from '@/hooks/useNavAlerts'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
@@ -19,6 +20,7 @@ export function MobileNav() {
   const { pathname } = useLocation()
   const user = useAuthStore(s => s.user)
   const { theme, toggleTheme } = useTheme()
+  const { totalCount, hasUrgentPick } = useNavAlerts()
   const isDark = theme === 'dark'
 
   return (
@@ -30,6 +32,7 @@ export function MobileNav() {
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.path
           const isProfile = item.id === 'profile'
+          const showAlertBadge = item.id === 'alerts' && totalCount > 0
 
           return (
             <button
@@ -55,6 +58,14 @@ export function MobileNav() {
               </span>
               {active && (
                 <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 bg-ink" />
+              )}
+              {showAlertBadge && (
+                <span className={cn(
+                  'absolute right-2 top-1 grid h-3.5 min-w-3.5 place-items-center px-0.5 font-mono text-[7px] font-bold leading-none text-white',
+                  hasUrgentPick ? 'bg-red' : 'bg-yellow text-[#0D0D0D]',
+                )}>
+                  {totalCount > 9 ? '9+' : totalCount}
+                </span>
               )}
             </button>
           )

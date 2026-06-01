@@ -164,6 +164,29 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d atrás`
 }
 
+const NEWS_SLIDE_MS = 9000
+
+function NewsFallbackVisual({ title }: { title: string }) {
+  const seed = title.length % 4
+  const palettes = [
+    ['#FFCB05', '#00A651', '#0D0D0D'],
+    ['#1D70B8', '#FFCB05', '#0D0D0D'],
+    ['#D71920', '#FFCB05', '#0D0D0D'],
+    ['#00A651', '#F5F1E8', '#0D0D0D'],
+  ]
+  const [a, b, c] = palettes[seed]
+  return (
+    <div
+      className="absolute inset-0"
+      style={{ background: `linear-gradient(135deg, ${a} 0%, ${a} 28%, ${b} 28%, ${b} 54%, ${c} 54%, ${c} 100%)` }}
+    >
+      <div className="absolute inset-0 opacity-[0.18]"
+        style={{ backgroundImage: 'repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 16px)' }} />
+      <div className="absolute bottom-4 right-4 font-display text-[64px] leading-none text-white/25">2026</div>
+    </div>
+  )
+}
+
 function WC26News({
   compact = false,
   className,
@@ -177,7 +200,7 @@ function WC26News({
 }) {
   const [news, setNews] = useState<FootballNewsItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [featured, setFeatured] = useState<FootballNewsItem | null>(null)
+  const [activeIndex, setActiveIndex] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -189,7 +212,7 @@ function WC26News({
     fetchWC26News(compact ? 6 : 10).then(items => {
       if (cancelled) return
       setNews(items)
-      setFeatured(items[0] ?? null)
+      setActiveIndex(0)
       setLoading(false)
       onAvailabilityChange?.(items.length > 0)
     }).catch(() => {
@@ -200,58 +223,80 @@ function WC26News({
     return () => { cancelled = true }
   }, [compact, onAvailabilityChange])
 
+  useEffect(() => {
+    if (loading || news.length <= 1) return undefined
+    const id = window.setInterval(() => {
+      setActiveIndex(index => (index + 1) % news.length)
+    }, NEWS_SLIDE_MS)
+    return () => window.clearInterval(id)
+  }, [loading, news.length])
+
   if (!newsConfigured() || (!loading && news.length === 0)) return null
   if (loading && deferUntilLoaded) return null
 
+  const featured = news[activeIndex] ?? news[0]
+  const nextItems = news.filter((_, index) => index !== activeIndex).slice(0, compact ? 2 : 4)
+
   return (
-    <div className={cn('ui-panel', className)}>
+    <div className={cn('ui-panel overflow-hidden', className)}>
       <div className="ui-panel-header flex items-baseline justify-between">
         <div className="flex items-baseline gap-1.5">
           <span className="font-display text-base">COPA 2026</span>
-          <span className="font-mono text-[10px] text-paper/40">últimas notícias</span>
+          <span className="font-mono text-[10px] text-paper/40">radar da copa</span>
         </div>
         <span className="font-mono text-[8px] text-paper/30 tracking-eyebrow">ao vivo</span>
       </div>
       {loading ? (
-        <div className="flex items-center justify-center py-8">
+        <div className="flex items-center justify-center py-12">
           <span className="font-mono text-[10px] text-ink-4 animate-pulse tracking-eyebrow">CARREGANDO…</span>
         </div>
-      ) : compact ? (
-        <div className="divide-y divide-hairline">
-          {news.map(item => (
-            <a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer"
-              className="flex items-start gap-3 px-4 py-3 hover:bg-surface-hover transition-colors group">
-              {item.image && <img src={item.image} alt="" className="w-16 h-12 object-cover flex-shrink-0 border border-hairline" onError={e => (e.currentTarget.style.display = 'none')} />}
-              <div className="flex-1 min-w-0">
-                <p className="font-mono text-[11px] font-bold text-ink leading-tight line-clamp-2 group-hover:underline">{item.title}</p>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="font-mono text-[8px] text-ink-4 tracking-eyebrow">{item.source}</span>
-                  <span className="font-mono text-[8px] text-ink-4">·</span>
-                  <span className="font-mono text-[8px] text-ink-4">{timeAgo(item.publishedAt)}</span>
-                </div>
-              </div>
-              <span className="font-mono text-[11px] text-ink-4 group-hover:text-ink transition-colors flex-shrink-0 self-center">→</span>
-            </a>
-          ))}
-        </div>
       ) : (
-        <div className="grid grid-cols-[1fr_300px]">
+        <div>
           {featured && (
             <a href={featured.url} target="_blank" rel="noopener noreferrer"
-              className="relative group overflow-hidden border-r border-hairline block" style={{ minHeight: 240 }}>
-              {featured.image && <img src={featured.image} alt="" className="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-500" onError={e => (e.currentTarget.style.display = 'none')} />}
-              <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-5">
-                <div className="font-mono text-[8px] text-yellow tracking-eyebrow mb-1.5">{featured.source} · {timeAgo(featured.publishedAt)}</div>
-                <h3 className="font-display text-xl text-paper leading-tight group-hover:text-yellow transition-colors">{featured.title}</h3>
+              className="relative block min-h-[280px] overflow-hidden border-b border-hairline bg-ink text-paper group">
+              {featured.image ? (
+                <img
+                  src={featured.image}
+                  alt={featured.title}
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                  onError={e => (e.currentTarget.style.display = 'none')}
+                />
+              ) : (
+                <NewsFallbackVisual title={featured.title} />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/5" />
+              <div className="absolute left-0 right-0 top-0 h-1 bg-white/20">
+                <div
+                  key={activeIndex}
+                  className="h-full bg-yellow"
+                  style={{ animation: `news-progress ${NEWS_SLIDE_MS}ms linear forwards` }}
+                />
+              </div>
+              <div className="absolute inset-x-0 bottom-0 p-4 md:p-5">
+                <div className="mb-2 flex items-center gap-2 font-mono text-[8px] tracking-eyebrow text-yellow">
+                  <span>{featured.source}</span>
+                  <span className="text-paper/45">·</span>
+                  <span className="text-paper/60">{timeAgo(featured.publishedAt)}</span>
+                </div>
+                <h3 className={cn(
+                  'font-display leading-[0.95] text-paper transition-colors group-hover:text-yellow',
+                  compact ? 'text-3xl' : 'text-4xl',
+                )}>
+                  {featured.title}
+                </h3>
+                <div className="mt-4 inline-flex items-center gap-2 border border-paper/40 px-3 py-2 font-mono text-[9px] font-bold tracking-eyebrow text-paper">
+                  LER MATERIA <span>→</span>
+                </div>
               </div>
             </a>
           )}
-          <div className="divide-y divide-hairline overflow-hidden">
-            {news.slice(1, 7).map(item => (
+          <div className="divide-y divide-hairline">
+            {nextItems.map((item, index) => (
               <a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer"
-                className="flex items-start gap-2.5 px-3 py-3 hover:bg-surface-hover transition-colors group">
-                {item.image && <img src={item.image} alt="" className="w-14 h-10 object-cover flex-shrink-0 border border-hairline" onError={e => (e.currentTarget.style.display = 'none')} />}
+                onMouseEnter={() => setActiveIndex(news.findIndex(n => n.url === item.url))}
+                className="flex items-center gap-3 px-3 py-3 hover:bg-surface-hover transition-colors group">
+                <span className="font-display text-lg text-ink-4 tabular-nums">{index + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="font-mono text-[10px] font-bold text-ink leading-tight line-clamp-2 group-hover:underline">{item.title}</p>
                   <div className="flex items-center gap-1 mt-1">
@@ -263,6 +308,22 @@ function WC26News({
               </a>
             ))}
           </div>
+          {news.length > 1 && (
+            <div className="flex gap-1.5 px-3 py-3">
+              {news.slice(0, 8).map((item, index) => (
+                <button
+                  key={item.url}
+                  type="button"
+                  aria-label={`Noticia ${index + 1}`}
+                  onClick={() => setActiveIndex(index)}
+                  className={cn(
+                    'h-1 flex-1 transition-colors',
+                    index === activeIndex ? 'bg-ink' : 'bg-hairline hover:bg-ink-4',
+                  )}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -783,13 +844,13 @@ function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void 
       className={cn('fixed inset-0 z-[60] flex justify-center', isDesktop ? 'items-center p-4' : 'items-end px-3 pt-3')}
       style={isDesktop ? undefined : { paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
     >
-      <div className="absolute inset-0 bg-ink/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-[1px]" onClick={onClose} />
       <motion.div
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 40, opacity: 0 }}
         transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-        className="relative w-full max-w-sm ui-card"
+        className="relative w-full max-w-sm ui-card shadow-none"
       >
         <button onClick={onClose}
           className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center font-mono text-[11px] text-ink-3 hover:text-ink border border-hairline hover:border-ink transition-colors z-10">

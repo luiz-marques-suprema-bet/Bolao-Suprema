@@ -1,45 +1,36 @@
 # Bolao Suprema
 
-Aplicacao web interna para o bolao da Copa do Mundo 2026 da Suprema.
+Aplicacao web interna da Suprema para palpites da Copa do Mundo FIFA 2026.
 
-## Resumo executivo para T.I.
+## Estado atual
 
-O Bolao Suprema e uma SPA React/Vite publicada no GitHub Pages. Autenticacao, banco, realtime, storage, regras de seguranca e Edge Functions rodam no Supabase.
+O Bolao Suprema e uma SPA React/Vite publicada no GitHub Pages em `https://bolao.suprema.group/`. Autenticacao, banco, RLS, realtime, storage, cron, Edge Functions, pontuacao e auditoria rodam no Supabase.
 
-Estado atual do fluxo principal:
+Validacao operacional mais recente: 2026-06-01.
 
-- Usuario pode palpitar jogo a jogo ou salvar um grupo inteiro de uma vez.
-- Palpite pode ser alterado ate o kickoff individual da partida.
-- A trava de horario nao depende do frontend: o banco bloqueia insert/update fora do mercado aberto.
-- Modelo Copa 2026 revisado para 48 selecoes, 12 grupos, 104 partidas e Fase de 32 antes das oitavas.
-- Tela admin e camada operacional de excecao: bloquear/reabrir mercados, desfazer palpites se necessario e apurar resultados.
+- Copa 2026 modelada com 48 selecoes, 12 grupos, 104 partidas e Fase de 32.
+- Palpites fecham automaticamente por `kickoff_utc`; o banco bloqueia insert/update fora do mercado aberto.
+- Salvamento jogo a jogo, em lote por grupo e apostas especiais confirmam somente depois de resposta do Supabase.
 - Pontuacao e ranking sao calculados no Supabase quando resultados sao apurados.
-- Sync externo com football-data.org roda via Edge Function, sem token no frontend.
-
-Ultima validacao informada em 2026-05-21:
-
-- `FOOTBALL_DATA_TOKEN` configurado como secret no Supabase.
-- Edge Function `football-data-sync` executada com `season=2026`.
-- `63` partidas atualizadas.
-- `41` partidas sem match, esperado para fases futuras/placeholders ainda sem times definidos.
-
-Handoff tecnico completo: [docs/TI_HANDOFF.md](docs/TI_HANDOFF.md)
-
-Formato da Copa 2026 usado pelo app: [docs/WC2026_FORMAT.md](docs/WC2026_FORMAT.md)
+- Sync externo de placares roda por `football-data-sync` + pg_cron.
+- Mata-mata materializa automaticamente da Fase de 32 ate final, com fallback admin.
+- Noticias da Copa passam por `news-proxy`; sem chave paga, usa Google News RSS server-side.
+- Avisos e alertas de palpites perto de fechar aparecem no sininho do app.
+- CI e deploy rodam no GitHub Actions em push para `main`.
 
 ## Funcionalidades
 
 - Login por OTP com e-mail corporativo `@suprema.group`.
 - Perfil de participante com foto, banner, bio, selecao e jogador favorito.
 - Palpites de placar por partida.
-- Salvamento em lote por grupo na fase de grupos.
-- Travamento automatico por kickoff e por status de mercado.
-- Apostas gerais: campeao, vice e artilheiro.
+- Salvamento em lote por grupo.
+- Apostas especiais: campeao, vice e artilheiro.
+- Travamento automatico por kickoff e status de mercado.
 - Ranking geral e detalhamento de pontos.
 - Resenha: chat com texto, imagem, GIF, audio e enquetes.
 - Boletim: comunicados internos para admin/marketing.
-- Notificacoes internas.
-- Painel admin para participantes, mercados, resultados, auditoria e exportacoes.
+- Avisos globais e sininho de alertas.
+- Painel admin para operacao, participantes, papeis, comunicacao, saude e auditoria.
 
 ## Stack
 
@@ -51,56 +42,32 @@ Formato da Copa 2026 usado pelo app: [docs/WC2026_FORMAT.md](docs/WC2026_FORMAT.
 | Rotas | React Router v6 com HashRouter |
 | Estado | Zustand |
 | Backend | Supabase PostgreSQL, Auth, Realtime, Storage |
-| Sync externo | Supabase Edge Function + football-data.org |
-| Deploy | GitHub Actions para GitHub Pages |
-
-## Arquitetura
-
-- SPA estatica em GitHub Pages.
-- HashRouter (`/#/rota`) para compatibilidade com GitHub Pages.
-- Supabase Auth emite sessao/JWT.
-- Supabase PostgreSQL aplica RLS, triggers e RPCs.
-- Supabase Realtime atualiza partidas/chat.
-- Supabase Storage guarda imagens e midias.
-- Edge Function `football-data-sync` sincroniza dados esportivos de football-data.org.
-
-Mais detalhes: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+| Automacao | Supabase Edge Functions + pg_cron |
+| Deploy | GitHub Actions + GitHub Pages |
 
 ## Fluxo de palpites
 
 1. Usuario autenticado acessa `/#/prediction`.
-2. Pode ajustar placares jogo a jogo.
-3. Pode salvar um grupo inteiro com `SALVAR GRUPO`.
-4. O frontend so marca como salvo depois de confirmacao do Supabase.
-5. O banco valida:
-   - usuario autenticado;
-   - participante ativo;
-   - partida existente;
-   - `market_status = open`;
-   - status nao esta `locked`, `live` ou `finished`;
-   - `kickoff_utc > now()`.
-6. Depois do kickoff, a trigger `trg_predictions_market_open` impede alteracao mesmo que alguem tente chamar a API direto.
+2. Ajusta placares jogo a jogo ou salva um grupo inteiro.
+3. O frontend so marca como salvo depois de confirmacao do Supabase.
+4. O banco valida usuario ativo, partida real, mercado aberto e `kickoff_utc > now()`.
+5. Depois do kickoff, a trigger `trg_predictions_market_open` impede alteracao mesmo por API direta.
 
-RPC principal:
+RPCs principais:
 
 - `public.save_match_predictions(jsonb)`
+- `public.save_general_picks(text,text,text)`
+- `public.ensure_prediction_market_open()`
 
-Tabela principal:
+## Automacao
 
-- `public.predictions`
+- `football-data-sync`: sincroniza placares e status da football-data.org.
+- Cron `football-data-sync`: agenda a Edge Function periodicamente pelo Supabase.
+- `close_expired_markets()`: fecha mercados expirados.
+- `settle_match_result()`: registra placar, apura pontos e atualiza ranking.
+- `materialize_knockout()`: preenche a fase eliminatoria conforme resultados reais.
 
-## Admin
-
-O admin nao e necessario para o fluxo normal de palpites. Ele existe para operacao:
-
-- bloquear/reabrir partida ou grupo;
-- registrar resultado;
-- apurar pontos;
-- remover/desfazer palpite quando necessario;
-- gerenciar participantes;
-- revisar auditoria.
-
-RPCs administrativas possuem checagem de admin/owner no banco e nao devem ser expostas a `anon`.
+O admin continua existindo como fallback operacional: bloquear/reabrir mercados, corrigir resultados, definir classificados manualmente e revisar auditoria.
 
 ## Supabase
 
@@ -111,35 +78,26 @@ Projeto atual:
 
 Migrations ficam em [supabase/migrations](supabase/migrations).
 
-Migrations recentes importantes:
+Edge Functions:
 
-- `20260521103000_prediction_batch_and_football_data.sql`
-  - Cria `save_match_predictions(jsonb)`.
-  - Adiciona colunas `football_data_id`, `football_data_status`, `football_data_last_updated` em `matches`.
-  - Ajusta helper de mercado.
-- `20260521110000_restrict_rpc_grants.sql`
-  - Remove execucao anonima de RPCs sensiveis.
-- `20260521110500_harden_chat_media_listing.sql`
-  - Remove listagem ampla do bucket `chat-media`.
+| Function | JWT | Funcao |
+|----------|-----|--------|
+| `football-data-sync` | `true` | sincroniza football-data.org |
+| `news-proxy` | `true` | proxy server-side de noticias da Copa |
 
-Edge Function:
+Documentos tecnicos:
 
-- Codigo: [supabase/functions/football-data-sync/index.ts](supabase/functions/football-data-sync/index.ts)
-- Nome: `football-data-sync`
-- Deploy esperado: `verify_jwt=true`
-- Endpoint: `https://<project-ref>.functions.supabase.co/football-data-sync?season=2026`
-- Codigo: [supabase/functions/news-proxy/index.ts](supabase/functions/news-proxy/index.ts)
-- Nome: `news-proxy`
-- Deploy esperado: `verify_jwt=true`
-- Funcao: proxy server-side para noticias da Copa 2026
-
-Documentacao da integracao: [docs/FOOTBALL_DATA_SYNC.md](docs/FOOTBALL_DATA_SYNC.md)
+- [docs/TI_HANDOFF.md](docs/TI_HANDOFF.md)
+- [docs/WC2026_FORMAT.md](docs/WC2026_FORMAT.md)
+- [docs/FOOTBALL_DATA_SYNC.md](docs/FOOTBALL_DATA_SYNC.md)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/SECURITY.md](docs/SECURITY.md)
 
 ## Variaveis e secrets
 
 ### Frontend / GitHub Actions
 
-Essas variaveis sao publicas para o build do app. Apenas chaves publishable podem aparecer aqui.
+Somente chaves publicas/publishable entram em `VITE_*`.
 
 | Variavel | Obrigatoria | Descricao |
 |----------|-------------|-----------|
@@ -149,87 +107,62 @@ Essas variaveis sao publicas para o build do app. Apenas chaves publishable pode
 | `VITE_THESPORTSDB_KEY` | Nao | Busca de jogadores |
 | `VITE_MOCK_AUTH` | Nao | `true` apenas para desenvolvimento local |
 
-Noticias da Copa 2026 nao usam chave `VITE_*`. Se houver chave paga, ela fica
-somente no secret da Edge Function `news-proxy`; sem chave, o proxy usa fallback
-server-side via Google News RSS.
+Noticias da Copa 2026 nao usam chave `VITE_*`. O frontend chama apenas `news-proxy`.
 
-### Supabase Edge Function secrets
-
-Esses secrets ficam no Supabase. Nunca entram no frontend, GitHub Pages ou repositorio.
+### Supabase secrets
 
 | Secret | Descricao |
 |--------|-----------|
 | `FOOTBALL_DATA_TOKEN` | Token da football-data.org |
-| `SUPABASE_SERVICE_ROLE_KEY` | Secret interno para Edge Functions, nunca usar no frontend |
-| `WORLD_NEWS_API_KEY` | Opcional; chave server-side para `news-proxy` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Uso interno de Edge Functions |
+| `WORLD_NEWS_API_KEY` | Opcional; chave paga server-side para noticias |
 | `WORLD_NEWS_URL` | Opcional; endpoint alternativo da API de noticias |
+
+Sem `WORLD_NEWS_API_KEY`, `news-proxy` usa fallback server-side via Google News RSS.
 
 ## Desenvolvimento local
 
 ```bash
-git clone https://github.com/ojozinho/Bolao-Suprema.git
+git clone https://github.com/luiz-marques-suprema-bet/Bolao-Suprema.git
 cd Bolao-Suprema
 npm install
 cp .env.example .env.local
 npm run dev
 ```
 
-Para desenvolvimento sem Supabase real:
-
-```bash
-VITE_MOCK_AUTH=true npm run dev
-```
-
-No Windows PowerShell:
+PowerShell com mock local:
 
 ```powershell
 $env:VITE_MOCK_AUTH="true"
 npm run dev
 ```
 
-## Validacao local
+## Validacao
 
 ```bash
 npm run type-check
+npm test
 npm run build
 ```
 
-## Deploy
+Checklist rapido antes de publicar:
 
-O deploy e automatico via GitHub Actions em push para `main`.
-
-- Workflow: `.github/workflows/deploy.yml`
-- Output: `dist/`
-- Publicacao: GitHub Pages
-- URL: `https://bolao.suprema.group/`
-
-## Checklist rapido para T.I.
-
-- [ ] Conferir GitHub Actions secrets: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
-- [ ] Conferir Supabase secret: `FOOTBALL_DATA_TOKEN`.
-- [ ] Confirmar Edge Function `football-data-sync` com `verify_jwt=true`.
-- [ ] Rodar `npm run type-check`.
-- [ ] Rodar `npm run build`.
-- [ ] Testar login OTP no GitHub Pages.
-- [ ] Testar `/#/prediction`: salvar um jogo e salvar um grupo.
-- [ ] Testar tentativa de alteracao apos bloquear mercado.
-- [ ] Testar admin: bloquear/reabrir partida e apurar resultado.
-- [ ] Rodar Supabase Security Advisor.
-- [ ] Rodar Supabase Performance Advisor.
+- [ ] GitHub Actions verdes em `main`.
+- [ ] `football-data-sync` ativo e com HTTP 200 recente.
+- [ ] `news-proxy` retorna noticias sem expor chave no bundle.
+- [ ] Login OTP funcionando em producao.
+- [ ] Palpite salvo e bloqueio por kickoff/mercado testados.
+- [ ] Admin consegue bloquear/reabrir mercado e apurar resultado.
+- [ ] Security Advisor e Performance Advisor revisados.
 
 ## Seguranca
 
 - Nunca usar `service_role` no frontend.
 - Nunca commitar `.env` ou tokens.
 - RLS habilitado nas tabelas publicas.
-- Views publicas com `security_invoker=true`.
-- Trigger protege privilegios de usuario.
+- RPCs administrativas checam admin/owner no banco.
 - Trigger bloqueia palpites fora do mercado aberto.
-- Bucket `chat-media` nao permite listagem ampla de objetos.
+- Buckets de midia nao permitem listagem ampla.
 - Secrets externos ficam em Supabase Edge Function secrets.
 
-Mais detalhes: [docs/SECURITY.md](docs/SECURITY.md)
-
-## Uso interno
-
-Este repositorio e publico para viabilizar GitHub Pages. O acesso funcional depende de autenticacao corporativa e aprovacoes no Supabase. Nenhum token secreto deve estar no codigo-fonte.
+Este repositorio e publico para viabilizar GitHub Pages. O acesso funcional ao bolao depende de autenticacao corporativa e permissoes no Supabase.

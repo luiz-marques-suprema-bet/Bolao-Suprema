@@ -42,7 +42,29 @@ const WC26_KEYWORDS = [
   'copa 2026',
   'mundial 2026',
   'fifa 2026',
+  'seleção',
+  'selecao',
+  'convocação',
+  'convocacao',
+  'estádio',
+  'estadio',
+  'ingresso',
+  'grupo',
 ]
+
+const GOOGLE_NEWS_QUERIES: Record<'pt' | 'en', string[]> = {
+  pt: [
+    '"Copa do Mundo 2026" OR "Copa 2026" OR "FIFA 2026"',
+    '("Copa 2026" OR "Mundial 2026") (convocação OR convocados OR seleção OR jogadores)',
+    '("Copa 2026" OR "Mundial 2026") (Brasil OR seleção brasileira OR Neymar OR Vinicius)',
+    '("Copa 2026" OR "Mundial 2026") (estádios OR ingressos OR calendário OR grupos)',
+  ],
+  en: [
+    '"World Cup 2026" OR "FIFA 2026"',
+    '("World Cup 2026" OR "FIFA 2026") (squad OR roster OR teams OR players)',
+    '("World Cup 2026" OR "FIFA 2026") (stadiums OR tickets OR schedule OR groups)',
+  ],
+}
 
 function decodeXml(input: string): string {
   return input
@@ -56,7 +78,7 @@ function decodeXml(input: string): string {
 }
 
 function isWC26Related(item: FootballNewsItem): boolean {
-  const haystack = `${item.title} ${item.tags.join(' ')}`.toLowerCase()
+  const haystack = `${item.title} ${item.source} ${item.tags.join(' ')}`.toLowerCase()
   return WC26_KEYWORDS.some((kw) => haystack.includes(kw))
 }
 
@@ -113,6 +135,52 @@ function tagValue(xml: string, tag: string): string {
   return match ? decodeXml(match[1]) : ''
 }
 
+function attrValue(xml: string, tag: string, attr: string): string {
+  const match = xml.match(new RegExp(`<${tag}[^>]*\\s${attr}=["']([^"']+)["'][^>]*>`, 'i'))
+  return match ? decodeXml(match[1]) : ''
+}
+
+function absoluteUrl(url: string, base: string): string {
+  if (!url) return ''
+  try {
+    return new URL(url, base).toString()
+  } catch {
+    return ''
+  }
+}
+
+function looksLikeImage(url: string): boolean {
+  return /^https?:\/\//i.test(url) && !url.includes('gstatic.com/favicon') && !url.includes('/favicon')
+}
+
+async function fetchArticleImage(url: string): Promise<string> {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), 2400)
+  try {
+    const res = await fetch(url, {
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: {
+        'user-agent': 'Mozilla/5.0 (compatible; BolaoSupremaNews/1.0)',
+        accept: 'text/html,application/xhtml+xml',
+      },
+    })
+    if (!res.ok) return ''
+    const html = await res.text()
+    const meta =
+      html.match(/<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+      html.match(/<meta[^>]+name=["']twitter:image(?::src)?["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url)?["']/i)?.[1] ??
+      ''
+    const image = absoluteUrl(decodeXml(meta), res.url || url)
+    return looksLikeImage(image) ? image : ''
+  } catch {
+    return ''
+  } finally {
+    clearTimeout(id)
+  }
+}
+
 function stripSourceSuffix(title: string, source: string): string {
   if (!source) return title
   return title
@@ -120,11 +188,9 @@ function stripSourceSuffix(title: string, source: string): string {
     .trim()
 }
 
-async function fetchFromGoogleNews(language: 'pt' | 'en', limit: number): Promise<FootballNewsItem[]> {
+async function fetchGoogleNewsQuery(language: 'pt' | 'en', query: string, limit: number): Promise<FootballNewsItem[]> {
   const params = new URLSearchParams({
-    q: language === 'pt'
-      ? '"Copa do Mundo 2026" OR "Copa 2026" OR "FIFA 2026"'
-      : '"World Cup 2026" OR "FIFA 2026"',
+    q: query,
     hl: language === 'pt' ? 'pt-BR' : 'en-US',
     gl: language === 'pt' ? 'BR' : 'US',
     ceid: language === 'pt' ? 'BR:pt-419' : 'US:en',
@@ -138,19 +204,48 @@ async function fetchFromGoogleNews(language: 'pt' | 'en', limit: number): Promis
       const source = tagValue(item, 'source') || 'Google News'
       const rawTitle = tagValue(item, 'title')
       const url = tagValue(item, 'link')
+      const mediaImage =
+        attrValue(item, 'media:content', 'url') ||
+        attrValue(item, 'media:thumbnail', 'url') ||
+        tagValue(item, 'url')
       if (!rawTitle || !url) return null
       return {
         title: stripSourceSuffix(rawTitle, source),
         url,
-        image: '',
+        image: looksLikeImage(mediaImage) ? mediaImage : '',
         source,
-        tags: ['World Cup 2026', 'Copa do Mundo 2026'],
+        tags: ['World Cup 2026', 'Copa do Mundo 2026', query],
         publishedAt: new Date(tagValue(item, 'pubDate') || Date.now()).toISOString(),
       }
     })
     .filter((item): item is FootballNewsItem => Boolean(item))
     .filter(isWC26Related)
     .slice(0, limit)
+}
+
+async function fetchFromGoogleNews(language: 'pt' | 'en', limit: number): Promise<FootballNewsItem[]> {
+  const results: FootballNewsItem[] = []
+  const seen = new Set<string>()
+
+  for (const query of GOOGLE_NEWS_QUERIES[language]) {
+    const batch = await fetchGoogleNewsQuery(language, query, Math.max(limit, 8))
+    for (const item of batch) {
+      const key = `${item.title.toLowerCase()}|${item.source.toLowerCase()}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      results.push(item)
+      if (results.length >= limit) break
+    }
+    if (results.length >= limit) break
+  }
+
+  const enriched = await Promise.all(
+    results.slice(0, limit).map(async (item) => ({
+      ...item,
+      image: item.image || await fetchArticleImage(item.url),
+    })),
+  )
+  return enriched
 }
 
 const corsHeaders = {
