@@ -164,17 +164,44 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d atrás`
 }
 
-function WC26News({ compact = false, className }: { compact?: boolean; className?: string }) {
+function WC26News({
+  compact = false,
+  className,
+  deferUntilLoaded = false,
+  onAvailabilityChange,
+}: {
+  compact?: boolean
+  className?: string
+  deferUntilLoaded?: boolean
+  onAvailabilityChange?: (available: boolean) => void
+}) {
   const [news, setNews] = useState<FootballNewsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [featured, setFeatured] = useState<FootballNewsItem | null>(null)
 
   useEffect(() => {
-    if (!newsConfigured()) { setLoading(false); return }
-    fetchWC26News(compact ? 6 : 10).then(items => { setNews(items); setFeatured(items[0] ?? null); setLoading(false) })
-  }, [compact])
+    let cancelled = false
+    if (!newsConfigured()) {
+      setLoading(false)
+      onAvailabilityChange?.(false)
+      return
+    }
+    fetchWC26News(compact ? 6 : 10).then(items => {
+      if (cancelled) return
+      setNews(items)
+      setFeatured(items[0] ?? null)
+      setLoading(false)
+      onAvailabilityChange?.(items.length > 0)
+    }).catch(() => {
+      if (cancelled) return
+      setLoading(false)
+      onAvailabilityChange?.(false)
+    })
+    return () => { cancelled = true }
+  }, [compact, onAvailabilityChange])
 
   if (!newsConfigured() || (!loading && news.length === 0)) return null
+  if (loading && deferUntilLoaded) return null
 
   return (
     <div className={cn('ui-panel', className)}>
@@ -688,10 +715,22 @@ function HomeBoletimSection({ compact = false, className }: { compact?: boolean;
 }
 
 function HomeBoletimNewsSection({ compact = false }: { compact?: boolean }) {
+  const [newsAvailable, setNewsAvailable] = useState(false)
+
   return (
-    <div className={cn('grid gap-4', compact ? 'grid-cols-1' : 'grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.75fr)]')}>
+    <div className={cn(
+      'grid gap-4',
+      compact || !newsAvailable
+        ? 'grid-cols-1'
+        : 'grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.75fr)]',
+    )}>
       <HomeBoletimSection compact={compact} />
-      <WC26News compact className="min-h-full" />
+      <WC26News
+        compact
+        className="min-h-full"
+        deferUntilLoaded
+        onAvailabilityChange={setNewsAvailable}
+      />
     </div>
   )
 }
