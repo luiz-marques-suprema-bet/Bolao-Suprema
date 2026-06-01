@@ -16,3 +16,6 @@ verify_jwt = true
 
 [functions.news-proxy]
 verify_jwt = true
+
+[functions.delete-chat-message]
+verify_jwt = true
