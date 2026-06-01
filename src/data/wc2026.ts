@@ -219,22 +219,22 @@ const RAW: RawMatch[] = [
 ]
 
 const R32_PLACEHOLDERS = [
-  ['Vencedor Grupo A', 'Melhor 3o colocado'],
-  ['Vencedor Grupo B', 'Melhor 3o colocado'],
-  ['Vencedor Grupo C', 'Melhor 3o colocado'],
-  ['Vencedor Grupo D', 'Melhor 3o colocado'],
-  ['Vencedor Grupo E', 'Melhor 3o colocado'],
-  ['Vencedor Grupo F', 'Melhor 3o colocado'],
-  ['Vencedor Grupo G', 'Melhor 3o colocado'],
-  ['Vencedor Grupo H', 'Melhor 3o colocado'],
-  ['Vencedor Grupo I', '2o Grupo A'],
-  ['Vencedor Grupo J', '2o Grupo B'],
-  ['Vencedor Grupo K', '2o Grupo C'],
-  ['Vencedor Grupo L', '2o Grupo D'],
-  ['2o Grupo E', '2o Grupo F'],
-  ['2o Grupo G', '2o Grupo H'],
-  ['2o Grupo I', '2o Grupo J'],
+  ['2o Grupo A', '2o Grupo B'],
+  ['Vencedor Grupo E', '3o A/B/C/D/F'],
+  ['Vencedor Grupo F', '2o Grupo C'],
+  ['Vencedor Grupo C', '2o Grupo F'],
+  ['Vencedor Grupo I', '3o C/D/F/G/H'],
+  ['2o Grupo E', '2o Grupo I'],
+  ['Vencedor Grupo A', '3o C/E/F/H/I'],
+  ['Vencedor Grupo L', '3o E/H/I/J/K'],
+  ['Vencedor Grupo D', '3o B/E/F/I/J'],
+  ['Vencedor Grupo G', '3o A/E/H/I/J'],
   ['2o Grupo K', '2o Grupo L'],
+  ['Vencedor Grupo H', '2o Grupo J'],
+  ['Vencedor Grupo B', '3o E/F/G/I/J'],
+  ['Vencedor Grupo J', '2o Grupo H'],
+  ['Vencedor Grupo K', '3o D/E/I/J/L'],
+  ['2o Grupo D', '2o Grupo G'],
 ] as const
 
 const KNOCKOUT_RAW: RawKnockoutMatch[] = [

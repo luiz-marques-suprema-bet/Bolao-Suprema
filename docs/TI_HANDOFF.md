@@ -98,7 +98,6 @@ Somente chaves publicas/publishable:
 | `VITE_SUPABASE_ANON_KEY` | Anon/publishable key |
 | `VITE_TENOR_KEY` | Opcional, GIFs |
 | `VITE_THESPORTSDB_KEY` | Opcional, busca de jogadores |
-| `VITE_FNEWS_URL`, `VITE_FNEWS_KEY`, `VITE_FNEWS_HOST` | Opcionais, noticias |
 
 ### Supabase Edge Function secrets
 
@@ -108,6 +107,8 @@ Nunca colocar esses valores no frontend:
 |--------|-----|
 | `FOOTBALL_DATA_TOKEN` | Token football-data.org |
 | `SUPABASE_SERVICE_ROLE_KEY` | Acesso interno da Edge Function ao banco |
+| `WORLD_NEWS_API_KEY` | Opcional, noticias da Copa 2026 via Edge Function `news-proxy` |
+| `WORLD_NEWS_URL` | Opcional, endpoint alternativo da World News API |
 
 ## Fluxo de autenticacao
 

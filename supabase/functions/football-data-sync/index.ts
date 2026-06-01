@@ -142,8 +142,17 @@ Deno.serve(async (req) => {
       current.lock_reason &&
       !String(current.lock_reason).startsWith('api_')
 
-    const safePatch = isManualLock && patch.market_status === 'open'
-      ? { football_data_id: fdMatch.id, football_data_status: fdMatch.status, football_data_last_updated: fdMatch.lastUpdated }
+    // M9 hardening: um lock MANUAL de admin (lock_reason != 'api_*') tem
+    // autoridade final. A API nunca pode sobrescrever status/placar/mercado de
+    // uma partida travada pelo admin — nem com LIVE nem com FINISHED. Gravamos
+    // apenas os metadados football_data_* para diagnostico. Para liberar/apurar,
+    // o admin usa admin_update_match_status / settle_match_result.
+    const safePatch = isManualLock
+      ? {
+          football_data_id: fdMatch.id,
+          football_data_status: fdMatch.status,
+          football_data_last_updated: fdMatch.lastUpdated ?? new Date().toISOString(),
+        }
       : {
           ...patch,
           football_data_id: fdMatch.id,

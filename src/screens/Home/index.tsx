@@ -164,7 +164,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d atrás`
 }
 
-function WC26News({ compact = false }: { compact?: boolean }) {
+function WC26News({ compact = false, className }: { compact?: boolean; className?: string }) {
   const [news, setNews] = useState<FootballNewsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [featured, setFeatured] = useState<FootballNewsItem | null>(null)
@@ -177,7 +177,7 @@ function WC26News({ compact = false }: { compact?: boolean }) {
   if (!newsConfigured() || (!loading && news.length === 0)) return null
 
   return (
-    <div className="ui-panel">
+    <div className={cn('ui-panel', className)}>
       <div className="ui-panel-header flex items-baseline justify-between">
         <div className="flex items-baseline gap-1.5">
           <span className="font-display text-base">COPA 2026</span>
@@ -594,7 +594,7 @@ function ResenhaCard() {
   )
 }
 
-function HomeBoletimSection({ compact = false }: { compact?: boolean }) {
+function HomeBoletimSection({ compact = false, className }: { compact?: boolean; className?: string }) {
   const { bulletins, isLoaded, init, destroy, addBoletim, togglePin, deleteBoletim } = useBoletimStore()
   const { user } = useAuthStore()
   const canEdit = (user?.isAdmin || user?.isMarketing) ?? false
@@ -614,7 +614,7 @@ function HomeBoletimSection({ compact = false }: { compact?: boolean }) {
   const rest = sorted.slice(1, compact ? 3 : 5)
 
   return (
-    <section className="border-2 border-line bg-paper-white">
+    <section className={cn('border-2 border-line bg-paper-white', className)}>
       <div className="px-4 py-3 md:px-5 md:py-4 border-b border-hairline flex items-center justify-between gap-3 bg-inverse text-inverse-text">
         <div>
           <div className="font-display text-xl md:text-2xl leading-none">BOLETIM DA FIRMA</div>
@@ -684,6 +684,15 @@ function HomeBoletimSection({ compact = false }: { compact?: boolean }) {
         )}
       </AnimatePresence>
     </section>
+  )
+}
+
+function HomeBoletimNewsSection({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={cn('grid gap-4', compact ? 'grid-cols-1' : 'grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.75fr)]')}>
+      <HomeBoletimSection compact={compact} />
+      <WC26News compact className="min-h-full" />
+    </div>
   )
 }
 
@@ -875,7 +884,7 @@ function HomeMobile() {
           </button>
         )}
 
-        <HomeBoletimSection compact />
+        <HomeBoletimNewsSection compact />
 
         {/* Upcoming matches */}
         <div className="ui-panel">
@@ -969,9 +978,6 @@ function HomeMobile() {
 
         {/* Resenha teaser */}
         <ResenhaCard />
-
-        {/* Notícias */}
-        <WC26News compact />
 
         {/* Highlights */}
         <VideoHighlights />
@@ -1172,16 +1178,13 @@ function HomeDesktop() {
           <ResenhaCard />
         </div>
 
-        {/* Row 3: Boletim */}
-        <HomeBoletimSection />
+        {/* Row 3: Boletim + noticias */}
+        <HomeBoletimNewsSection />
 
         {/* Row 4: grupos grid */}
         <GroupsGrid predictions={predictions} />
 
-        {/* Row 5: Notícias */}
-        <WC26News />
-
-        {/* Row 6: Highlights */}
+        {/* Row 5: Highlights */}
         <VideoHighlights />
 
       </div>

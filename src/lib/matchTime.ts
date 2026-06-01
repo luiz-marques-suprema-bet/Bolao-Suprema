@@ -55,3 +55,17 @@ export function formatMatchDateTime(input: MatchTimeInput): string {
 export function getBettingDeadline(input: MatchTimeInput): Date {
   return getMatchKickoffInBrazilTime(input)
 }
+
+/**
+ * Deadline robusto para apostas que fecham no início do torneio (ex.: campeão/
+ * vice/artilheiro): o MENOR kickoff do conjunto, não o índice [0] do array.
+ * Espelha o `min(kickoff_utc)` usado pelos mercados no banco e independe da
+ * ordem da lista. Lança se a lista vier vazia.
+ */
+export function getEarliestKickoff(matches: MatchTimeInput[]): Date {
+  if (matches.length === 0) throw new Error('getEarliestKickoff: lista vazia')
+  return matches.reduce<Date>((min, m) => {
+    const d = toDate(m)
+    return d < min ? d : min
+  }, toDate(matches[0]))
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { WC2026_GROUPS, WC2026_MATCHES } from '@/data/wc2026'
-import { computeGroupStandings, rankBestThirds, type StandingRow } from './groupStandings'
+import { computeGroupStandings, rankBestThirds, sortGroupRows, type StandingRow } from './groupStandings'
 
 describe('group standings and best thirds', () => {
   it('computes group order from predicted scores', () => {
@@ -37,6 +37,18 @@ describe('group standings and best thirds', () => {
 
     expect(bestThirds).toHaveLength(8)
     expect(bestThirds.map(team => team.group)).toEqual(['L', 'K', 'J', 'I', 'H', 'G', 'F', 'E'])
+  })
+
+  it('desempata por confronto direto antes do saldo geral (FIFA 2026)', () => {
+    // XXX e YYY empatados em 6 pts. XXX tem MELHOR saldo geral (gd 5 vs 2),
+    // mas YYY venceu o confronto direto — deve ficar à frente.
+    const rows: StandingRow[] = [
+      row('A', 'XXX', 6, 8, 3), // gd +5
+      row('A', 'YYY', 6, 5, 3), // gd +2
+      row('A', 'ZZZ', 0, 1, 9),
+    ]
+    const sorted = sortGroupRows(rows, [{ home: 'YYY', away: 'XXX', hs: 2, as: 0 }])
+    expect(sorted.map(r => r.code)).toEqual(['YYY', 'XXX', 'ZZZ'])
   })
 })
 

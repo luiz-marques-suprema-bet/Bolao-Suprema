@@ -33,6 +33,8 @@ interface PredictionState {
   scorerPick: string | null
 
   lastError: string | null
+  /** true enquanto save_general_picks está em voo (UI mostra "salvando"). */
+  savingGeneral: boolean
   _userId: string | undefined
 
   setUserId: (id: string | undefined) => void
@@ -49,9 +51,9 @@ interface PredictionState {
   clearError: () => void
   getPrediction: (matchId: string) => Prediction | undefined
   getDraft: (matchId: string) => { home: number; away: number } | undefined
-  setChampionPick: (teamCode: string) => void
-  setVicePick: (teamCode: string) => void
-  setScorerPick: (playerName: string) => void
+  setChampionPick: (teamCode: string) => Promise<void>
+  setVicePick: (teamCode: string) => Promise<void>
+  setScorerPick: (playerName: string) => Promise<void>
 }
 
 type PredictionRow = {
@@ -158,6 +160,7 @@ export const usePredictionStore = create<PredictionState>()(
     vicePick: null,
     scorerPick: null,
     lastError: null,
+    savingGeneral: false,
     _userId: undefined,
 
     setUserId: (id) => set({ _userId: id }),
@@ -354,42 +357,64 @@ export const usePredictionStore = create<PredictionState>()(
     getPrediction: (matchId) => get().predictions[matchId],
     getDraft: (matchId) => get().drafts[matchId],
 
-    setChampionPick: (teamCode) => {
+    // M2: apostas especiais agora confirmam na UI SOMENTE após a RPC responder
+    // ok (espelha confirmPrediction). Em falha, a escolha NÃO é aplicada e o erro
+    // aparece em lastError — nada de "salvo" falso.
+    setChampionPick: async (teamCode) => {
       const value = teamCode || null
       const validation = validateChampionVice(value, get().vicePick)
       if (!validation.valid) {
         set({ lastError: validation.error })
         return
       }
-      set({ championPick: value, lastError: null })
       const uid = get()._userId
-      if (!isMockMode && uid) {
-        saveGeneralPicks(value, get().vicePick, get().scorerPick)
-          .catch((error: Error) => set({ lastError: error.message }))
+      if (isMockMode || !uid) {
+        set({ championPick: value, lastError: null })
+        return
+      }
+      set({ savingGeneral: true, lastError: null })
+      try {
+        await saveGeneralPicks(value, get().vicePick, get().scorerPick)
+        set({ championPick: value, savingGeneral: false, lastError: null })
+      } catch (error) {
+        set({ savingGeneral: false, lastError: (error as Error).message })
       }
     },
 
-    setVicePick: (teamCode) => {
+    setVicePick: async (teamCode) => {
       const value = teamCode || null
       const validation = validateChampionVice(get().championPick, value)
       if (!validation.valid) {
         set({ lastError: validation.error })
         return
       }
-      set({ vicePick: value, lastError: null })
       const uid = get()._userId
-      if (!isMockMode && uid) {
-        saveGeneralPicks(get().championPick, value, get().scorerPick)
-          .catch((error: Error) => set({ lastError: error.message }))
+      if (isMockMode || !uid) {
+        set({ vicePick: value, lastError: null })
+        return
+      }
+      set({ savingGeneral: true, lastError: null })
+      try {
+        await saveGeneralPicks(get().championPick, value, get().scorerPick)
+        set({ vicePick: value, savingGeneral: false, lastError: null })
+      } catch (error) {
+        set({ savingGeneral: false, lastError: (error as Error).message })
       }
     },
 
-    setScorerPick: (playerName) => {
-      set({ scorerPick: playerName, lastError: null })
+    setScorerPick: async (playerName) => {
+      const value = playerName || null
       const uid = get()._userId
-      if (!isMockMode && uid) {
-        saveGeneralPicks(get().championPick, get().vicePick, playerName || null)
-          .catch((error: Error) => set({ lastError: error.message }))
+      if (isMockMode || !uid) {
+        set({ scorerPick: value, lastError: null })
+        return
+      }
+      set({ savingGeneral: true, lastError: null })
+      try {
+        await saveGeneralPicks(get().championPick, get().vicePick, value)
+        set({ scorerPick: value, savingGeneral: false, lastError: null })
+      } catch (error) {
+        set({ savingGeneral: false, lastError: (error as Error).message })
       }
     },
   })

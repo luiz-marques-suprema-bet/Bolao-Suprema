@@ -1,5 +1,26 @@
 -- Bolao Suprema - RLS performance cleanup based on Supabase advisor output.
 
+-- H4 remediation: global_notices e uma feature viva (Admin cria avisos em
+-- Admin/index.tsx; Notifications os le), mas a tabela nunca foi versionada, entao
+-- um replay limpo das migrations abortava no indice/policies abaixo. Criamos a
+-- tabela aqui de forma idempotente para que o conjunto de migrations seja
+-- auto-contido e reproduzivel (supabase db reset). Em DB existente, o
+-- "if not exists" e no-op.
+create table if not exists public.global_notices (
+  id         uuid primary key default gen_random_uuid(),
+  title      text not null,
+  body       text,
+  created_by uuid references public.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.global_notices enable row level security;
+
+-- Notifications/index.tsx faz select de id,title,body,created_at para qualquer
+-- usuario autenticado. As policies de insert/update/delete (admin) estao abaixo.
+drop policy if exists notices_select_all on public.global_notices;
+create policy notices_select_all on public.global_notices for select to authenticated using (true);
+
 create index if not exists idx_global_notices_created_by on public.global_notices(created_by);
 
 drop policy if exists "users can insert own profile" on public.users;

@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Bolao Suprema · prediction independence + football-data.org sync foundation
 -- ============================================================================
--- Paste this in Supabase/Claude before enabling the Edge Function below.
+-- Apply this before enabling the Edge Function below.
 -- It keeps normal user prediction flow independent from admin screens:
 -- users can save one match or a whole group while each match market is open.
 -- Admin remains an override layer only.

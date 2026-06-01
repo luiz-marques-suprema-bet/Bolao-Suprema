@@ -90,7 +90,14 @@ async function setMatchResult(
   // (via scoring_rules table) + ranking refresh + audit log + is_admin check
   const result = await settleMatchResult(matchCode, homeScore, awayScore)
   if (result.error) return { scored: 0, error: result.error }
-  return { scored: 0, error: null }
+  // M1: contagem real. A trigger server-side define points_earned para todos os
+  // palpites da partida; contamos quantos foram apurados em vez de devolver 0.
+  const { count, error } = await supabase
+    .from('predictions')
+    .select('id', { count: 'exact', head: true })
+    .eq('match_code', matchCode)
+  if (error) return { scored: 0, error: null } // resultado salvo; só a contagem falhou
+  return { scored: count ?? 0, error: null }
 }
 
 // ─── Status badge ──────────────────────────────────────────────────────────────
@@ -166,7 +173,7 @@ function MatchRowAdmin({
       onAction(`Erro: ${error}`, false)
     } else {
       applyOverride({ matchCode, status: 'finished', marketStatus: 'settled', homeScore: homeGoals, awayScore: awayGoals })
-      onAction(`✓ Resultado registrado · ${scored} palpites pontuados`, true)
+      onAction(`✓ Resultado registrado · ${scored} palpites apurados`, true)
       setEditResult(false)
     }
     setBusy(false)

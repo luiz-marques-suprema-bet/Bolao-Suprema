@@ -18,22 +18,29 @@
 
 ## 2. Aplicar as migrations
 
-As migrations estão em `supabase/migrations/` e devem ser aplicadas em ordem no Supabase SQL Editor (Dashboard > SQL Editor > New query).
+> **Fonte de verdade do banco = `supabase/migrations/**`.**
+> O arquivo `supabase-schema.sql` na raiz é apenas um snapshot histórico
+> DESATUALIZADO e INSEGURO se aplicado sozinho (policies antigas com
+> `using (true)`). **Não use `supabase-schema.sql` para provisionar.**
 
-Ordem de aplicação:
+As migrations estão em `supabase/migrations/` e devem ser aplicadas **todas, em
+ordem de nome de arquivo (timestamp)**. A lista cresce ao longo do tempo — não
+mantenha uma lista manual aqui; use sempre o conteúdo do diretório.
 
-1. `20260515130000_productizacao_bolao_suprema.sql`
-2. `20260515133000_harden_productizacao_helpers.sql`
-3. `20260515143000_internal_product_governance.sql`
-4. `20260515144500_harden_storage_listing.sql`
-5. `20260515150000_harden_rpc_permissions.sql`
-6. `20260515151000_index_new_foreign_keys.sql`
-7. `20260515162000_harden_user_profile_privacy.sql`
-8. `20260519090000_lock_user_privileged_columns.sql`
-9. `20260519091000_enforce_prediction_market_lock.sql`
-10. `20260519100000_lock_user_email_updates.sql`
+**Forma recomendada (Supabase CLI):**
 
-Execute cada arquivo individualmente. Verificar que não há erros antes de passar ao próximo.
+```bash
+# Banco do zero (ambiente novo / DR), recria tudo a partir das migrations:
+supabase db reset
+
+# Banco existente, aplica apenas as migrations pendentes:
+supabase db push
+```
+
+**Alternativa manual (SQL Editor):** se não usar a CLI, abra cada arquivo de
+`supabase/migrations/` em ordem alfabética/cronológica no Dashboard > SQL Editor
+e execute um a um, conferindo que não há erro antes de seguir. As migrations são
+idempotentes; um replay limpo (`supabase db reset`) deve passar sem erros.
 
 ## 3. Configurar Auth
 
@@ -85,7 +92,7 @@ Se as migrations de storage foram aplicadas, os buckets são criados automaticam
 | `avatars` | Sim | 5 MB | JPEG, PNG, WebP, GIF |
 | `banners` | Sim | 5 MB | JPEG, PNG, WebP, GIF |
 | `bulletins` | Sim | 5 MB | JPEG, PNG, WebP, GIF |
-| `chat-media` | Sim | 10 MB | Imagem + áudio |
+| `chat-media` | Sim | 25 MB | Imagem + áudio (allowlist MIME) |
 | `user-media` | Sim | 5 MB | JPEG, PNG, WebP, GIF (legado) |
 
 Verificar que nenhum bucket tem listagem pública habilitada.
