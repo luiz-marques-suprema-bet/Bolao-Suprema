@@ -121,3 +121,45 @@ export async function uploadChatMedia(
 
   throw new Error(`Falha ao enviar ${kind === 'audio' ? 'audio' : kind === 'image' ? 'imagem' : 'video'}.`)
 }
+
+export function chatMediaPathFromUrl(url?: string): { bucket: 'chat-media' | 'user-media'; path: string } | null {
+  if (!url) return null
+  try {
+    const parsed = new URL(url)
+    const marker = '/storage/v1/object/public/'
+    const index = parsed.pathname.indexOf(marker)
+    if (index < 0) return null
+
+    const objectPath = decodeURIComponent(parsed.pathname.slice(index + marker.length))
+    const slash = objectPath.indexOf('/')
+    if (slash < 0) return null
+
+    const bucket = objectPath.slice(0, slash)
+    const path = objectPath.slice(slash + 1)
+    if ((bucket !== 'chat-media' && bucket !== 'user-media') || !path.startsWith('chat/')) return null
+    return { bucket, path }
+  } catch {
+    return null
+  }
+}
+
+export async function deleteChatMediaUrls(urls: Array<string | undefined>): Promise<string | null> {
+  const byBucket = new Map<'chat-media' | 'user-media', Set<string>>()
+
+  for (const url of urls) {
+    const item = chatMediaPathFromUrl(url)
+    if (!item) continue
+    const paths = byBucket.get(item.bucket) ?? new Set<string>()
+    paths.add(item.path)
+    byBucket.set(item.bucket, paths)
+  }
+
+  let lastError: string | null = null
+  for (const [bucket, paths] of byBucket) {
+    if (paths.size === 0) continue
+    const { error } = await supabase.storage.from(bucket).remove(Array.from(paths))
+    if (error) lastError = error.message
+  }
+
+  return lastError
+}

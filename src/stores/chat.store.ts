@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { ChatMessage, ChatReaction } from '@/types'
-import { supabase, isMockMode } from '@/lib/supabase'
+import { deleteChatMediaUrls, supabase, isMockMode } from '@/lib/supabase'
 import { sanitizeText } from '@/services/product'
 
 export interface ChatProfile {
@@ -725,6 +725,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     }
 
     const before = get().messages
+    const message = before.find(m => m.id === id)
     set(s => ({
       messages: s.messages.filter(m => m.id !== id),
       pinnedId: s.pinnedId === id ? null : s.pinnedId,
@@ -734,6 +735,18 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     if (error) {
       console.error('[Chat] delete:', error.message)
       set({ messages: before, lastError: `Erro ao apagar: ${error.message}` })
+      return
+    }
+
+    const mediaError = await deleteChatMediaUrls([
+      message?.mediaUrl,
+      message?.imageUrl,
+      message?.audioUrl,
+      message?.videoUrl,
+    ])
+    if (mediaError) {
+      console.error('[Chat] media delete:', mediaError)
+      set({ lastError: `Mensagem apagada, mas a midia nao foi removida: ${mediaError}` })
     }
   },
 }))
