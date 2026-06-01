@@ -4,10 +4,10 @@ import { describe, expect, it } from 'vitest'
 // Valida o mapa de progressao do mata-mata (knockout_progression):
 // 16 alvos = 8 Oitavas + 4 Quartas + 2 Semis + 1 Final + 1 3o lugar.
 // Final = vencedores das semis; 3o lugar = perdedores das semis.
-// Cada Oitava p vem dos vencedores de ko-r32-(2p-1) e ko-r32-(2p).
+// As oitavas seguem a numeracao oficial FIFA: 89=(74,77), 90=(73,75), etc.
 
 const SQL = readFileSync(
-  new URL('../../supabase/migrations/20260531120000_knockout_materialization.sql', import.meta.url),
+  new URL('../../supabase/migrations/20260601040928_official_third_place_h2h.sql', import.meta.url),
   'utf8',
 )
 
@@ -33,14 +33,26 @@ describe('knockout progression map', () => {
     expect(byPrefix('ko-third-')).toHaveLength(1)
   })
 
-  it('R16 slot p feeds from winners of ko-r32-(2p-1) and ko-r32-(2p)', () => {
-    for (const r of byPrefix('ko-r16-')) {
-      const p = Number(r.target.split('-').pop())
-      expect(r.homeSrc).toBe(`ko-r32-${2 * p - 1}`)
-      expect(r.awaySrc).toBe(`ko-r32-${2 * p}`)
-      expect(r.homeTake).toBe('winner')
-      expect(r.awayTake).toBe('winner')
-    }
+  it('R16 follows official match progression', () => {
+    expect(byPrefix('ko-r16-')).toEqual([
+      { target: 'ko-r16-1', homeSrc: 'ko-r32-2', homeTake: 'winner', awaySrc: 'ko-r32-5', awayTake: 'winner' },
+      { target: 'ko-r16-2', homeSrc: 'ko-r32-1', homeTake: 'winner', awaySrc: 'ko-r32-3', awayTake: 'winner' },
+      { target: 'ko-r16-3', homeSrc: 'ko-r32-4', homeTake: 'winner', awaySrc: 'ko-r32-6', awayTake: 'winner' },
+      { target: 'ko-r16-4', homeSrc: 'ko-r32-7', homeTake: 'winner', awaySrc: 'ko-r32-8', awayTake: 'winner' },
+      { target: 'ko-r16-5', homeSrc: 'ko-r32-11', homeTake: 'winner', awaySrc: 'ko-r32-12', awayTake: 'winner' },
+      { target: 'ko-r16-6', homeSrc: 'ko-r32-9', homeTake: 'winner', awaySrc: 'ko-r32-10', awayTake: 'winner' },
+      { target: 'ko-r16-7', homeSrc: 'ko-r32-14', homeTake: 'winner', awaySrc: 'ko-r32-16', awayTake: 'winner' },
+      { target: 'ko-r16-8', homeSrc: 'ko-r32-13', homeTake: 'winner', awaySrc: 'ko-r32-15', awayTake: 'winner' },
+    ])
+  })
+
+  it('QF follows official match progression', () => {
+    expect(byPrefix('ko-qf-')).toEqual([
+      { target: 'ko-qf-1', homeSrc: 'ko-r16-1', homeTake: 'winner', awaySrc: 'ko-r16-2', awayTake: 'winner' },
+      { target: 'ko-qf-2', homeSrc: 'ko-r16-5', homeTake: 'winner', awaySrc: 'ko-r16-6', awayTake: 'winner' },
+      { target: 'ko-qf-3', homeSrc: 'ko-r16-3', homeTake: 'winner', awaySrc: 'ko-r16-4', awayTake: 'winner' },
+      { target: 'ko-qf-4', homeSrc: 'ko-r16-7', homeTake: 'winner', awaySrc: 'ko-r16-8', awayTake: 'winner' },
+    ])
   })
 
   it('Final takes the two semifinal winners; Third takes the two semifinal losers', () => {
