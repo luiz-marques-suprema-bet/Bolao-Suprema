@@ -41,7 +41,7 @@ Arquivos principais:
 
 ## Passo para aplicar no Supabase
 
-Cole para o Claude/Supabase executar:
+Execute no Supabase SQL Editor:
 
 ```sql
 -- aplicar exatamente o conteudo de:

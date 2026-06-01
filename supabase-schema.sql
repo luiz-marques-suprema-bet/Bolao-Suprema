@@ -1,9 +1,20 @@
 -- ============================================================
 -- BOLÃO SUPREMA · Schema PostgreSQL (Supabase)
--- Execute no SQL Editor do Supabase Dashboard
+-- ============================================================
+-- ⚠️  ATENÇÃO — ESTE ARQUIVO NÃO É A FONTE DE VERDADE ⚠️
+-- ------------------------------------------------------------
+-- Este é um SNAPSHOT DESATUALIZADO do schema inicial. As policies
+-- abaixo (ex.: users_select_all / predictions_select_all usando
+-- `using (true)`) foram SUBSTITUÍDAS por migrations posteriores e
+-- são INSEGURAS se aplicadas isoladamente (expõem e-mail e palpites).
+-- Várias tabelas/policies/RPCs criados depois NÃO estão aqui.
+--
+-- FONTE AUTORITATIVA = `supabase/migrations/**` (aplicadas em ordem).
+-- Para subir um banco do zero use:  supabase db reset   (ou db push)
+-- NÃO use este arquivo sozinho para provisionar produção/DR.
+-- Mantido apenas como referência histórica de leitura.
 -- ============================================================
 -- Este arquivo é idempotente (IF NOT EXISTS / OR REPLACE).
--- Pode ser executado em DB novo ou já existente.
 -- ============================================================
 
 -- ── Extensions ───────────────────────────────────────────────

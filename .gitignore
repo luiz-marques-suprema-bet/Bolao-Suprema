@@ -12,3 +12,10 @@ coverage/
 
 # Uploads — user media should live in Supabase Storage, not in the repo
 uploads/
+
+# Local QA/artifact output
+tmp-e2e/
+speedtest-*-output/
+stream-diagnostic-output/
+yt-buffer-test-output/
+supabase/.temp/

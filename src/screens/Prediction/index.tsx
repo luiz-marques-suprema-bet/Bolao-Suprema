@@ -5,12 +5,12 @@ import { Flag } from '@/components/shared/Flag'
 import { Tooltip } from '@/components/shared/Tooltip'
 import { usePredictionStore } from '@/stores/prediction.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
-import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
+import { WC2026_MATCHES, WC2026_GROUP_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
 import { clamp, cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
-import { formatMatchDate, formatMatchDateTime, getBettingDeadline } from '@/lib/matchTime'
+import { formatMatchDate, formatMatchDateTime, getEarliestKickoff } from '@/lib/matchTime'
 import { isBetOpen } from '@/lib/markets'
 import { isPlaceholderMatch, isPlaceholderTeam } from '@/lib/matchGuards'
 import type { Match } from '@/types'
@@ -1141,7 +1141,9 @@ function TeamPickerGrid({
 
 // ─── Champion tab ────────────────────────────────────────────────────────────
 
-const GENERAL_DEADLINE = getBettingDeadline(WC2026_MATCHES[0])
+// M4: deadline = MENOR kickoff dos jogos de grupo (espelha o min(kickoff_utc)
+// do mercado no banco), robusto à ordem do array — não o índice [0].
+const GENERAL_DEADLINE = getEarliestKickoff(WC2026_GROUP_MATCHES)
 
 type GeneralSection = 'champion' | 'vice' | 'scorer'
 
@@ -1149,7 +1151,7 @@ function ChampionTab() {
   const {
     championPick, vicePick, scorerPick,
     setChampionPick, setVicePick, setScorerPick,
-    lastError, clearError,
+    lastError, clearError, savingGeneral,
   } = usePredictionStore()
 
   const [scorerInput, setScorerInput] = useState(scorerPick ?? '')
@@ -1174,7 +1176,7 @@ function ChampionTab() {
   const now = new Date()
   const isDeadlinePassed = now >= GENERAL_DEADLINE
   const allSet = championPick && vicePick && scorerPick
-  const deadlineStr = formatMatchDateTime(WC2026_MATCHES[0])
+  const deadlineStr = formatMatchDateTime(GENERAL_DEADLINE)
 
   const slots: { id: GeneralSection; label: string; pts: number; pick: string | null; isTeam: boolean }[] = [
     { id: 'champion', label: 'CAMPEÃO',    pts: 25, pick: championPick, isTeam: true  },
@@ -1204,6 +1206,12 @@ function ChampionTab() {
         <div className="mb-4 border border-red/30 bg-red/5 px-3 py-2 flex items-center justify-between gap-3">
           <p className="font-mono text-[10px] text-red">{lastError}</p>
           <button onClick={clearError} className="font-mono text-[10px] text-red underline">OK</button>
+        </div>
+      )}
+
+      {savingGeneral && (
+        <div className="mb-4 border border-yellow/40 bg-yellow/5 px-3 py-2">
+          <p className="font-mono text-[10px] text-ink-3">Salvando aposta especial…</p>
         </div>
       )}
 

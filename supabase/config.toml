@@ -1,0 +1,18 @@
+# ============================================================================
+# Supabase CLI config — Bolao Suprema
+# ----------------------------------------------------------------------------
+# project_id = ref do projeto (Dashboard > Settings > General > Reference ID).
+# Ajuste antes de `supabase link` / `supabase functions deploy`.
+# ============================================================================
+project_id = "mklmnxquvslflgljhgqn"
+
+# ── Edge Functions ──────────────────────────────────────────────────────────
+# verify_jwt = true: estes endpoints usam service role / chaves pagas
+# server-side internamente e NUNCA podem ser anonimos. Fixado aqui para que o
+# deploy nao caia para verify_jwt=false silenciosamente (M9 / H5).
+
+[functions.football-data-sync]
+verify_jwt = true
+
+[functions.news-proxy]
+verify_jwt = true

@@ -15,6 +15,8 @@ interface BracketState {
   picks: Record<string, TeamCode> // slotId → pickedWinner
   lockedRounds: BracketRound[]
   _userId: string | undefined
+  /** Última falha de gravação no Supabase (null = ok). Consumível pela UI. */
+  lastError: string | null
 
   setUserId: (id: string | undefined) => void
   syncFromSupabase: (userId: string) => Promise<void>
@@ -46,6 +48,7 @@ export const useBracketStore = create<BracketState>()(
       picks: {},
       lockedRounds: [],
       _userId: undefined,
+      lastError: null,
 
       setUserId: (id) => set({ _userId: id }),
 
@@ -83,7 +86,12 @@ export const useBracketStore = create<BracketState>()(
             },
             { onConflict: 'user_id,slot_id' }
           ).then(({ error }) => {
-            if (error) console.error('[Bracket] setPick error:', error.message)
+            if (error) {
+              console.error('[Bracket] setPick error:', error.message)
+              set({ lastError: error.message })
+            } else {
+              set({ lastError: null })
+            }
           })
         }
       },
@@ -102,7 +110,12 @@ export const useBracketStore = create<BracketState>()(
             .eq('user_id', userId)
             .eq('slot_id', slotId)
             .then(({ error }) => {
-              if (error) console.error('[Bracket] clearPick error:', error.message)
+              if (error) {
+                console.error('[Bracket] clearPick error:', error.message)
+                set({ lastError: error.message })
+              } else {
+                set({ lastError: null })
+              }
             })
         }
       },

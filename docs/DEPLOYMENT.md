@@ -89,4 +89,12 @@ Alternativa rápida: no GitHub Actions, re-executar o workflow de um run anterio
 |----------|----------------------------------|
 | `VITE_TENOR_KEY` | GIFs na Resenha ficam desabilitados |
 | `VITE_THESPORTSDB_KEY` | Busca de jogador usa chave free (rate-limited) |
-| `VITE_FNEWS_URL` + `VITE_FNEWS_KEY` + `VITE_FNEWS_HOST` | Seção de notícias na Home não aparece |
+
+Noticias da Copa 2026 nao usam mais chave `VITE_*` no frontend. Configure a chave paga como secret da Edge Function `news-proxy`:
+
+```bash
+supabase secrets set WORLD_NEWS_API_KEY=your-world-news-api-key
+supabase functions deploy news-proxy
+```
+
+Sem esse secret, a secao de noticias da Home fica oculta.
