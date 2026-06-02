@@ -30,24 +30,94 @@ function escapeHtml(value: string) {
 function buildHtml(email: string, emailData: Record<string, string>) {
   const token = escapeHtml(emailData.token ?? '')
   const safeEmail = escapeHtml(email)
+  const appUrl = 'https://bolao.suprema.group/#/login'
 
   return `<!doctype html>
 <html lang="pt-BR">
-  <body style="margin:0;background:#f5f4f0;font-family:Arial,Helvetica,sans-serif;color:#111">
-    <main style="max-width:560px;margin:0 auto;padding:28px 16px">
-      <section style="background:#0d0d0d;color:#fff;padding:28px 32px;border-radius:0">
-        <p style="margin:0 0 10px;color:#ffcb05;font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:700">Bolao Suprema 2026</p>
-        <h1 style="margin:0;font-size:34px;line-height:1;text-transform:uppercase">Seu codigo de acesso</h1>
-      </section>
-      <section style="background:#fff;border:1px solid #e8e7e3;padding:32px">
-        <p style="margin:0 0 18px;color:#555;font-size:15px;line-height:1.5">Digite este codigo na tela de login:</p>
-        <div style="background:#f5f4f0;border:1px solid #ddd;padding:22px;text-align:center;margin-bottom:22px">
-          <strong style="font-size:34px;letter-spacing:8px;color:#111">${token}</strong>
-        </div>
-        <p style="margin:0 0 20px;color:#555;font-size:14px;line-height:1.6">O codigo e de uso unico. Por seguranca, este e-mail nao possui link clicavel: copie o codigo acima e cole na tela do Bolao.</p>
-        <p style="margin:0;color:#999;font-size:12px;line-height:1.5">Solicitado para ${safeEmail}. Se nao foi voce, ignore este e-mail.</p>
-      </section>
-    </main>
+  <body style="margin:0;padding:0;background:#2c2c2c;font-family:Arial,Helvetica,sans-serif;color:#f8f8f8">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#2c2c2c;margin:0;padding:0">
+      <tr>
+        <td align="center" style="padding:32px 14px">
+          <table role="presentation" width="640" cellspacing="0" cellpadding="0" style="width:100%;max-width:640px;background:#101010;border:1px solid #6a6a6a">
+            <tr>
+              <td style="padding:28px 40px 18px;background:#101010">
+                <div style="font-size:18px;line-height:16px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#ffffff">Suprema Gaming</div>
+                <div style="font-size:11px;line-height:14px;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:#ffcb05">Bolao Copa 2026</div>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:12px 24px;background:#008a25;color:#ffffff;font-size:11px;line-height:16px;font-weight:900;letter-spacing:3px;text-transform:uppercase">
+                USA · CAN · MEX · 11 Jun - 19 Jul 2026 · 48 selecoes · 104 partidas
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:44px 40px 48px;background:#101010">
+                <div style="font-size:12px;line-height:14px;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:#ffcb05;margin-bottom:14px">Acesso exclusivo</div>
+                <div style="font-size:46px;line-height:42px;font-weight:900;letter-spacing:0;text-transform:uppercase;color:#ffffff">Seu codigo<br><span style="color:#00b765">de acesso</span></div>
+                <div style="font-size:14px;line-height:22px;font-style:italic;color:#a8a8a8;margin-top:14px">use em ate 10 minutos</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:36px 40px;background:#2f2f2f;border-top:1px solid #9a9a9a">
+                <div style="font-size:11px;line-height:14px;font-weight:900;letter-spacing:4px;text-transform:uppercase;color:#bdbdbd;margin-bottom:16px">Codigo de verificacao</div>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:2px solid #c9c9c9;background:#5d5d5a">
+                  <tr>
+                    <td align="center" style="padding:26px 14px">
+                      <div style="font-size:11px;line-height:14px;font-weight:900;letter-spacing:4px;text-transform:uppercase;color:#cfcfcf;margin-bottom:14px">Copie este codigo no app</div>
+                      <div style="font-size:40px;line-height:44px;font-weight:900;letter-spacing:10px;color:#ffffff">${token}</div>
+                      <div style="font-size:11px;line-height:18px;color:#cfcfcf;margin-top:10px">Expira em 10 minutos · uso unico</div>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:26px 0 0;color:#ffffff;font-size:15px;line-height:24px">
+                  Voce solicitou acesso ao <strong>Bolao Suprema 2026</strong>. Selecione o codigo acima, copie e cole na tela de login. Se nao foi voce, ignore este e-mail.
+                </p>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:28px 0 0;border-top:1px solid #9a9a9a;border-bottom:1px solid #4a4a4a">
+                  <tr>
+                    <td align="center" style="width:25%;padding:18px 6px;border-right:1px solid #777">
+                      <div style="font-size:24px;line-height:26px;font-weight:900;color:#ffffff">104</div>
+                      <div style="font-size:10px;line-height:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#d0d0d0">partidas</div>
+                    </td>
+                    <td align="center" style="width:25%;padding:18px 6px;border-right:1px solid #777">
+                      <div style="font-size:24px;line-height:26px;font-weight:900;color:#ffffff">48</div>
+                      <div style="font-size:10px;line-height:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#d0d0d0">selecoes</div>
+                    </td>
+                    <td align="center" style="width:25%;padding:18px 6px;border-right:1px solid #777">
+                      <div style="font-size:24px;line-height:26px;font-weight:900;color:#ffffff">+25</div>
+                      <div style="font-size:10px;line-height:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#d0d0d0">pts campeao</div>
+                    </td>
+                    <td align="center" style="width:25%;padding:18px 6px">
+                      <div style="font-size:24px;line-height:26px;font-weight:900;color:#ffffff">11 Jun</div>
+                      <div style="font-size:10px;line-height:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#d0d0d0">inicio</div>
+                    </td>
+                  </tr>
+                </table>
+                <table role="presentation" cellspacing="0" cellpadding="0" align="center" style="margin:28px auto 0">
+                  <tr>
+                    <td align="center" bgcolor="#b38400" style="background:#b38400">
+                      <a href="${appUrl}" style="display:inline-block;padding:16px 36px;color:#ffffff;text-decoration:none;font-size:13px;line-height:16px;font-weight:900;letter-spacing:3px;text-transform:uppercase">Abrir o Bolao -></a>
+                    </td>
+                  </tr>
+                </table>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:30px;background:#5e5742;border-left:4px solid #ffcb05">
+                  <tr>
+                    <td style="padding:18px 22px;color:#ffdc55;font-size:12px;line-height:20px">
+                      <strong>Atencao:</strong> nunca compartilhe este codigo. A Suprema Gaming jamais pedira seu codigo por telefone, WhatsApp ou outro canal.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:26px 40px;background:#151515;color:#8f8f8f;font-size:11px;line-height:18px">
+                Este e-mail foi enviado para <strong style="color:#ffcb05">${safeEmail}</strong> porque alguem solicitou acesso ao Bolao Suprema Copa 2026.<br>
+                © 2026 Suprema Gaming & Co · Uso interno · Acesso restrito a colaboradores.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>`
 }
@@ -59,6 +129,8 @@ Seu codigo de acesso: ${emailData.token ?? ''}
 
 Copie este codigo e cole na tela do Bolao.
 Este e-mail nao possui link clicavel por seguranca.
+
+Abrir o Bolao: https://bolao.suprema.group/#/login
 
 Solicitado para ${email}. Se nao foi voce, ignore este e-mail.`
 }
