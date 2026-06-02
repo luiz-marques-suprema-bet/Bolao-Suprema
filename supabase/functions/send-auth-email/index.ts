@@ -2,7 +2,6 @@ import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0'
 
 const resendApiKey = Deno.env.get('RESEND_API_KEY') ?? ''
 const hookSecret = (Deno.env.get('SEND_EMAIL_HOOK_SECRET') ?? '').replace('v1,whsec_', '')
-const projectUrl = Deno.env.get('SUPABASE_URL') ?? 'https://mklmnxquvslflgljhgqn.supabase.co'
 const fromEmail = 'Bolao Suprema <bolao@suprema.group>'
 
 const subjects: Record<string, string> = {
@@ -25,22 +24,8 @@ function escapeHtml(value: string) {
     .replaceAll("'", '&#39;')
 }
 
-function buildVerifyUrl(emailData: Record<string, string>) {
-  const params = new URLSearchParams({
-    token: emailData.token_hash ?? '',
-    type: emailData.email_action_type ?? 'magiclink',
-    redirect_to:
-      emailData.redirect_to ??
-      emailData.site_url ??
-      'https://luiz-marques-suprema-bet.github.io/Bolao-Suprema/',
-  })
-
-  return `${projectUrl}/auth/v1/verify?${params.toString()}`
-}
-
 function buildHtml(email: string, emailData: Record<string, string>) {
   const token = escapeHtml(emailData.token ?? '')
-  const verifyUrl = buildVerifyUrl(emailData)
   const safeEmail = escapeHtml(email)
 
   return `<!doctype html>
@@ -56,8 +41,7 @@ function buildHtml(email: string, emailData: Record<string, string>) {
         <div style="background:#f5f4f0;border:1px solid #ddd;padding:22px;text-align:center;margin-bottom:22px">
           <strong style="font-size:34px;letter-spacing:8px;color:#111">${token}</strong>
         </div>
-        <p style="margin:0 0 20px;color:#555;font-size:14px;line-height:1.6">O codigo e de uso unico. Se preferir, voce tambem pode acessar pelo link abaixo.</p>
-        <p style="margin:0 0 22px"><a href="${verifyUrl}" style="display:inline-block;background:#ffcb05;color:#111;padding:14px 22px;text-decoration:none;font-weight:800;letter-spacing:2px;text-transform:uppercase;font-size:12px">Abrir Bolao</a></p>
+        <p style="margin:0 0 20px;color:#555;font-size:14px;line-height:1.6">O codigo e de uso unico. Por seguranca, este e-mail nao possui link clicavel: copie o codigo acima e cole na tela do Bolao.</p>
         <p style="margin:0;color:#999;font-size:12px;line-height:1.5">Solicitado para ${safeEmail}. Se nao foi voce, ignore este e-mail.</p>
       </section>
     </main>
@@ -65,7 +49,18 @@ function buildHtml(email: string, emailData: Record<string, string>) {
 </html>`
 }
 
-async function sendWithResend(message: { to: string; subject: string; html: string }) {
+function buildText(email: string, emailData: Record<string, string>) {
+  return `Bolao Suprema 2026
+
+Seu codigo de acesso: ${emailData.token ?? ''}
+
+Copie este codigo e cole na tela do Bolao.
+Este e-mail nao possui link clicavel por seguranca.
+
+Solicitado para ${email}. Se nao foi voce, ignore este e-mail.`
+}
+
+async function sendWithResend(message: { to: string; subject: string; html: string; text: string }) {
   let lastError = ''
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -85,6 +80,7 @@ async function sendWithResend(message: { to: string; subject: string; html: stri
         to: [message.to],
         subject: message.subject,
         html: message.html,
+        text: message.text,
       }),
     })
 
@@ -121,6 +117,7 @@ Deno.serve(async (req) => {
       to: email,
       subject: subjects[action] ?? 'Bolao Suprema',
       html: buildHtml(email, event.email_data),
+      text: buildText(email, event.email_data),
     })
 
     return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })
