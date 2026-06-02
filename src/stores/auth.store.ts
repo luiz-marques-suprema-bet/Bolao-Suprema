@@ -170,7 +170,7 @@ export const useAuthStore = create<AuthState>()(
             isMarketing: false,
             isOwner: false,
             userRole: 'user',
-            participantStatus: 'pending',
+            participantStatus: 'active',
             privacyHideEmail: true,
             privacyHideProfile: false,
             createdAt: new Date().toISOString(),
@@ -263,7 +263,7 @@ export const useAuthStore = create<AuthState>()(
           throw new Error('Supabase nao esta configurado. Perfil nao pode ser salvo.')
         }
 
-        const updated: AppUser = { ...current, ...data, avatarUrl, bannerUrl }
+        const updated: AppUser = { ...current, ...data, avatarUrl, bannerUrl, participantStatus: 'active' }
         const initials = getInitials(`${updated.firstName} ${updated.lastName}`) || updated.initials
         updated.initials = initials
 
@@ -292,6 +292,7 @@ export const useAuthStore = create<AuthState>()(
             favorite_player:     updated.favoritePlayer,
             favorite_player_img: updated.favoritePlayerImg ?? null,
             since:               updated.since,
+            participant_status:  'active',
           })
           if (error) {
             console.error('[Profile] Erro ao salvar perfil:', error.message)

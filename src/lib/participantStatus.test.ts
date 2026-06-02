@@ -9,14 +9,14 @@ describe('participant status gates', () => {
     expect(normalizeParticipantStatus('removed')).toBe('removed')
   })
 
-  it('falls back to pending instead of active', () => {
-    expect(normalizeParticipantStatus(undefined)).toBe('pending')
-    expect(normalizeParticipantStatus('owner')).toBe('pending')
+  it('falls back to active for self-service launch access', () => {
+    expect(normalizeParticipantStatus(undefined)).toBe('active')
+    expect(normalizeParticipantStatus('owner')).toBe('active')
   })
 
-  it('allows only active participants to use protected features', () => {
+  it('blocks only exceptional removed or blocked participants', () => {
     expect(canParticipate('active')).toBe(true)
-    expect(canParticipate('pending')).toBe(false)
+    expect(canParticipate('pending')).toBe(true)
     expect(canParticipate('blocked')).toBe(false)
     expect(canParticipate('removed')).toBe(false)
   })

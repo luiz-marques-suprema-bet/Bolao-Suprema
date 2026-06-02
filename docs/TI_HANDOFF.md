@@ -123,16 +123,15 @@ Nunca colocar esses valores no frontend:
 3. A Edge Function envia o codigo via SendGrid.
 4. Usuario valida o codigo.
 5. Supabase emite sessao/JWT.
-6. Novo usuario fica `pending`.
-7. Admin aprova participante.
-8. Usuario completa perfil.
-9. Usuario acessa app.
+6. Novo usuario nasce `active`.
+7. Usuario completa perfil.
+8. Usuario acessa app, palpites e Resenha sem aprovacao manual.
 
 ## Roles e status
 
 | Role/status | Permissao |
 |-------------|-----------|
-| `pending` | Aguardando aprovacao |
+| `pending` | Legado; nao deve bloquear acesso no lancamento |
 | `active` | Participa normalmente |
 | `blocked` | Sem palpites/chat |
 | `removed` | Removido/desativado |

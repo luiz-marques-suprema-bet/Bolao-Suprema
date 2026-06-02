@@ -139,8 +139,8 @@ Substituir pelo e-mail real do administrador.
 Após o setup completo:
 
 - [ ] Login com OTP funciona.
-- [ ] Novo usuário é criado com `participant_status = 'pending'`.
-- [ ] Admin consegue aprovar participante.
+- [ ] Novo usuario é criado com `participant_status = 'active'`.
+- [ ] Admin consegue bloquear/desbloquear participante excepcional.
 - [ ] Palpite é aceito com mercado aberto.
 - [ ] Palpite é rejeitado com mercado fechado.
 - [ ] Upload de foto funciona.
