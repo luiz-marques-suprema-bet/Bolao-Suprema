@@ -10,7 +10,7 @@ export default defineConfig({
       targets: [{ src: 'assets', dest: '.' }],
     }),
   ],
-  base: '/',
+  base: './',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
