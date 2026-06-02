@@ -177,27 +177,6 @@ function CarouselIcon({ className }: { className?: string }) {
   )
 }
 
-function NewsFallbackVisual({ title }: { title: string }) {
-  const seed = title.length % 4
-  const palettes = [
-    ['#FFCB05', '#00A651', '#0D0D0D'],
-    ['#1D70B8', '#FFCB05', '#0D0D0D'],
-    ['#D71920', '#FFCB05', '#0D0D0D'],
-    ['#00A651', '#F5F1E8', '#0D0D0D'],
-  ]
-  const [a, b, c] = palettes[seed]
-  return (
-    <div
-      className="absolute inset-0"
-      style={{ background: `linear-gradient(135deg, ${a} 0%, ${a} 28%, ${b} 28%, ${b} 54%, ${c} 54%, ${c} 100%)` }}
-    >
-      <div className="absolute inset-0 opacity-[0.18]"
-        style={{ backgroundImage: 'repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 16px)' }} />
-      <div className="absolute bottom-4 right-4 font-display text-[64px] leading-none text-white/25">2026</div>
-    </div>
-  )
-}
-
 function WC26News({
   compact = false,
   className,
@@ -205,11 +184,12 @@ function WC26News({
   compact?: boolean
   className?: string
 }) {
-  const limit = compact ? 6 : 10
+  const limit = compact ? 5 : 6
   const initialNews = getCachedWC26News(limit)
   const [news, setNews] = useState<FootballNewsItem[]>(initialNews)
   const [loading, setLoading] = useState(initialNews.length === 0)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [brokenImageUrls, setBrokenImageUrls] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -250,7 +230,9 @@ function WC26News({
   if (!newsConfigured()) return null
 
   const featured = news[activeIndex] ?? news[0]
-  const nextItems = news.filter((_, index) => index !== activeIndex).slice(0, compact ? 4 : 5)
+  const nextItems = news.filter((_, index) => index !== activeIndex).slice(0, limit - 1)
+  const visibleNews = featured ? [featured, ...nextItems] : []
+  const featuredHasImage = Boolean(featured?.image) && !brokenImageUrls[featured.url]
   const showLoading = loading && news.length === 0
   const showEmpty = !showLoading && !featured
 
@@ -263,7 +245,7 @@ function WC26News({
         </div>
         <div className="flex items-center gap-2 font-mono text-[8px] text-paper/30 tracking-eyebrow">
           <CarouselIcon className="h-3.5 w-3.5" />
-          <span>{showLoading ? 'buscando' : 'auto'}</span>
+          <span>{showLoading ? 'buscando' : `${visibleNews.length} noticias`}</span>
         </div>
       </div>
       {showLoading ? (
@@ -288,28 +270,27 @@ function WC26News({
                   style={{ animation: `news-progress ${NEWS_SLIDE_MS}ms linear forwards` }}
                 />
               </div>
-              <div className={cn('relative overflow-hidden bg-ink', compact ? 'h-40' : 'h-64')}>
-                {featured.image ? (
+              {featuredHasImage && (
+                <div className={cn('relative overflow-hidden bg-ink', compact ? 'h-40' : 'h-64')}>
                   <img
-                    src={featured.image}
+                    src={featured.image!}
                     alt={featured.title}
                     className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                    onError={e => (e.currentTarget.style.display = 'none')}
+                    onError={() => setBrokenImageUrls(urls => ({ ...urls, [featured.url]: true }))}
                   />
-                ) : (
-                  <NewsFallbackVisual title={featured.title} />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/25" />
-              </div>
-              <div className="bg-ink p-4">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/25" />
+                </div>
+              )}
+              <div className={cn('bg-ink', featuredHasImage ? 'p-4' : compact ? 'p-5 py-8' : 'p-6 py-12')}>
                 <div className="mb-2 flex items-center gap-2 font-mono text-[8px] tracking-eyebrow text-yellow">
+                  <span className="font-display text-paper/45">1</span>
                   <span>{featured.source}</span>
                   <span className="text-paper/45">·</span>
                   <span className="text-paper/60">{timeAgo(featured.publishedAt)}</span>
                 </div>
                 <h3 className={cn(
                   'font-display leading-[1.02] text-paper break-words transition-colors group-hover:text-yellow',
-                  compact ? 'text-xl' : 'text-4xl',
+                  featuredHasImage ? (compact ? 'text-xl' : 'text-4xl') : (compact ? 'text-3xl' : 'text-5xl'),
                 )}>
                   {featured.title}
                 </h3>
@@ -332,7 +313,7 @@ function WC26News({
                 onClick={() => setActiveIndex(news.findIndex(n => n.url === item.url))}
                 className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover group"
               >
-                <span className="font-display text-base text-ink-4 tabular-nums">{index + 1}</span>
+                <span className="font-display text-base text-ink-4 tabular-nums">{index + 2}</span>
                 <div className="flex-1 min-w-0">
                   <p className="font-mono text-[10px] font-bold text-ink leading-tight line-clamp-2 group-hover:underline">{item.title}</p>
                   <div className="flex items-center gap-1 mt-1">
@@ -348,18 +329,21 @@ function WC26News({
             <div className="flex items-center gap-2 px-3 py-3">
               <CarouselIcon className="h-4 w-4 flex-shrink-0 text-ink-4" />
               <div className="flex flex-1 gap-1.5">
-                {news.slice(0, 8).map((item, index) => (
+                {visibleNews.map((item, index) => {
+                  const itemIndex = news.findIndex(n => n.url === item.url)
+                  return (
                   <button
                     key={item.url}
                     type="button"
                     aria-label={`Noticia ${index + 1}`}
-                    onClick={() => setActiveIndex(index)}
+                    onClick={() => setActiveIndex(itemIndex)}
                     className={cn(
                       'h-1 flex-1 transition-colors',
-                      index === activeIndex ? 'bg-ink' : 'bg-hairline hover:bg-ink-4',
+                      itemIndex === activeIndex ? 'bg-ink' : 'bg-hairline hover:bg-ink-4',
                     )}
                   />
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
