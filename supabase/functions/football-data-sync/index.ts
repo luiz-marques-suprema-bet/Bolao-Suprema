@@ -25,12 +25,40 @@ interface FootballDataMatch {
   score: {
     winner?: 'HOME_TEAM' | 'AWAY_TEAM' | 'DRAW' | null
     fullTime?: { home?: number | null; away?: number | null }
+    regularTime?: { home?: number | null; away?: number | null }
   }
 }
 
-function statusPatch(match: FootballDataMatch) {
-  const homeScore = match.score?.fullTime?.home ?? null
-  const awayScore = match.score?.fullTime?.away ?? null
+interface CurrentMatchRow {
+  match_code: string
+  home_code?: string | null
+  away_code?: string | null
+  market_status?: string | null
+  lock_reason?: string | null
+}
+
+function finishedScore(match: FootballDataMatch, side: 'home' | 'away') {
+  return match.score?.regularTime?.[side] ?? match.score?.fullTime?.[side] ?? null
+}
+
+function liveScore(match: FootballDataMatch, side: 'home' | 'away') {
+  return match.score?.fullTime?.[side] ?? null
+}
+
+function winnerCode(match: FootballDataMatch, current?: CurrentMatchRow | null) {
+  if (match.score?.winner === 'HOME_TEAM') {
+    return current?.home_code ?? match.homeTeam.tla ?? null
+  }
+  if (match.score?.winner === 'AWAY_TEAM') {
+    return current?.away_code ?? match.awayTeam.tla ?? null
+  }
+  if (match.score?.winner === 'DRAW') return 'draw'
+  return null
+}
+
+function statusPatch(match: FootballDataMatch, current?: CurrentMatchRow | null) {
+  const homeScore = match.status === 'FINISHED' ? finishedScore(match, 'home') : liveScore(match, 'home')
+  const awayScore = match.status === 'FINISHED' ? finishedScore(match, 'away') : liveScore(match, 'away')
 
   if (match.status === 'FINISHED') {
     return {
@@ -38,6 +66,7 @@ function statusPatch(match: FootballDataMatch) {
       market_status: 'settled',
       home_score: homeScore,
       away_score: awayScore,
+      winner: winnerCode(match, current),
       live_minute: null,
       settled_at: new Date().toISOString(),
     }
@@ -45,12 +74,13 @@ function statusPatch(match: FootballDataMatch) {
 
   if (match.status === 'LIVE' || match.status === 'IN_PLAY' || match.status === 'PAUSED') {
     return {
-      status: 'live',
-      market_status: 'closed',
-      home_score: homeScore,
-      away_score: awayScore,
-      live_minute: match.minute ? String(match.minute) : null,
-    }
+        status: 'live',
+        market_status: 'closed',
+        home_score: homeScore,
+        away_score: awayScore,
+        winner: null,
+        live_minute: match.minute ? String(match.minute) : null,
+      }
   }
 
   if (match.status === 'POSTPONED' || match.status === 'SUSPENDED' || match.status === 'CANCELLED') {
@@ -67,6 +97,7 @@ function statusPatch(match: FootballDataMatch) {
     market_status: 'open',
     home_score: null,
     away_score: null,
+    winner: null,
     live_minute: null,
   }
 }
@@ -110,7 +141,7 @@ Deno.serve(async (req) => {
   for (const fdMatch of matches) {
     const { data: idRows, error: idFindError } = await supabase
       .from('matches')
-      .select('match_code,market_status,lock_reason')
+      .select('match_code,home_code,away_code,market_status,lock_reason')
       .eq('football_data_id', fdMatch.id)
       .limit(1)
 
@@ -121,7 +152,7 @@ Deno.serve(async (req) => {
     if (!current && fdMatch.homeTeam.tla && fdMatch.awayTeam.tla) {
       const { data: codeRows, error: codeFindError } = await supabase
         .from('matches')
-        .select('match_code,market_status,lock_reason')
+        .select('match_code,home_code,away_code,market_status,lock_reason')
         .eq('home_code', fdMatch.homeTeam.tla)
         .eq('away_code', fdMatch.awayTeam.tla)
         .eq('kickoff_utc', fdMatch.utcDate)
@@ -136,7 +167,7 @@ Deno.serve(async (req) => {
       continue
     }
 
-    const patch = statusPatch(fdMatch)
+    const patch = statusPatch(fdMatch, current)
     const isManualLock =
       current.market_status === 'locked' &&
       current.lock_reason &&
