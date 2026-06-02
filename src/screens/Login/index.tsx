@@ -12,6 +12,27 @@ import { asset } from '@/lib/utils'
 
 type Step = 'email' | 'code'
 
+const OTP_COOLDOWN_SECONDS = 60
+
+function getOtpCooldownKey(email: string) {
+  return `bolao-otp-cooldown:${email.trim().toLowerCase()}`
+}
+
+function getOtpCooldownLeft(email: string) {
+  if (!email || typeof window === 'undefined') return 0
+  const until = Number(window.localStorage.getItem(getOtpCooldownKey(email)))
+  if (!Number.isFinite(until)) return 0
+  const left = Math.ceil((until - Date.now()) / 1000)
+  return Math.max(0, left)
+}
+
+function startOtpCooldown(email: string) {
+  if (typeof window === 'undefined') return OTP_COOLDOWN_SECONDS
+  const until = Date.now() + OTP_COOLDOWN_SECONDS * 1000
+  window.localStorage.setItem(getOtpCooldownKey(email), String(until))
+  return OTP_COOLDOWN_SECONDS
+}
+
 function useOtpFlow() {
   const { sendOtp, verifyOtp, rememberMe, setRememberMe } = useAuthStore()
   const navigate = useNavigate()
@@ -26,15 +47,24 @@ function useOtpFlow() {
   // Cooldown timer
   useEffect(() => {
     if (resendCooldown <= 0) return
-    const t = setTimeout(() => setResendCooldown(c => c - 1), 1000)
+    const t = setTimeout(() => setResendCooldown(getOtpCooldownLeft(email)), 1000)
     return () => clearTimeout(t)
-  }, [resendCooldown])
+  }, [email, resendCooldown])
+
+  useEffect(() => {
+    setResendCooldown(getOtpCooldownLeft(email))
+  }, [email])
 
   const canSendEmail = email.trim().toLowerCase().endsWith('@suprema.group')
   const codeComplete = code.length >= 6
 
   const handleSendOtp = async () => {
-    if (!canSendEmail || loading || resendCooldown > 0) return
+    const activeCooldown = getOtpCooldownLeft(email)
+    if (activeCooldown > 0) {
+      setResendCooldown(activeCooldown)
+      return
+    }
+    if (!canSendEmail || loading) return
     setLoading(true)
     setError('')
     const res = await sendOtp(email.trim())
@@ -43,7 +73,7 @@ function useOtpFlow() {
       setError(res.error)
     } else {
       setStep('code')
-      setResendCooldown(60)
+      setResendCooldown(startOtpCooldown(email))
     }
   }
 
@@ -62,13 +92,18 @@ function useOtpFlow() {
   }
 
   const handleResend = async () => {
-    if (resendCooldown > 0 || loading) return
+    const activeCooldown = getOtpCooldownLeft(email)
+    if (activeCooldown > 0) {
+      setResendCooldown(activeCooldown)
+      return
+    }
+    if (loading) return
     setLoading(true)
     setError('')
     const res = await sendOtp(email.trim())
     setLoading(false)
     if (res.error) setError(res.error)
-    else setResendCooldown(60)
+    else setResendCooldown(startOtpCooldown(email))
   }
 
   const handleBack = () => {
