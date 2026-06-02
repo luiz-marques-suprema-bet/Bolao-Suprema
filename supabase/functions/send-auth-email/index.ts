@@ -1,7 +1,6 @@
 import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0'
 
 const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY') ?? ''
-const resendFallbackApiKey = Deno.env.get('RESEND_API_KEY') ?? ''
 const hookSecret = (Deno.env.get('SEND_EMAIL_HOOK_SECRET') ?? '').replace('v1,whsec_', '')
 const fromEmail = Deno.env.get('SENDGRID_FROM_EMAIL') ?? 'no-reply@ultra.bet.br'
 const fromName = Deno.env.get('SENDGRID_FROM_NAME') ?? 'Bolao da Copa'
@@ -135,48 +134,13 @@ async function sendWithSendGrid(message: { to: string; subject: string; html: st
   throw new Error(lastError || 'SendGrid failed')
 }
 
-async function sendWithResendFallback(message: { to: string; subject: string; html: string; text: string }) {
-  let lastError = ''
-
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    if (attempt > 0) {
-      const jitter = Math.floor(Math.random() * 900)
-      await sleep(850 + attempt * 450 + jitter)
-    }
-
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendFallbackApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: `${fromName} <${fromEmail}>`,
-        to: [message.to],
-        subject: message.subject,
-        html: message.html,
-        text: message.text,
-      }),
-    })
-
-    if (response.ok) return
-
-    const text = await response.text()
-    lastError = `${response.status} ${text}`
-    const retryable = response.status === 429 || response.status >= 500 || text.toLowerCase().includes('too many requests')
-    if (!retryable) break
-  }
-
-  throw new Error(lastError || 'Resend fallback failed')
-}
-
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response('not allowed', { status: 405 })
   }
 
   try {
-    if ((!sendgridApiKey && !resendFallbackApiKey) || !hookSecret) throw new Error('Missing email hook secrets')
+    if (!sendgridApiKey || !hookSecret) throw new Error('Missing email hook secrets')
 
     const payload = await req.text()
     const headers = Object.fromEntries(req.headers)
@@ -195,11 +159,7 @@ Deno.serve(async (req) => {
       text: buildText(email, event.email_data),
     }
 
-    if (sendgridApiKey) {
-      await sendWithSendGrid(message)
-    } else {
-      await sendWithResendFallback(message)
-    }
+    await sendWithSendGrid(message)
 
     return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })
   } catch (error) {
