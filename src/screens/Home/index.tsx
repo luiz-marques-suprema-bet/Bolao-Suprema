@@ -177,6 +177,28 @@ function CarouselIcon({ className }: { className?: string }) {
   )
 }
 
+function NewsProgressBar({
+  isActive,
+  className,
+}: {
+  isActive: boolean
+  className?: string
+}) {
+  return (
+    <span className={cn('relative block overflow-hidden bg-hairline', className)}>
+      <span className="absolute inset-0 bg-ink/20" />
+      {isActive && (
+        <motion.span
+          className="absolute inset-y-0 left-0 bg-yellow"
+          initial={{ width: '0%' }}
+          animate={{ width: '100%' }}
+          transition={{ duration: NEWS_SLIDE_MS / 1000, ease: 'linear' }}
+        />
+      )}
+    </span>
+  )
+}
+
 function WC26News({
   compact = false,
   className,
@@ -230,22 +252,30 @@ function WC26News({
   if (!newsConfigured()) return null
 
   const featured = news[activeIndex] ?? news[0]
-  const nextItems = news.filter((_, index) => index !== activeIndex).slice(0, limit - 1)
-  const visibleNews = featured ? [featured, ...nextItems] : []
+  const displayItems = news.slice(0, limit)
+  const featuredPosition = featured ? Math.max(0, displayItems.findIndex(item => item.url === featured.url)) : 0
   const featuredHasImage = Boolean(featured?.image) && !brokenImageUrls[featured.url]
   const showLoading = loading && news.length === 0
   const showEmpty = !showLoading && !featured
 
   return (
-    <div className={cn('ui-panel overflow-hidden', className)}>
+    <div data-testid="wc26-news" className={cn('ui-panel overflow-hidden', className)}>
       <div className="ui-panel-header flex items-baseline justify-between">
         <div className="flex items-baseline gap-1.5">
           <span className="font-display text-base">COPA 2026</span>
           <span className="font-mono text-[10px] text-paper/40">radar da copa</span>
         </div>
         <div className="flex items-center gap-2 font-mono text-[8px] text-paper/30 tracking-eyebrow">
-          <CarouselIcon className="h-3.5 w-3.5" />
-          <span>{showLoading ? 'buscando' : `${visibleNews.length} noticias`}</span>
+          <motion.span
+            key={`header-${activeIndex}`}
+            initial={{ rotate: -90, opacity: 0.35 }}
+            animate={{ rotate: 0, opacity: 1 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+            className="inline-flex"
+          >
+            <CarouselIcon className="h-3.5 w-3.5" />
+          </motion.span>
+          <span>{showLoading ? 'buscando' : `${displayItems.length} noticias`}</span>
         </div>
       </div>
       {showLoading ? (
@@ -261,36 +291,42 @@ function WC26News({
         </div>
       ) : (
         <div>
+          <AnimatePresence mode="wait">
           {featured && (
             <motion.article
               key={featured.url}
-              initial={{ opacity: 0, y: 14, filter: 'blur(3px)' }}
-              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-              transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-              className="relative block overflow-hidden border-b border-hairline bg-ink text-paper group"
+              initial={{ opacity: 0, x: 22, filter: 'blur(6px)' }}
+              animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, x: -22, filter: 'blur(6px)' }}
+              transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+              className="relative block min-h-[380px] overflow-hidden border-b border-yellow bg-ink text-paper group"
             >
               {featuredHasImage && (
-                <div className={cn('relative overflow-hidden bg-ink', compact ? 'h-40' : 'h-64')}>
+                <div className="absolute inset-0 overflow-hidden bg-ink">
                   <motion.img
                     src={featured.image!}
                     alt={featured.title}
-                    initial={{ scale: 1.06 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 4.8, ease: 'easeOut' }}
+                    initial={{ scale: 1.09 }}
+                    animate={{ scale: 1.01 }}
+                    transition={{ duration: NEWS_SLIDE_MS / 1000, ease: 'linear' }}
                     className="h-full w-full object-cover"
                     onError={() => setBrokenImageUrls(urls => ({ ...urls, [featured.url]: true }))}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/25" />
                 </div>
               )}
-              <div className={cn('bg-ink', featuredHasImage ? 'p-4' : compact ? 'p-5 py-8' : 'p-6 py-12')}>
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/78 to-black/20" />
+              <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/65 to-transparent" />
+              <div className="absolute right-4 top-4 z-10 border border-paper/30 bg-black/35 px-2.5 py-1 font-mono text-[8px] font-bold tracking-eyebrow text-paper/70 backdrop-blur-sm">
+                {String(featuredPosition + 1).padStart(2, '0')} / {String(displayItems.length).padStart(2, '0')}
+              </div>
+              <div className="relative z-10 flex min-h-[380px] flex-col justify-end p-5">
                 <motion.div
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.08, duration: 0.22 }}
                   className="mb-2 flex items-center gap-2 font-mono text-[8px] tracking-eyebrow text-yellow"
                 >
-                  <span className="font-display text-paper/45">1</span>
+                  <span className="font-display text-paper/45">FOCO</span>
                   <span>{featured.source}</span>
                   <span className="text-paper/45">·</span>
                   <span className="text-paper/60">{timeAgo(featured.publishedAt)}</span>
@@ -301,7 +337,7 @@ function WC26News({
                   transition={{ delay: 0.12, duration: 0.26 }}
                   className={cn(
                   'font-display leading-[1.02] text-paper break-words transition-colors group-hover:text-yellow',
-                  featuredHasImage ? (compact ? 'text-xl' : 'text-4xl') : (compact ? 'text-3xl' : 'text-5xl'),
+                  featuredHasImage ? (compact ? 'text-3xl' : 'text-5xl') : (compact ? 'text-3xl' : 'text-5xl'),
                 )}
                 >
                   {featured.title}
@@ -318,20 +354,29 @@ function WC26News({
                   LER MATERIA <span>→</span>
                 </motion.a>
               </div>
+              <NewsProgressBar key={`hero-progress-${activeIndex}`} isActive className="absolute inset-x-0 bottom-0 z-20 h-1" />
             </motion.article>
           )}
+          </AnimatePresence>
           <div className="divide-y divide-hairline">
-            {nextItems.map((item, index) => (
+            {displayItems.map((item, index) => {
+              const itemIndex = news.findIndex(n => n.url === item.url)
+              const isActive = itemIndex === activeIndex
+              return (
               <motion.button
                 key={item.url}
+                data-testid="wc26-news-row"
                 type="button"
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.04 * index, duration: 0.2 }}
-                onClick={() => setActiveIndex(news.findIndex(n => n.url === item.url))}
-                className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover group"
+                onClick={() => setActiveIndex(itemIndex)}
+                className={cn(
+                  'relative flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors group',
+                  isActive ? 'bg-yellow/10' : 'hover:bg-surface-hover',
+                )}
               >
-                <span className="font-display text-base text-ink-4 tabular-nums">{index + 2}</span>
+                <span className={cn('font-display text-base tabular-nums', isActive ? 'text-ink' : 'text-ink-4')}>{index + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="font-mono text-[10px] font-bold text-ink leading-tight line-clamp-2 group-hover:underline">{item.title}</p>
                   <div className="flex items-center gap-1 mt-1">
@@ -340,37 +385,44 @@ function WC26News({
                     <span className="font-mono text-[7px] text-ink-4">{timeAgo(item.publishedAt)}</span>
                   </div>
                 </div>
+                {isActive && (
+                  <motion.span
+                    key={`row-${activeIndex}`}
+                    className="absolute bottom-0 left-0 h-0.5 bg-yellow"
+                    initial={{ width: '0%' }}
+                    animate={{ width: '100%' }}
+                    transition={{ duration: NEWS_SLIDE_MS / 1000, ease: 'linear' }}
+                  />
+                )}
               </motion.button>
-            ))}
+              )
+            })}
           </div>
           {news.length > 1 && (
             <div className="flex items-center gap-2 px-3 py-3">
-              <CarouselIcon className="h-4 w-4 flex-shrink-0 text-ink-4" />
+              <motion.span
+                key={`footer-${activeIndex}`}
+                initial={{ rotate: -90, opacity: 0.35 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="inline-flex flex-shrink-0 text-ink-4"
+              >
+                <CarouselIcon className="h-4 w-4" />
+              </motion.span>
               <div className="flex flex-1 gap-1.5">
-                {visibleNews.map((item, index) => {
+                {displayItems.map((item, index) => {
                   const itemIndex = news.findIndex(n => n.url === item.url)
                   const isActive = itemIndex === activeIndex
                   return (
                   <button
                     key={item.url}
                     type="button"
+                    data-testid="wc26-news-progress"
                     aria-label={`Noticia ${index + 1}`}
                     onClick={() => setActiveIndex(itemIndex)}
                     className="group relative h-2 flex-1 overflow-hidden bg-hairline transition-colors hover:bg-ink-4/40"
                   >
-                    <span className={cn(
-                      'absolute inset-0 origin-left bg-ink/25 transition-opacity',
-                      isActive ? 'opacity-0' : 'opacity-100',
-                    )} />
-                    {isActive && (
-                      <motion.span
-                        key={activeIndex}
-                        className="absolute inset-y-0 left-0 bg-yellow"
-                        initial={{ width: '0%' }}
-                        animate={{ width: '100%' }}
-                        transition={{ duration: NEWS_SLIDE_MS / 1000, ease: 'linear' }}
-                      />
-                    )}
+                    <NewsProgressBar isActive={isActive} className="absolute inset-0" />
                     <span className="sr-only">{item.title}</span>
                   </button>
                   )
