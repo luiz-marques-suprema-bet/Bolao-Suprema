@@ -262,54 +262,72 @@ function WC26News({
       ) : (
         <div>
           {featured && (
-            <article className="relative block overflow-hidden border-b border-hairline bg-ink text-paper group">
-              <div className="absolute left-0 right-0 top-0 h-1 bg-white/20">
-                <div
-                  key={activeIndex}
-                  className="h-full bg-yellow"
-                  style={{ animation: `news-progress ${NEWS_SLIDE_MS}ms linear forwards` }}
-                />
-              </div>
+            <motion.article
+              key={featured.url}
+              initial={{ opacity: 0, y: 14, filter: 'blur(3px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+              className="relative block overflow-hidden border-b border-hairline bg-ink text-paper group"
+            >
               {featuredHasImage && (
                 <div className={cn('relative overflow-hidden bg-ink', compact ? 'h-40' : 'h-64')}>
-                  <img
+                  <motion.img
                     src={featured.image!}
                     alt={featured.title}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                    initial={{ scale: 1.06 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 4.8, ease: 'easeOut' }}
+                    className="h-full w-full object-cover"
                     onError={() => setBrokenImageUrls(urls => ({ ...urls, [featured.url]: true }))}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/25" />
                 </div>
               )}
               <div className={cn('bg-ink', featuredHasImage ? 'p-4' : compact ? 'p-5 py-8' : 'p-6 py-12')}>
-                <div className="mb-2 flex items-center gap-2 font-mono text-[8px] tracking-eyebrow text-yellow">
+                <motion.div
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.08, duration: 0.22 }}
+                  className="mb-2 flex items-center gap-2 font-mono text-[8px] tracking-eyebrow text-yellow"
+                >
                   <span className="font-display text-paper/45">1</span>
                   <span>{featured.source}</span>
                   <span className="text-paper/45">·</span>
                   <span className="text-paper/60">{timeAgo(featured.publishedAt)}</span>
-                </div>
-                <h3 className={cn(
+                </motion.div>
+                <motion.h3
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.12, duration: 0.26 }}
+                  className={cn(
                   'font-display leading-[1.02] text-paper break-words transition-colors group-hover:text-yellow',
                   featuredHasImage ? (compact ? 'text-xl' : 'text-4xl') : (compact ? 'text-3xl' : 'text-5xl'),
-                )}>
+                )}
+                >
                   {featured.title}
-                </h3>
-                <a
+                </motion.h3>
+                <motion.a
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.18, duration: 0.24 }}
                   href={featured.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-3 inline-flex items-center gap-2 border border-paper/40 px-3 py-2 font-mono text-[9px] font-bold tracking-eyebrow text-paper transition-colors hover:border-yellow hover:text-yellow"
                 >
                   LER MATERIA <span>→</span>
-                </a>
+                </motion.a>
               </div>
-            </article>
+            </motion.article>
           )}
           <div className="divide-y divide-hairline">
             {nextItems.map((item, index) => (
-              <button
+              <motion.button
                 key={item.url}
                 type="button"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.04 * index, duration: 0.2 }}
                 onClick={() => setActiveIndex(news.findIndex(n => n.url === item.url))}
                 className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover group"
               >
@@ -322,7 +340,7 @@ function WC26News({
                     <span className="font-mono text-[7px] text-ink-4">{timeAgo(item.publishedAt)}</span>
                   </div>
                 </div>
-              </button>
+              </motion.button>
             ))}
           </div>
           {news.length > 1 && (
@@ -331,17 +349,30 @@ function WC26News({
               <div className="flex flex-1 gap-1.5">
                 {visibleNews.map((item, index) => {
                   const itemIndex = news.findIndex(n => n.url === item.url)
+                  const isActive = itemIndex === activeIndex
                   return (
                   <button
                     key={item.url}
                     type="button"
                     aria-label={`Noticia ${index + 1}`}
                     onClick={() => setActiveIndex(itemIndex)}
-                    className={cn(
-                      'h-1 flex-1 transition-colors',
-                      itemIndex === activeIndex ? 'bg-ink' : 'bg-hairline hover:bg-ink-4',
+                    className="group relative h-2 flex-1 overflow-hidden bg-hairline transition-colors hover:bg-ink-4/40"
+                  >
+                    <span className={cn(
+                      'absolute inset-0 origin-left bg-ink/25 transition-opacity',
+                      isActive ? 'opacity-0' : 'opacity-100',
+                    )} />
+                    {isActive && (
+                      <motion.span
+                        key={activeIndex}
+                        className="absolute inset-y-0 left-0 bg-yellow"
+                        initial={{ width: '0%' }}
+                        animate={{ width: '100%' }}
+                        transition={{ duration: NEWS_SLIDE_MS / 1000, ease: 'linear' }}
+                      />
                     )}
-                  />
+                    <span className="sr-only">{item.title}</span>
+                  </button>
                   )
                 })}
               </div>
