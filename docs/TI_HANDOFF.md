@@ -23,6 +23,7 @@ Implementado e validado:
 - Edge Function executada com `season=2026`.
 - Resultado informado do sync: `63` partidas atualizadas, `41` sem match.
 - Edge Function redeployada com `verify_jwt=true`.
+- Edge Function `send-auth-email` configurada como hook do Supabase Auth para enviar codigos OTP via SendGrid.
 - Grants anonimos removidos de RPCs administrativas sensiveis.
 - Listagem ampla do bucket `chat-media` removida.
 
@@ -105,6 +106,11 @@ Nunca colocar esses valores no frontend:
 
 | Secret | Uso |
 |--------|-----|
+| `SENDGRID_API_KEY` | Chave server-side do SendGrid para envio de OTP |
+| `SENDGRID_FROM_EMAIL` | Remetente verificado no SendGrid, ex.: `no-reply@ultra.bet.br` |
+| `SENDGRID_FROM_NAME` | Nome do remetente, ex.: `Bolao da Copa` |
+| `SENDGRID_REPLY_TO_EMAIL` | Opcional, endereco de resposta |
+| `SENDGRID_REPLY_TO_NAME` | Opcional, nome do reply-to |
 | `FOOTBALL_DATA_TOKEN` | Token football-data.org |
 | `SUPABASE_SERVICE_ROLE_KEY` | Acesso interno da Edge Function ao banco |
 | `WORLD_NEWS_API_KEY` | Opcional, noticias da Copa 2026 via Edge Function `news-proxy` |
@@ -113,13 +119,14 @@ Nunca colocar esses valores no frontend:
 ## Fluxo de autenticacao
 
 1. Usuario informa e-mail corporativo `@suprema.group`.
-2. Supabase envia OTP.
-3. Usuario valida o codigo.
-4. Supabase emite sessao/JWT.
-5. Novo usuario fica `pending`.
-6. Admin aprova participante.
-7. Usuario completa perfil.
-8. Usuario acessa app.
+2. Supabase gera OTP e chama o hook `send-auth-email`.
+3. A Edge Function envia o codigo via SendGrid.
+4. Usuario valida o codigo.
+5. Supabase emite sessao/JWT.
+6. Novo usuario fica `pending`.
+7. Admin aprova participante.
+8. Usuario completa perfil.
+9. Usuario acessa app.
 
 ## Roles e status
 

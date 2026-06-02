@@ -1,8 +1,11 @@
 import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0'
 
-const resendApiKey = Deno.env.get('RESEND_API_KEY') ?? ''
+const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY') ?? ''
 const hookSecret = (Deno.env.get('SEND_EMAIL_HOOK_SECRET') ?? '').replace('v1,whsec_', '')
-const fromEmail = 'Bolao Suprema <bolao@suprema.group>'
+const fromEmail = Deno.env.get('SENDGRID_FROM_EMAIL') ?? 'no-reply@ultra.bet.br'
+const fromName = Deno.env.get('SENDGRID_FROM_NAME') ?? 'Bolao da Copa'
+const replyToEmail = Deno.env.get('SENDGRID_REPLY_TO_EMAIL') ?? ''
+const replyToName = Deno.env.get('SENDGRID_REPLY_TO_NAME') ?? fromName
 
 const subjects: Record<string, string> = {
   signup: 'Seu codigo de acesso - Bolao Suprema',
@@ -60,7 +63,7 @@ Este e-mail nao possui link clicavel por seguranca.
 Solicitado para ${email}. Se nao foi voce, ignore este e-mail.`
 }
 
-async function sendWithResend(message: { to: string; subject: string; html: string; text: string }) {
+async function sendWithSendGrid(message: { to: string; subject: string; html: string; text: string }) {
   let lastError = ''
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -69,30 +72,66 @@ async function sendWithResend(message: { to: string; subject: string; html: stri
       await sleep(850 + attempt * 450 + jitter)
     }
 
-    const response = await fetch('https://api.resend.com/emails', {
+    const payload: Record<string, unknown> = {
+      personalizations: [
+        {
+          to: [{ email: message.to }],
+          subject: message.subject,
+        },
+      ],
+      from: {
+        email: fromEmail,
+        name: fromName,
+      },
+      content: [
+        {
+          type: 'text/plain',
+          value: message.text,
+        },
+        {
+          type: 'text/html',
+          value: message.html,
+        },
+      ],
+      tracking_settings: {
+        click_tracking: {
+          enable: false,
+          enable_text: false,
+        },
+        open_tracking: {
+          enable: false,
+        },
+        subscription_tracking: {
+          enable: false,
+        },
+      },
+    }
+
+    if (replyToEmail) {
+      payload.reply_to = {
+        email: replyToEmail,
+        name: replyToName,
+      }
+    }
+
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${resendApiKey}`,
+        Authorization: `Bearer ${sendgridApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [message.to],
-        subject: message.subject,
-        html: message.html,
-        text: message.text,
-      }),
+      body: JSON.stringify(payload),
     })
 
     if (response.ok) return
 
     const text = await response.text()
     lastError = `${response.status} ${text}`
-    const retryable = response.status === 429 || text.toLowerCase().includes('too many requests')
+    const retryable = response.status === 429 || response.status >= 500 || text.toLowerCase().includes('too many requests')
     if (!retryable) break
   }
 
-  throw new Error(lastError || 'Resend failed')
+  throw new Error(lastError || 'SendGrid failed')
 }
 
 Deno.serve(async (req) => {
@@ -101,7 +140,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (!resendApiKey || !hookSecret) throw new Error('Missing email hook secrets')
+    if (!sendgridApiKey || !hookSecret) throw new Error('Missing email hook secrets')
 
     const payload = await req.text()
     const headers = Object.fromEntries(req.headers)
@@ -113,7 +152,7 @@ Deno.serve(async (req) => {
     const email = event.user.email
     const action = event.email_data.email_action_type ?? 'magiclink'
 
-    await sendWithResend({
+    await sendWithSendGrid({
       to: email,
       subject: subjects[action] ?? 'Bolao Suprema',
       html: buildHtml(email, event.email_data),

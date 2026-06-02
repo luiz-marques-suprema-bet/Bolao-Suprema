@@ -98,3 +98,16 @@ supabase functions deploy news-proxy
 ```
 
 Sem esse secret, o proxy usa fallback server-side via Google News RSS.
+
+### Auth email / SendGrid
+
+O OTP do Supabase Auth e enviado pela Edge Function `send-auth-email`, via SendGrid Web API. Configure os secrets abaixo no Supabase, nunca no frontend:
+
+```bash
+supabase secrets set SENDGRID_API_KEY=SG_your_key
+supabase secrets set SENDGRID_FROM_EMAIL=no-reply@ultra.bet.br
+supabase secrets set SENDGRID_FROM_NAME="Bolao da Copa"
+supabase functions deploy send-auth-email --no-verify-jwt
+```
+
+`SENDGRID_REPLY_TO_EMAIL` e `SENDGRID_REPLY_TO_NAME` sao opcionais.

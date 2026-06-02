@@ -82,6 +82,7 @@ Edge Functions:
 
 | Function | JWT | Funcao |
 |----------|-----|--------|
+| `send-auth-email` | `false` | hook do Supabase Auth; envia codigo OTP via SendGrid |
 | `football-data-sync` | `true` | sincroniza football-data.org |
 | `news-proxy` | `true` | proxy server-side de noticias da Copa |
 
@@ -113,6 +114,11 @@ Noticias da Copa 2026 nao usam chave `VITE_*`. O frontend chama apenas `news-pro
 
 | Secret | Descricao |
 |--------|-----------|
+| `SENDGRID_API_KEY` | Chave server-side do SendGrid para e-mails de autenticacao |
+| `SENDGRID_FROM_EMAIL` | Remetente verificado no SendGrid, ex.: `no-reply@ultra.bet.br` |
+| `SENDGRID_FROM_NAME` | Nome exibido no remetente, ex.: `Bolao da Copa` |
+| `SENDGRID_REPLY_TO_EMAIL` | Opcional; endereco de resposta |
+| `SENDGRID_REPLY_TO_NAME` | Opcional; nome do reply-to |
 | `FOOTBALL_DATA_TOKEN` | Token da football-data.org |
 | `SUPABASE_SERVICE_ROLE_KEY` | Uso interno de Edge Functions |
 | `WORLD_NEWS_API_KEY` | Opcional; chave paga server-side para noticias |
