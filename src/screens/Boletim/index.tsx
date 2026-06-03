@@ -62,6 +62,7 @@ export function BoletimCard({
   b,
   canEdit,
   onDelete,
+  onEdit,
   onTogglePin,
   featured = false,
   compactHome = false,
@@ -69,6 +70,7 @@ export function BoletimCard({
   b: Boletim
   canEdit: boolean
   onDelete: (id: string) => void
+  onEdit: (b: Boletim) => void
   onTogglePin: (id: string) => void
   featured?: boolean
   compactHome?: boolean
@@ -117,6 +119,12 @@ export function BoletimCard({
               </div>
               {canEdit && (
                 <div className="flex flex-col gap-1.5">
+                  <button
+                    onClick={() => onEdit(b)}
+                    className="border border-inverse-text/30 px-2 py-1 font-mono text-[8px] text-inverse-text/60 transition-colors hover:border-inverse-text hover:text-inverse-text"
+                  >
+                    EDITAR
+                  </button>
                   <button
                     onClick={() => onTogglePin(b.id)}
                     className="border border-inverse-text/30 px-2 py-1 font-mono text-[8px] text-inverse-text/60 transition-colors hover:border-inverse-text hover:text-inverse-text"
@@ -175,6 +183,12 @@ export function BoletimCard({
           </div>
           {canEdit && (
             <div className="flex flex-col gap-1 flex-shrink-0">
+              <button
+                onClick={() => onEdit(b)}
+                className="font-mono text-[8px] px-2 py-1 border border-inverse-text/30 hover:border-inverse-text text-inverse-text/60 hover:text-inverse-text transition-colors"
+              >
+                EDITAR
+              </button>
               <button
                 onClick={() => onTogglePin(b.id)}
                 className="font-mono text-[8px] px-2 py-1 border border-inverse-text/30 hover:border-inverse-text text-inverse-text/60 hover:text-inverse-text transition-colors"
@@ -256,6 +270,12 @@ export function BoletimCard({
               {canEdit && (
                 <div className="flex gap-2 mt-4">
                   <button
+                    onClick={() => onEdit(b)}
+                    className="font-mono text-[9px] px-3 py-1.5 border border-hairline hover:border-ink transition-colors"
+                  >
+                    EDITAR
+                  </button>
+                  <button
                     onClick={() => onTogglePin(b.id)}
                     className="font-mono text-[9px] px-3 py-1.5 border border-hairline hover:border-ink transition-colors"
                   >
@@ -282,22 +302,28 @@ export function BoletimCard({
 const PRESET_LABELS = ['REGRAS', 'BRASIL', 'AGENDA', 'DESTAQUE', 'AVISO', 'PRÊMIO']
 
 export type NewBoletim = Omit<Boletim, 'id' | 'createdAt'>
+export type EditBoletim = Omit<Boletim, 'id' | 'createdAt' | 'authorId' | 'authorName'>
 
 export function CreateModal({
   onClose,
   onCreate,
+  onUpdate,
+  initialBoletim,
 }: {
   onClose: () => void
   onCreate: (b: NewBoletim) => void
+  onUpdate?: (id: string, b: EditBoletim) => void
+  initialBoletim?: Boletim | null
 }) {
   const { user } = useAuthStore()
-  const [label, setLabel] = useState('DESTAQUE')
-  const [title, setTitle] = useState('')
-  const [subtitle, setSubtitle] = useState('')
-  const [body, setBody] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [imageFitMode, setImageFitMode] = useState<ImageFitMode>('cover')
+  const isEditing = Boolean(initialBoletim)
+  const [label, setLabel] = useState(initialBoletim?.label ?? 'DESTAQUE')
+  const [title, setTitle] = useState(initialBoletim?.title ?? '')
+  const [subtitle, setSubtitle] = useState(initialBoletim?.subtitle ?? '')
+  const [body, setBody] = useState(initialBoletim?.body ?? '')
+  const [imageUrl, setImageUrl] = useState(initialBoletim?.imageUrl ?? '')
+  const [imagePreview, setImagePreview] = useState<string | null>(initialBoletim?.imageUrl ?? null)
+  const [imageFitMode, setImageFitMode] = useState<ImageFitMode>(initialBoletim?.imageFitMode ?? 'cover')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -324,19 +350,29 @@ export function CreateModal({
     }
   }
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     if (!valid) return
     setSaving(true)
-    await onCreate({
+    const draft = {
       label,
       title:      title.trim(),
       subtitle:   subtitle.trim() || undefined,
       body:       body.trim(),
       imageUrl:   imageUrl || undefined,
       imageFitMode,
+      isPinned:   initialBoletim?.isPinned ?? false,
+    }
+
+    if (initialBoletim && onUpdate) {
+      await onUpdate(initialBoletim.id, draft)
+      setSaving(false)
+      return
+    }
+
+    await onCreate({
+      ...draft,
       authorId:   user?.id   ?? 'admin',
       authorName: user ? `${user.firstName} ${user.lastName}` : 'Admin',
-      isPinned:   false,
     })
     setSaving(false)
   }
@@ -358,8 +394,10 @@ export function CreateModal({
       >
         <div className="flex items-center justify-between mb-5">
           <div>
-            <div className="font-display text-2xl">NOVO BOLETIM</div>
-            <div className="font-serif-it text-sm text-green-deep">escreva para a firma</div>
+            <div className="font-display text-2xl">{isEditing ? 'EDITAR BOLETIM' : 'NOVO BOLETIM'}</div>
+            <div className="font-serif-it text-sm text-green-deep">
+              {isEditing ? 'ajuste o comunicado' : 'escreva para a firma'}
+            </div>
           </div>
           <button onClick={onClose} className="font-mono text-[10px] text-ink-3 hover:text-ink">
             FECHAR
@@ -486,12 +524,12 @@ export function CreateModal({
             CANCELAR
           </button>
           <button
-            onClick={handleCreate}
+            onClick={handleSave}
             disabled={!valid || saving}
             className="btn-yellow text-[11px] disabled:opacity-40"
             style={{ flex: 2 }}
           >
-            {saving ? 'PUBLICANDO…' : 'PUBLICAR BOLETIM'}
+            {saving ? (isEditing ? 'SALVANDO...' : 'PUBLICANDO...') : (isEditing ? 'SALVAR ALTERACOES' : 'PUBLICAR BOLETIM')}
           </button>
         </div>
       </motion.div>
@@ -502,10 +540,11 @@ export function CreateModal({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function BoletimScreen() {
-  const { bulletins, isLoaded, init, destroy, addBoletim, togglePin, deleteBoletim } = useBoletimStore()
+  const { bulletins, isLoaded, init, destroy, addBoletim, updateBoletim, togglePin, deleteBoletim } = useBoletimStore()
   const { user } = useAuthStore()
   const canEdit = (user?.isAdmin || user?.isMarketing) ?? false
   const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState<Boletim | null>(null)
 
   useEffect(() => {
     init()
@@ -524,6 +563,11 @@ export function BoletimScreen() {
   const handleCreate = async (b: NewBoletim) => {
     await addBoletim(b)
     setCreating(false)
+  }
+
+  const handleUpdate = async (id: string, b: EditBoletim) => {
+    await updateBoletim(id, b)
+    setEditing(null)
   }
 
   if (!isLoaded) {
@@ -573,6 +617,7 @@ export function BoletimScreen() {
                 b={featured}
                 canEdit={canEdit}
                 onDelete={deleteBoletim}
+                onEdit={setEditing}
                 onTogglePin={togglePin}
                 featured
               />
@@ -593,6 +638,7 @@ export function BoletimScreen() {
                   b={b}
                   canEdit={canEdit}
                   onDelete={deleteBoletim}
+                  onEdit={setEditing}
                   onTogglePin={togglePin}
                 />
               ))}
@@ -604,6 +650,14 @@ export function BoletimScreen() {
       <AnimatePresence>
         {creating && (
           <CreateModal onClose={() => setCreating(false)} onCreate={handleCreate} />
+        )}
+        {editing && (
+          <CreateModal
+            initialBoletim={editing}
+            onClose={() => setEditing(null)}
+            onCreate={handleCreate}
+            onUpdate={handleUpdate}
+          />
         )}
       </AnimatePresence>
     </div>

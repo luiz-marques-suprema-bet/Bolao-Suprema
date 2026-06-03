@@ -44,6 +44,7 @@ interface BoletimState {
   init:          () => Promise<void>
   destroy:       () => void
   addBoletim:    (b: Omit<Boletim, 'id' | 'createdAt'>) => Promise<void>
+  updateBoletim: (id: string, b: Omit<Boletim, 'id' | 'createdAt' | 'authorId' | 'authorName'>) => Promise<void>
   togglePin:     (id: string) => Promise<void>
   deleteBoletim: (id: string) => Promise<void>
 }
@@ -136,6 +137,56 @@ export const useBoletimStore = create<BoletimState>()((set, get) => ({
         if (s.bulletins.some(x => x.id === novo.id)) return s
         return { bulletins: [novo, ...s.bulletins] }
       })
+    }
+  },
+
+  // ── updateBoletim ─────────────────────────────────────────────────────────
+
+  updateBoletim: async (id, b) => {
+    const prev = get().bulletins
+    const current = prev.find(x => x.id === id)
+    if (!current) return
+
+    const updated: Boletim = {
+      ...current,
+      label: b.label,
+      title: b.title,
+      subtitle: b.subtitle,
+      body: b.body,
+      imageUrl: b.imageUrl,
+      imageFitMode: b.imageFitMode ?? 'contain',
+      isPinned: b.isPinned ?? false,
+    }
+
+    set(s => ({
+      bulletins: s.bulletins.map(x => x.id === id ? updated : x),
+    }))
+
+    if (isMockMode) return
+
+    const { data, error } = await supabase
+      .from('bulletins')
+      .update({
+        label:       b.label,
+        title:       b.title,
+        subtitle:    b.subtitle ?? null,
+        body:        b.body,
+        image_url:   b.imageUrl ?? null,
+        image_fit_mode: b.imageFitMode ?? 'contain',
+        is_pinned:   b.isPinned ?? false,
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[Boletim] Erro ao editar:', error.message)
+      set({ bulletins: prev })
+      return
+    }
+    if (data) {
+      const saved = mapRow(data as BoletimRow)
+      set(s => ({ bulletins: s.bulletins.map(x => x.id === id ? saved : x) }))
     }
   },
 

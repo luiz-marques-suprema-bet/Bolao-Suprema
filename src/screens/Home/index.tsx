@@ -20,7 +20,7 @@ import { formatMatchDate, formatMatchTime, getBettingDeadline } from '@/lib/matc
 import { getEffectiveMarketStatus } from '@/lib/markets'
 import { fetchWC26News, getCachedWC26News, isConfigured as newsConfigured } from '@/lib/footballnews'
 import type { FootballNewsItem } from '@/lib/footballnews'
-import type { RankingEntry, Match } from '@/types'
+import type { RankingEntry, Match, Boletim } from '@/types'
 
 // ─── All 48 teams as hero themes ─────────────────────────────────────────────
 
@@ -789,10 +789,11 @@ function ResenhaCard() {
 }
 
 function HomeBoletimSection({ compact = false, className }: { compact?: boolean; className?: string }) {
-  const { bulletins, isLoaded, init, destroy, addBoletim, togglePin, deleteBoletim } = useBoletimStore()
+  const { bulletins, isLoaded, init, destroy, addBoletim, updateBoletim, togglePin, deleteBoletim } = useBoletimStore()
   const { user } = useAuthStore()
   const canEdit = (user?.isAdmin || user?.isMarketing) ?? false
   const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState<Boletim | null>(null)
 
   useEffect(() => {
     init()
@@ -845,6 +846,7 @@ function HomeBoletimSection({ compact = false, className }: { compact?: boolean;
               b={featured}
               canEdit={canEdit}
               onDelete={deleteBoletim}
+              onEdit={setEditing}
               onTogglePin={togglePin}
               featured
               compactHome
@@ -858,6 +860,7 @@ function HomeBoletimSection({ compact = false, className }: { compact?: boolean;
                   b={b}
                   canEdit={canEdit}
                   onDelete={deleteBoletim}
+                  onEdit={setEditing}
                   onTogglePin={togglePin}
                 />
               ))}
@@ -873,6 +876,20 @@ function HomeBoletimSection({ compact = false, className }: { compact?: boolean;
             onCreate={async b => {
               await addBoletim(b)
               setCreating(false)
+            }}
+          />
+        )}
+        {editing && (
+          <CreateModal
+            initialBoletim={editing}
+            onClose={() => setEditing(null)}
+            onCreate={async b => {
+              await addBoletim(b)
+              setEditing(null)
+            }}
+            onUpdate={async (id, b) => {
+              await updateBoletim(id, b)
+              setEditing(null)
             }}
           />
         )}
