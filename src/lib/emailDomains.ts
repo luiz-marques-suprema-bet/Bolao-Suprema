@@ -1,4 +1,4 @@
-const ALLOWED_EMAIL_DOMAINS = ['suprema.group', 'sx-co.com', 'agencia505.com.br'] as const
+const ALLOWED_EMAIL_DOMAINS = ['suprema.group', 'sx-co.com', 'agencia505.com.br', 'ilotto.com.br'] as const
 
 export function isAllowedCorporateEmail(email: string) {
   const normalized = email.trim().toLowerCase()
