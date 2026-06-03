@@ -330,7 +330,7 @@ function LoginDesktop() {
         <img
           src={asset('assets/hero-portrait.png')}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover object-[30%_center]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/20 to-transparent" />
 
