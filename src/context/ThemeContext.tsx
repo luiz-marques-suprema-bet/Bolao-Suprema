@@ -1,11 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState, type ReactNode } from 'react'
 
 type Theme = 'light' | 'dark'
 
 interface ThemeContextValue {
   theme: Theme
+  effectiveTheme: Theme
   toggleTheme: () => void
   setTheme: (theme: Theme) => void
+  forceLightMode: () => () => void
 }
 
 const STORAGE_KEY = 'bolao-theme'
@@ -26,10 +28,12 @@ function applyTheme(theme: Theme) {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(getInitialTheme)
+  const [forcedLightCount, setForcedLightCount] = useState(0)
+  const effectiveTheme: Theme = forcedLightCount > 0 ? 'light' : theme
 
-  useEffect(() => {
-    applyTheme(theme)
-  }, [theme])
+  useLayoutEffect(() => {
+    applyTheme(effectiveTheme)
+  }, [effectiveTheme])
 
   const setTheme = useCallback((nextTheme: Theme) => {
     window.localStorage.setItem(STORAGE_KEY, nextTheme)
@@ -44,7 +48,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const value = useMemo(() => ({ theme, toggleTheme, setTheme }), [theme, toggleTheme, setTheme])
+  const forceLightMode = useCallback(() => {
+    setForcedLightCount(count => count + 1)
+    return () => {
+      setForcedLightCount(count => Math.max(0, count - 1))
+    }
+  }, [])
+
+  const value = useMemo(
+    () => ({ theme, effectiveTheme, toggleTheme, setTheme, forceLightMode }),
+    [theme, effectiveTheme, toggleTheme, setTheme, forceLightMode],
+  )
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }

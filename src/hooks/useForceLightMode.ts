@@ -1,16 +1,8 @@
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
+import { useTheme } from '@/context/ThemeContext'
 
 export function useForceLightMode() {
-  useEffect(() => {
-    const root = document.documentElement
-    const wasDark = root.classList.contains('dark')
-    root.classList.remove('dark')
-    root.style.colorScheme = 'light'
-    return () => {
-      if (wasDark) {
-        root.classList.add('dark')
-        root.style.colorScheme = 'dark'
-      }
-    }
-  }, [])
+  const { forceLightMode } = useTheme()
+
+  useLayoutEffect(() => forceLightMode(), [forceLightMode])
 }
