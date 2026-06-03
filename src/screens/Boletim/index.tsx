@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/auth.store'
 import { useBoletimStore } from '@/stores/boletim.store'
@@ -18,6 +18,43 @@ const LABEL_COLORS: Record<string, string> = {
   'PRÊMIO': 'bg-green text-paper',
 }
 const labelColor = (l: string) => LABEL_COLORS[l.toUpperCase()] ?? 'bg-ink text-paper'
+
+const URL_PATTERN = /https?:\/\/[^\s<]+/g
+const TRAILING_URL_PUNCTUATION = /[.,!?;:)\]}]+$/
+
+function renderLinkedText(text: string, linkClassName: string): ReactNode[] {
+  const parts: ReactNode[] = []
+  let lastIndex = 0
+
+  for (const match of text.matchAll(URL_PATTERN)) {
+    const rawUrl = match[0]
+    const index = match.index ?? 0
+    const trailing = rawUrl.match(TRAILING_URL_PUNCTUATION)?.[0] ?? ''
+    const href = rawUrl.slice(0, rawUrl.length - trailing.length)
+
+    if (index > lastIndex) parts.push(text.slice(lastIndex, index))
+
+    parts.push(
+      <a
+        key={`${href}-${index}`}
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={event => event.stopPropagation()}
+        className={linkClassName}
+      >
+        {href}
+      </a>,
+    )
+
+    if (trailing) parts.push(trailing)
+    lastIndex = index + rawUrl.length
+  }
+
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex))
+
+  return parts
+}
 
 // ─── Boletim card ─────────────────────────────────────────────────────────────
 
@@ -97,7 +134,7 @@ export function BoletimCard({
             </div>
 
             <p className="font-sans text-[14px] leading-relaxed text-inverse-text/80 line-clamp-4">
-              {b.body}
+              {renderLinkedText(b.body, 'break-all text-yellow underline underline-offset-2 hover:text-inverse-text')}
             </p>
           </div>
 
@@ -160,7 +197,9 @@ export function BoletimCard({
           </div>
         )}
 
-        <p className={compactHome ? 'font-sans text-[13px] text-inverse-text/80 leading-relaxed line-clamp-3' : 'font-sans text-[14px] text-inverse-text/80 leading-relaxed'}>{b.body}</p>
+        <p className={compactHome ? 'font-sans text-[13px] text-inverse-text/80 leading-relaxed line-clamp-3' : 'font-sans text-[14px] text-inverse-text/80 leading-relaxed'}>
+          {renderLinkedText(b.body, 'break-all text-yellow underline underline-offset-2 hover:text-inverse-text')}
+        </p>
 
         <p className={compactHome ? 'font-mono text-[9px] text-inverse-text/45 mt-3' : 'font-mono text-[9px] text-inverse-text/45 mt-4'}>
           {b.authorName} · {date}
@@ -211,7 +250,9 @@ export function BoletimCard({
                   <SafeImage src={b.imageUrl} alt={b.title} fit={b.imageFitMode ?? 'contain'} className="absolute inset-0 h-full w-full" />
                 </div>
               )}
-              <p className="font-sans text-[13px] text-ink-2 leading-relaxed">{b.body}</p>
+              <p className="font-sans text-[13px] text-ink-2 leading-relaxed">
+                {renderLinkedText(b.body, 'break-all text-green-deep underline underline-offset-2 hover:text-ink')}
+              </p>
               {canEdit && (
                 <div className="flex gap-2 mt-4">
                   <button
