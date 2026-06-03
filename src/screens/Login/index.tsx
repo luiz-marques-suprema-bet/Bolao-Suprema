@@ -6,6 +6,7 @@ import { TourneyMark } from '@/components/shared/TourneyMark'
 import { useAuthStore } from '@/stores/auth.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { useForceLightMode } from '@/hooks/useForceLightMode'
+import { isAllowedCorporateEmail } from '@/lib/emailDomains'
 import { asset } from '@/lib/utils'
 
 // ─── OTP logic (shared) ───────────────────────────────────────────────────────
@@ -55,7 +56,7 @@ function useOtpFlow() {
     setResendCooldown(getOtpCooldownLeft(email))
   }, [email])
 
-  const canSendEmail = email.trim().toLowerCase().endsWith('@suprema.group')
+  const canSendEmail = isAllowedCorporateEmail(email)
   const codeComplete = code.length >= 6
 
   const handleSendOtp = async () => {
@@ -215,7 +216,7 @@ function LoginMobile() {
                   value={f.email}
                   onChange={e => f.setEmail(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && f.handleSendOtp()}
-                  placeholder="seu.nome@suprema.group"
+                  placeholder="seu.email@empresa.com"
                   autoFocus
                   autoComplete="email"
                   className="w-full bg-card border border-line focus:border-ink px-3 py-3 font-sans text-[14px] text-ink placeholder:text-ink-4 outline-none transition-colors"
@@ -373,7 +374,7 @@ function LoginDesktop() {
                   value={f.email}
                   onChange={e => f.setEmail(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && f.handleSendOtp()}
-                  placeholder="seu.nome@suprema.group"
+                  placeholder="seu.email@empresa.com"
                   autoFocus
                   autoComplete="email"
                   className="w-full bg-paper-deep border border-line focus:border-ink px-3 py-3 font-sans text-[14px] outline-none transition-colors placeholder:text-ink-4"

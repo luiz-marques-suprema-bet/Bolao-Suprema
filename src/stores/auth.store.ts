@@ -5,6 +5,7 @@ import { supabase, isExplicitMockMode, isSupabaseConfigured, uploadFile } from '
 import { MOCK_ME } from '@/data/mock'
 import { getInitials } from '@/lib/utils'
 import { normalizeParticipantStatus } from '@/lib/participantStatus'
+import { allowedCorporateDomainsLabel, isAllowedCorporateEmail } from '@/lib/emailDomains'
 import { usePredictionStore } from './prediction.store'
 import { useBracketStore } from './bracket.store'
 
@@ -103,8 +104,8 @@ export const useAuthStore = create<AuthState>()(
 
       sendOtp: async (email) => {
         const normalized = email.trim().toLowerCase()
-        if (!normalized.endsWith('@suprema.group')) {
-          return { error: 'Use seu e-mail corporativo @suprema.group' }
+        if (!isAllowedCorporateEmail(normalized)) {
+          return { error: `Use um e-mail autorizado: ${allowedCorporateDomainsLabel()}` }
         }
         if (isExplicitMockMode) return {}
         if (!isSupabaseConfigured) return { error: 'Supabase nao esta configurado. Login real indisponivel.' }
