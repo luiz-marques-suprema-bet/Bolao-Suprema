@@ -162,6 +162,7 @@ export function ResenhaScreen() {
   const [uploading, setUploading] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [actionMenu, setActionMenu] = useState(false)
+  const [onlineMenuOpen, setOnlineMenuOpen] = useState(false)
   const [messageMenuId, setMessageMenuId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
@@ -171,9 +172,34 @@ export function ResenhaScreen() {
   const audio = useAudioRecorder()
   const videoNote = useVideoNoteRecorder()
 
-  const isAdmin = user?.isAdmin ?? false
+  const isAdmin = Boolean(user?.isAdmin || user?.isOwner)
   const combinedError = error || lastError
   const pinnedMsg = pinnedId ? messages.find(message => message.id === pinnedId) : null
+  const onlineCount = onlineUserIds.length || 1
+
+  const onlineProfiles = useMemo(() => {
+    const ids = onlineUserIds.length > 0 ? onlineUserIds : user?.id ? [user.id] : []
+    const uniqueIds = Array.from(new Set(ids))
+    return uniqueIds
+      .map(id => {
+        const profile = profiles.find(item => item.id === id)
+        if (profile) return profile
+        if (id === user?.id) {
+          return {
+            id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            dept: user.dept,
+            initials: user.initials,
+            color: user.color,
+            avatarUrl: user.avatarUrl,
+          } satisfies ChatProfile
+        }
+        return null
+      })
+      .filter((profile): profile is ChatProfile => Boolean(profile))
+      .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'pt-BR'))
+  }, [onlineUserIds, profiles, user])
 
   const typingLabel = useMemo(() => {
     if (typingUserIds.length === 0) return ''
@@ -225,6 +251,10 @@ export function ResenhaScreen() {
   useEffect(() => {
     return () => setTyping(false)
   }, [setTyping])
+
+  useEffect(() => {
+    if (!isAdmin) setOnlineMenuOpen(false)
+  }, [isAdmin])
 
   useEffect(() => {
     if (!actionMenu) return
@@ -417,9 +447,18 @@ export function ResenhaScreen() {
                 <div className="font-display text-4xl leading-none">RESENHA</div>
                 <div className="flex items-baseline gap-2 pb-0.5">
                   <span className="font-serif-it text-2xl text-green-deep leading-none">aí,</span>
-                  <span className="rounded-full bg-green px-2 py-0.5 font-mono text-[9px] font-bold text-white flex-shrink-0">
-                    {onlineUserIds.length || 1} ONLINE
-                  </span>
+                  {isAdmin ? (
+                    <OnlineUsersDropdown
+                      count={onlineCount}
+                      open={onlineMenuOpen}
+                      profiles={onlineProfiles}
+                      onToggle={() => setOnlineMenuOpen(value => !value)}
+                    />
+                  ) : (
+                    <span className="rounded-full bg-green px-2 py-0.5 font-mono text-[9px] font-bold text-white flex-shrink-0">
+                      {onlineCount} ONLINE
+                    </span>
+                  )}
                 </div>
               </div>
               <p className="mt-0.5 truncate font-mono text-[10px] text-ink-3">
@@ -941,6 +980,74 @@ function MenuAction({ label, detail, danger, onClick }: { label: string; detail:
       </span>
       <span className="font-mono text-[10px]">→</span>
     </button>
+  )
+}
+
+function OnlineUsersDropdown({
+  count,
+  open,
+  profiles,
+  onToggle,
+}: {
+  count: number
+  open: boolean
+  profiles: ChatProfile[]
+  onToggle: () => void
+}) {
+  return (
+    <div className="relative flex-shrink-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        className={cn(
+          'inline-flex items-center gap-1 rounded-full bg-green px-2 py-0.5 font-mono text-[9px] font-bold text-white transition hover:bg-green-deep',
+          open && 'bg-green-deep',
+        )}
+        aria-expanded={open}
+        aria-haspopup="menu"
+      >
+        {count} ONLINE
+        <span className={cn('text-[8px] transition-transform', open && 'rotate-180')}>v</span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.98 }}
+            className="absolute left-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden border border-line-strong bg-card shadow-[0_14px_34px_rgba(0,0,0,0.16)]"
+            role="menu"
+          >
+            <div className="border-b border-hairline bg-surface-2 px-3 py-2 font-mono text-[9px] font-bold tracking-eyebrow text-ink-4">
+              ONLINE AGORA
+            </div>
+            <div className="max-h-72 overflow-auto">
+              {profiles.length > 0 ? (
+                profiles.map(profile => {
+                  const name = `${profile.firstName} ${profile.lastName}`.trim() || profile.initials
+
+                  return (
+                    <div key={profile.id} className="flex items-center gap-2 border-b border-hairline px-3 py-2 last:border-b-0" role="menuitem">
+                      <Avatar initials={profile.initials} color={profile.color} src={profile.avatarUrl} size={26} />
+                      <div className="min-w-0">
+                        <div className="truncate font-mono text-[11px] font-bold">{name}</div>
+                        <div className="truncate font-mono text-[9px] text-ink-4">{profile.dept || 'sem depto'}</div>
+                      </div>
+                      <span className="ml-auto h-2 w-2 flex-shrink-0 rounded-full bg-green" />
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="px-3 py-3 font-mono text-[10px] text-ink-4">
+                  Aguardando presenca.
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }
 

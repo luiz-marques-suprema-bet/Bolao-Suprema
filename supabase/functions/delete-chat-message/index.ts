@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
   const jwt = authHeader.replace(/^Bearer\s+/i, '').trim()
   if (!jwt) return json({ error: 'Unauthorized.' }, 401)
 
-  let id = ''
+  let id: string
   try {
     const body = await req.json()
     id = typeof body?.id === 'string' ? body.id : ''

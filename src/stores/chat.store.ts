@@ -725,7 +725,6 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     }
 
     const before = get().messages
-    const message = before.find(m => m.id === id)
     set(s => ({
       messages: s.messages.filter(m => m.id !== id),
       pinnedId: s.pinnedId === id ? null : s.pinnedId,
