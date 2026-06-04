@@ -875,7 +875,7 @@ function HomeBoletimSection({ compact = false, className }: { compact?: boolean;
             />
           )}
           {rest.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2">
               {rest.map(b => (
                 <BoletimCard
                   key={b.id}
@@ -923,13 +923,13 @@ function HomeBoletimSection({ compact = false, className }: { compact?: boolean;
 function HomeBoletimNewsSection({ compact = false }: { compact?: boolean }) {
   return (
     <div className={cn(
-      'grid gap-4',
+      'grid items-start gap-4',
       compact
         ? 'grid-cols-1'
         : 'grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.75fr)]',
     )}>
       <HomeBoletimSection compact={compact} />
-      <WC26News compact className="min-h-full" />
+      <WC26News compact className="self-start" />
     </div>
   )
 }
