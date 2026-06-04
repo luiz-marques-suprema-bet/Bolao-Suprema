@@ -18,7 +18,73 @@ const STAGE_BY_CODE: Record<string, string> = Object.fromEntries(
   WC2026_MATCHES.map(m => [m.id, m.stage]),
 )
 
-export async function fetchRanking(myUserId?: string): Promise<RankingEntry[]> {
+type CurrentRankingRow = {
+  rank: number
+  user_id: string
+  first_name: string
+  last_name: string
+  dept: string | null
+  initials: string | null
+  color: string | null
+  avatar_url: string | null
+  participant_status: string | null
+  privacy_hide_profile: boolean | null
+  pts: number | null
+  mov: string | null
+  correct: number | null
+  exact_score: number | null
+  streak: number | null
+  match_points: number | null
+  special_points: number | null
+  knockout_points: number | null
+  final_exact: boolean | null
+  scorer_tiebreak_goals: number | null
+  scorer_pick_hit: boolean | null
+  first_prediction_at: string | null
+  snapshot_at: string | null
+}
+
+function toRankingEntry(row: CurrentRankingRow, myUserId?: string): RankingEntry {
+  return {
+    rank: row.rank,
+    userId: row.user_id,
+    name: `${row.first_name} ${row.last_name}`.trim(),
+    dept: row.dept ?? '',
+    initials: row.initials ?? '?',
+    color: row.color ?? '#777',
+    avatarUrl: row.avatar_url ?? undefined,
+    pts: row.pts ?? 0,
+    correct: row.correct ?? 0,
+    exact: row.exact_score ?? 0,
+    streak: row.streak ?? 0,
+    mov: (row.mov as Mov | null) ?? '—',
+    matchPoints: row.match_points ?? 0,
+    specialPoints: row.special_points ?? 0,
+    knockoutPoints: row.knockout_points ?? 0,
+    finalExact: row.final_exact ?? false,
+    scorerTiebreakGoals: row.scorer_tiebreak_goals ?? 0,
+    scorerPickHit: row.scorer_pick_hit ?? false,
+    firstPredictionAt: row.first_prediction_at,
+    snapshotAt: row.snapshot_at ?? undefined,
+    isYou: row.user_id === myUserId,
+  }
+}
+
+async function fetchRankingFromSnapshots(myUserId?: string): Promise<RankingEntry[]> {
+  const { data, error } = await supabase
+    .from('current_ranking')
+    .select('rank,user_id,first_name,last_name,dept,initials,color,avatar_url,participant_status,privacy_hide_profile,pts,mov,correct,exact_score,streak,match_points,special_points,knockout_points,final_exact,scorer_tiebreak_goals,scorer_pick_hit,first_prediction_at,snapshot_at')
+    .order('rank', { ascending: true })
+
+  if (error) throw new Error(error.message)
+
+  return ((data ?? []) as CurrentRankingRow[])
+    .filter(row => row.participant_status === 'active')
+    .filter(row => !row.privacy_hide_profile || row.user_id === myUserId)
+    .map(row => toRankingEntry(row, myUserId))
+}
+
+async function fetchRankingFromPredictions(myUserId?: string): Promise<RankingEntry[]> {
   if (isMockMode) return []
 
   const { data: users } = await supabase
@@ -69,4 +135,32 @@ export async function fetchRanking(myUserId?: string): Promise<RankingEntry[]> {
     }))
     .sort((a, b) => b.pts - a.pts || b.exact - a.exact || b.correct - a.correct)
     .map((u, i) => ({ ...u, rank: i + 1 }))
+}
+
+export async function fetchRanking(myUserId?: string): Promise<RankingEntry[]> {
+  if (isMockMode) return []
+
+  try {
+    return await fetchRankingFromSnapshots(myUserId)
+  } catch (error) {
+    console.warn('[Ranking] current_ranking indisponivel; usando fallback local.', error)
+    return fetchRankingFromPredictions(myUserId)
+  }
+}
+
+export function subscribeRankingUpdates(onChange: () => void): () => void {
+  if (isMockMode) return () => {}
+
+  const channel = supabase
+    .channel(`ranking-live-${Date.now()}-${Math.random().toString(16).slice(2)}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'ranking_snapshots' },
+      onChange,
+    )
+    .subscribe()
+
+  return () => {
+    void supabase.removeChannel(channel)
+  }
 }

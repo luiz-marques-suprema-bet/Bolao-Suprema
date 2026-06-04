@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Avatar } from '@/components/shared/Avatar'
 import { FloatingTooltip } from '@/components/shared/FloatingTooltip'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/stores/auth.store'
 import { fmtPts, cn } from '@/lib/utils'
-import { fetchRanking } from '@/lib/ranking'
+import { fetchRanking, subscribeRankingUpdates } from '@/lib/ranking'
+import { supabase, isMockMode } from '@/lib/supabase'
 import { fetchRankingBreakdown, fetchScoringRules } from '@/services/product'
 import type { RankingBreakdown, RankingEntry, Mov, ScoringRule } from '@/types'
 
@@ -30,7 +31,7 @@ function useRanking() {
   const [loading, setLoading] = useState(rankingCache.length === 0)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const loadRanking = useCallback(() => {
     let active = true
     setLoading(rankingCache.length === 0)
     setError(null)
@@ -52,6 +53,23 @@ function useRanking() {
     return () => { active = false }
   }, [me?.id])
 
+  useEffect(() => loadRanking(), [loadRanking])
+
+  useEffect(() => {
+    let timer: number | undefined
+    const unsubscribe = subscribeRankingUpdates(() => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        loadRanking()
+      }, 250)
+    })
+
+    return () => {
+      window.clearTimeout(timer)
+      unsubscribe()
+    }
+  }, [loadRanking])
+
   return { ranking, loading, error }
 }
 
@@ -69,10 +87,11 @@ function useScoring() {
 
 function useBreakdown(userId?: string) {
   const [items, setItems] = useState<RankingBreakdown[]>([])
-  useEffect(() => {
+
+  const loadBreakdown = useCallback(() => {
     if (!userId) {
       setItems([])
-      return
+      return () => {}
     }
     let active = true
     fetchRankingBreakdown(userId)
@@ -80,6 +99,33 @@ function useBreakdown(userId?: string) {
       .catch(() => { if (active) setItems([]) })
     return () => { active = false }
   }, [userId])
+
+  useEffect(() => loadBreakdown(), [loadBreakdown])
+
+  useEffect(() => {
+    if (!userId || isMockMode) return undefined
+
+    let timer: number | undefined
+    const channel = supabase
+      .channel(`ranking-breakdown-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ranking_breakdowns', filter: `user_id=eq.${userId}` },
+        () => {
+          window.clearTimeout(timer)
+          timer = window.setTimeout(() => {
+            loadBreakdown()
+          }, 250)
+        },
+      )
+      .subscribe()
+
+    return () => {
+      window.clearTimeout(timer)
+      void supabase.removeChannel(channel)
+    }
+  }, [loadBreakdown, userId])
+
   return items
 }
 

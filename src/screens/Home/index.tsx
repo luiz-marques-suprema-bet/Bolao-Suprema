@@ -13,7 +13,7 @@ import { BoletimCard, CreateModal } from '@/screens/Boletim'
 import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
 import { fmtPts, cn, clamp } from '@/lib/utils'
-import { fetchRanking } from '@/lib/ranking'
+import { fetchRanking, subscribeRankingUpdates } from '@/lib/ranking'
 import { fetchFeaturedVideos } from '@/lib/scorebat'
 import type { ScorebatVideo } from '@/lib/scorebat'
 import { formatMatchDate, formatMatchTime, getBettingDeadline } from '@/lib/matchTime'
@@ -714,7 +714,29 @@ function useHomeData() {
   const { overrides, isLoaded } = useMatchStore()
   const [ranking, setRanking] = useState<RankingEntry[]>([])
 
-  useEffect(() => { fetchRanking(me?.id).then(setRanking) }, [me?.id])
+  useEffect(() => {
+    let active = true
+    const loadRanking = () => {
+      fetchRanking(me?.id).then(result => {
+        if (active) setRanking(result)
+      }).catch(() => {
+        if (active) setRanking([])
+      })
+    }
+
+    let timer: number | undefined
+    loadRanking()
+    const unsubscribe = subscribeRankingUpdates(() => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(loadRanking, 250)
+    })
+
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+      unsubscribe()
+    }
+  }, [me?.id])
 
   const upcoming = isLoaded
     ? WC2026_MATCHES.map((m): Match => { const ov = overrides[m.id]; return ov ? { ...m, ...ov } : m })

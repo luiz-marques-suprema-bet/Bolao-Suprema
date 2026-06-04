@@ -1,7 +1,15 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WC2026_MATCHES } from '@/data/wc2026'
 import { useMatchStore } from '@/stores/match.store'
 import { usePredictionStore } from './prediction.store'
+
+vi.mock('@/lib/supabase', () => ({
+  isMockMode: true,
+  supabase: {
+    channel: vi.fn(),
+    removeChannel: vi.fn(),
+  },
+}))
 
 describe('prediction store flow safeguards', () => {
   beforeEach(() => {

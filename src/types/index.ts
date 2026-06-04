@@ -157,11 +157,20 @@ export interface RankingEntry {
   dept: string
   initials: string
   color: string
+  avatarUrl?: string
   pts: number
   mov: Mov
   correct: number // correct winner predictions
   exact: number // exact score predictions
   streak: number
+  matchPoints?: number
+  specialPoints?: number
+  knockoutPoints?: number
+  finalExact?: boolean
+  scorerTiebreakGoals?: number
+  scorerPickHit?: boolean
+  firstPredictionAt?: string | null
+  snapshotAt?: string
   isYou?: boolean
 }
 

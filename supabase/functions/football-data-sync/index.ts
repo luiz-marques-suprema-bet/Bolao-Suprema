@@ -29,6 +29,18 @@ interface FootballDataMatch {
   }
 }
 
+interface FootballDataScorer {
+  player?: {
+    id?: number | null
+    name?: string | null
+  } | null
+  team?: {
+    tla?: string | null
+  } | null
+  goals?: number | null
+  assists?: number | null
+}
+
 interface CurrentMatchRow {
   match_code: string
   home_code?: string | null
@@ -54,6 +66,10 @@ function winnerCode(match: FootballDataMatch, current?: CurrentMatchRow | null) 
   }
   if (match.score?.winner === 'DRAW') return 'draw'
   return null
+}
+
+function normalizePlayerName(name: string) {
+  return name.trim().replace(/\s+/g, ' ').toLowerCase()
 }
 
 function statusPatch(match: FootballDataMatch, current?: CurrentMatchRow | null) {
@@ -102,6 +118,82 @@ function statusPatch(match: FootballDataMatch, current?: CurrentMatchRow | null)
   }
 }
 
+async function syncScorers(
+  supabase: ReturnType<typeof createClient>,
+  footballToken: string,
+  season: string,
+) {
+  const url = `https://api.football-data.org/v4/competitions/WC/scorers?season=${encodeURIComponent(season)}`
+  const scorersRes = await fetch(url, {
+    headers: { 'X-Auth-Token': footballToken },
+  })
+
+  if (!scorersRes.ok) {
+    return {
+      ok: false,
+      status: scorersRes.status,
+      updated: 0,
+      body: await scorersRes.text(),
+    }
+  }
+
+  const body = await scorersRes.json() as { scorers?: FootballDataScorer[] }
+  const scorers = body.scorers ?? []
+  let updated = 0
+
+  for (const scorer of scorers) {
+    const playerName = scorer.player?.name?.trim()
+    if (!playerName) continue
+
+    const externalPlayerId = scorer.player?.id ? String(scorer.player.id) : null
+    const normalizedName = normalizePlayerName(playerName)
+    let playerId: string | null = null
+
+    if (externalPlayerId) {
+      const { data: player, error: playerError } = await supabase
+        .from('players')
+        .upsert(
+          {
+            team_code: scorer.team?.tla ?? null,
+            display_name: playerName,
+            normalized_name: normalizedName,
+            external_id: externalPlayerId,
+            source: 'football-data',
+            status: 'active',
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'source,external_id' },
+        )
+        .select('id')
+        .single()
+
+      if (playerError) throw playerError
+      playerId = player?.id ?? null
+    }
+
+    const payload = {
+      player_id: playerId,
+      player_name: playerName,
+      normalized_name: normalizedName,
+      team_code: scorer.team?.tla ?? null,
+      goals: scorer.goals ?? 0,
+      assists: scorer.assists ?? null,
+      source: 'football-data',
+      external_player_id: externalPlayerId ?? `name:${normalizedName}`,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error: goalError } = await supabase
+      .from('player_goal_totals')
+      .upsert(payload, { onConflict: 'source,external_player_id' })
+
+    if (goalError) throw goalError
+    updated += 1
+  }
+
+  return { ok: true, updated }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 })
@@ -137,6 +229,7 @@ Deno.serve(async (req) => {
   const matches = body.matches ?? []
   let updated = 0
   const unmatched: number[] = []
+  let scorerSync: Record<string, unknown>
 
   for (const fdMatch of matches) {
     const { data: idRows, error: idFindError } = await supabase
@@ -201,5 +294,14 @@ Deno.serve(async (req) => {
     updated += 1
   }
 
-  return Response.json({ ok: true, competition: 'WC', season, updated, unmatched })
+  try {
+    scorerSync = await syncScorers(supabase, footballToken, season)
+  } catch (error) {
+    scorerSync = {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+
+  return Response.json({ ok: true, competition: 'WC', season, updated, unmatched, scorerSync })
 })
