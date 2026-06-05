@@ -276,14 +276,10 @@ function BreakdownBox({ items }: { items: RankingBreakdown[] }) {
 // ─── Mobile ───────────────────────────────────────────────────────────────────
 
 function RankingMobile() {
-  const [tab, setTab] = useState<'geral' | 'squad' | 'semana'>('geral')
-  const me = useAuthStore(s => s.user)
+  const [tab, setTab] = useState<'geral' | 'semana'>('geral')
   const { ranking: fullRanking, loading, error } = useRanking()
   const myEntry = fullRanking.find(r => r.isYou)
-
-  const ranking = tab === 'squad' && me
-    ? fullRanking.filter(r => r.dept === me.dept)
-    : fullRanking
+  const ranking = fullRanking
 
   const top3 = fullRanking.slice(0, 3)
 
@@ -327,7 +323,7 @@ function RankingMobile() {
 
       {myEntry && (
         <div className="bg-ink text-paper px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
-          <Avatar initials={myEntry.initials} color={myEntry.color} size={32} />
+          <Avatar initials={myEntry.initials} color={myEntry.color} src={myEntry.avatarUrl} size={32} />
           <div className="flex-1">
             <div className="font-mono text-[10px] text-paper/50">VOCÊ · {myEntry.rank}º</div>
             <div className="font-display text-2xl">{fmtPts(myEntry.pts)} PTS</div>
@@ -339,8 +335,8 @@ function RankingMobile() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 border-b border-line">
-        {(['geral', 'squad', 'semana'] as const).map(t => (
+      <div className="grid grid-cols-2 border-b border-line">
+        {(['geral', 'semana'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={cn('py-2.5 font-mono text-[10px] font-bold tracking-eyebrow uppercase transition-colors',
               tab === t ? 'bg-yellow text-[#0D0D0D]' : 'text-ink-3 hover:bg-surface-hover')}>
@@ -368,10 +364,6 @@ function RankingMobile() {
       ) : ranking.length > 0 ? (
         <div className="divide-y divide-hairline">
           {ranking.map(r => <RankingRow key={r.userId} r={r} />)}
-        </div>
-      ) : tab === 'squad' ? (
-        <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
-          <p className="font-mono text-[11px] text-ink-3">Nenhum colega do seu squad pontuou ainda.</p>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
