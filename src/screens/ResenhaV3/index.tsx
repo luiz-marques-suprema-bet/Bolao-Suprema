@@ -441,11 +441,11 @@ export function ResenhaScreen() {
     <div className="min-h-0 flex-1 bg-app text-ink">
       <div className="h-[calc(100dvh-3.5rem)] overflow-hidden lg:h-[calc(100dvh-5.75rem)]">
         <section className="flex h-full min-h-0 flex-col">
-          <header className="flex shrink-0 items-center justify-between gap-3 border-b border-hairline bg-paper px-4 py-3 shadow-card">
+          <header className="flex shrink-0 items-center justify-between gap-2 border-b border-hairline bg-paper px-3 py-2 shadow-card sm:gap-3 sm:px-4 sm:py-3">
             <div className="min-w-0">
               <div className="flex items-end gap-3">
-                <div className="font-display text-4xl leading-none">RESENHA</div>
-                <div className="flex items-baseline gap-2 pb-0.5">
+                <div className="font-display text-3xl leading-none sm:text-4xl">RESENHA</div>
+                <div className="flex items-baseline gap-1.5 pb-0.5 sm:gap-2">
                   <span className="font-serif-it text-2xl text-green-deep leading-none">aí,</span>
                   {isAdmin ? (
                     <OnlineUsersDropdown
@@ -469,7 +469,7 @@ export function ResenhaScreen() {
               <button type="button" onClick={() => setPollOpen(true)} className="hidden border border-line-strong bg-inverse px-3 py-2 font-mono text-[10px] font-bold text-inverse-text transition hover:bg-surface-hover sm:block">
                 ENQUETE
               </button>
-              <button type="button" onClick={() => setGifOpen(true)} className="border border-yellow bg-yellow px-3 py-2 font-mono text-[10px] font-bold text-[#0D0D0D] shadow-btn transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
+              <button type="button" onClick={() => setGifOpen(true)} className="border border-yellow bg-yellow px-2.5 py-1.5 font-mono text-[9px] font-bold text-[#0D0D0D] shadow-btn transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none sm:px-3 sm:py-2 sm:text-[10px]">
                 GIF
               </button>
             </div>
@@ -500,7 +500,7 @@ export function ResenhaScreen() {
             )}
           </AnimatePresence>
 
-          <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-2 py-4 sm:px-4">
+          <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2.5 sm:px-4 sm:py-4">
             {!isLoaded && <LoadingChat />}
             {isLoaded && messages.length === 0 && <EmptyResenha />}
 
@@ -577,9 +577,9 @@ export function ResenhaScreen() {
               </div>
             )}
 
-            <div className="flex items-end gap-2 px-3 py-2.5 sm:px-4">
+            <div className="flex items-end gap-1.5 px-2 py-2 sm:gap-2 sm:px-4 sm:py-2.5">
               <div className="relative">
-                <button ref={actionButtonRef} type="button" onClick={openActionMenu} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-line-strong bg-card font-display text-xl transition hover:bg-yellow hover:text-[#0D0D0D]', actionMenu && 'bg-yellow text-[#0D0D0D]')}>
+                <button ref={actionButtonRef} type="button" onClick={openActionMenu} className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-line-strong bg-card font-display text-lg transition hover:bg-yellow hover:text-[#0D0D0D] sm:h-11 sm:w-11 sm:text-xl', actionMenu && 'bg-yellow text-[#0D0D0D]')}>
                   +
                 </button>
                 <AnimatePresence>
@@ -606,16 +606,16 @@ export function ResenhaScreen() {
                 }}
                 rows={1}
                 placeholder="Mensagem"
-                className="max-h-32 min-h-11 flex-1 resize-none rounded-[22px] border border-hairline bg-card px-4 py-3 font-sans text-[15px] leading-5 outline-none transition placeholder:text-ink-4 focus:border-line-strong"
+                className="max-h-24 min-h-9 flex-1 resize-none rounded-[18px] border border-hairline bg-card px-3 py-2 font-sans text-sm leading-5 outline-none transition placeholder:text-ink-4 focus:border-line-strong sm:max-h-32 sm:min-h-11 sm:rounded-[22px] sm:px-4 sm:py-3 sm:text-[15px]"
               />
 
-              <button type="button" onClick={startVideoNoteRecording} disabled={videoNote.recording || audio.recording} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border border-hairline bg-card font-mono text-[9px] font-bold text-ink-3 transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:opacity-40', videoNote.recording && 'border-red bg-red text-white')}>
+              <button type="button" onClick={startVideoNoteRecording} disabled={videoNote.recording || audio.recording} className={cn('hidden h-11 w-11 shrink-0 place-items-center rounded-full border border-hairline bg-card font-mono text-[9px] font-bold text-ink-3 transition hover:border-line-strong hover:bg-surface-hover hover:text-ink disabled:opacity-40 sm:grid', videoNote.recording && 'border-red bg-red text-white')}>
                 CAM
               </button>
-              <button type="button" onClick={startAudioRecording} disabled={audio.uploading || audio.recording || videoNote.recording} className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full border border-hairline bg-card font-mono text-[9px] font-bold text-ink-3 transition hover:border-red hover:bg-surface-hover hover:text-red disabled:opacity-50', audio.recording && 'border-red bg-red text-white')}>
+              <button type="button" onClick={startAudioRecording} disabled={audio.uploading || audio.recording || videoNote.recording} className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-full border border-hairline bg-card font-mono text-[8px] font-bold text-ink-3 transition hover:border-red hover:bg-surface-hover hover:text-red disabled:opacity-50 sm:h-11 sm:w-11 sm:text-[9px]', audio.recording && 'border-red bg-red text-white')}>
                 {audio.recording ? `${audio.seconds}s` : 'MIC'}
               </button>
-              <button type="button" onClick={sendText} disabled={!draft.trim()} className="h-11 min-w-16 shrink-0 rounded-[22px] bg-green px-4 font-mono text-[10px] font-bold text-white shadow-btn transition hover:bg-green/90 disabled:opacity-40 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
+              <button type="button" onClick={sendText} disabled={!draft.trim()} className="h-9 min-w-12 shrink-0 rounded-[18px] bg-green px-3 font-mono text-[9px] font-bold text-white shadow-btn transition hover:bg-green/90 disabled:opacity-40 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none sm:h-11 sm:min-w-16 sm:rounded-[22px] sm:px-4 sm:text-[10px]">
                 ENVIAR
               </button>
             </div>

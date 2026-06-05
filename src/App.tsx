@@ -208,6 +208,19 @@ export function App() {
     loadSession()
   }, [loadSession])
 
+  useEffect(() => {
+    const preventImageDefault = (event: Event) => {
+      if (event.target instanceof HTMLImageElement) event.preventDefault()
+    }
+
+    document.addEventListener('dragstart', preventImageDefault)
+    document.addEventListener('contextmenu', preventImageDefault)
+    return () => {
+      document.removeEventListener('dragstart', preventImageDefault)
+      document.removeEventListener('contextmenu', preventImageDefault)
+    }
+  }, [])
+
   return (
     <ThemeProvider>
       <RouterProvider router={router} />

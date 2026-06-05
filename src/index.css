@@ -90,6 +90,11 @@
     -webkit-user-select: text;
   }
 
+  img {
+    -webkit-user-drag: none;
+    user-drag: none;
+  }
+
   #root {
     min-height: 100dvh;
     display: flex;

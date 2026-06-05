@@ -558,7 +558,7 @@ function RotatingHeroMobile({ days, onCta }: { days: number; onCta: () => void }
             <span className="font-display text-[52px] leading-none text-ink">{days}</span>
             <div>
               <div className="font-mono text-[8px] tracking-eyebrow text-ink-3">DIAS</div>
-              <div className="font-mono text-[8px] text-yellow">para a bola rolar</div>
+              <div className="font-mono text-[8px] font-bold text-green-deep dark:text-yellow">para a bola rolar</div>
               <div className="font-mono text-[7px] text-ink-4">11 Jun · 16:00 · Brasília</div>
             </div>
           </div>
@@ -627,7 +627,7 @@ function RotatingHeroDesktop({ days, onCta }: { days: number; onCta: () => void 
               <span className="font-mono text-[10px] tracking-eyebrow text-ink-3 pb-1.5">DIAS</span>
             </div>
             <div className="pb-1">
-              <div className="font-mono text-[10px] text-yellow">para a bola rolar</div>
+              <div className="font-mono text-[10px] font-bold text-green-deep dark:text-yellow">para a bola rolar</div>
               <div className="font-mono text-[9px] text-ink-4 mt-0.5">11 Jun · 16:00 · Horário de Brasília</div>
             </div>
           </div>
