@@ -56,16 +56,16 @@ async function fetchKpis(): Promise<KpiData> {
   const [usersRes, predsRes, matchesRes] = await Promise.all([
     supabase.from('users').select('id', { count: 'exact', head: true }),
     supabase.from('predictions').select('user_id', { count: 'exact', head: true }),
-    supabase.from('matches').select('status'),
+    supabase.from('matches').select('status, market_status'),
   ])
   const totalUsers = usersRes.count ?? 0
   const totalPredictions = predsRes.count ?? 0
-  const matchRows = (matchesRes.data ?? []) as { status: string }[]
+  const matchRows = (matchesRes.data ?? []) as { status: string; market_status: string | null }[]
   return {
     totalUsers,
     totalPredictions,
     avgPredictionsPerUser: totalUsers > 0 ? Math.round(totalPredictions / totalUsers) : 0,
-    matchesOpen: matchRows.filter(m => m.status === 'open').length,
+    matchesOpen: matchRows.filter(m => m.market_status === 'open').length,
     matchesFinished: matchRows.filter(m => m.status === 'finished').length,
     matchesScheduled: matchRows.filter(m => m.status === 'scheduled').length,
   }
