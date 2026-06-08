@@ -118,13 +118,34 @@ function statusPatch(match: FootballDataMatch, current?: CurrentMatchRow | null)
   }
 }
 
+// A football-data.org ocasionalmente derruba a conexao HTTP/2 ("http2 error:
+// connection error received"), fazendo o fetch LANCAR excecao. Sem retry isso
+// virava HTTP 500 no cron. Tentamos algumas vezes com backoff antes de desistir.
+async function fetchWithRetry(url: string, init: RequestInit, attempts = 4): Promise<Response> {
+  let lastError: unknown
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, init)
+      if (res.status === 429 || res.status >= 500) {
+        lastError = new Error(`upstream HTTP ${res.status}`)
+      } else {
+        return res
+      }
+    } catch (err) {
+      lastError = err
+    }
+    if (i < attempts - 1) await new Promise(resolve => setTimeout(resolve, 600 * (i + 1)))
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
+}
+
 async function syncScorers(
   supabase: ReturnType<typeof createClient>,
   footballToken: string,
   season: string,
 ) {
   const url = `https://api.football-data.org/v4/competitions/WC/scorers?season=${encodeURIComponent(season)}`
-  const scorersRes = await fetch(url, {
+  const scorersRes = await fetchWithRetry(url, {
     headers: { 'X-Auth-Token': footballToken },
   })
 
@@ -199,6 +220,7 @@ Deno.serve(async (req) => {
     return new Response('Method not allowed', { status: 405 })
   }
 
+  try {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const footballToken = Deno.env.get('FOOTBALL_DATA_TOKEN')
@@ -213,7 +235,7 @@ Deno.serve(async (req) => {
 
   const season = new URL(req.url).searchParams.get('season') ?? '2026'
   const url = `https://api.football-data.org/v4/competitions/WC/matches?season=${encodeURIComponent(season)}`
-  const footballRes = await fetch(url, {
+  const footballRes = await fetchWithRetry(url, {
     headers: { 'X-Auth-Token': footballToken },
   })
 
@@ -304,4 +326,11 @@ Deno.serve(async (req) => {
   }
 
   return Response.json({ ok: true, competition: 'WC', season, updated, unmatched, scorerSync })
+  } catch (error) {
+    console.error('[football-data-sync]', error)
+    return Response.json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    }, { status: 502 })
+  }
 })
