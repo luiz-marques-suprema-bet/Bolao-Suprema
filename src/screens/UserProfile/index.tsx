@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Avatar } from '@/components/shared/Avatar'
+import { ImageViewer } from '@/screens/ResenhaV2/components/ImageViewer'
 import { Flag } from '@/components/shared/Flag'
 import { Stamp } from '@/components/shared/Stamp'
 import { useAuthStore } from '@/stores/auth.store'
@@ -41,6 +43,7 @@ export function UserProfileScreen() {
   const me = useAuthStore(s => s.user)
   const [profile, setProfile] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [viewer, setViewer] = useState<string | null>(null)
 
   // If viewing own profile, redirect to /profile
   useEffect(() => {
@@ -91,7 +94,14 @@ export function UserProfileScreen() {
       {/* Banner */}
       <div className="relative h-40 md:h-52 bg-ink overflow-hidden">
         {profile.bannerUrl ? (
-          <img src={profile.bannerUrl} alt="" className="w-full h-full object-cover opacity-80" />
+          <button
+            type="button"
+            onClick={() => setViewer(profile.bannerUrl!)}
+            className="block w-full h-full cursor-zoom-in"
+            aria-label="Ver banner"
+          >
+            <img src={profile.bannerUrl} alt="" className="w-full h-full object-cover opacity-80" />
+          </button>
         ) : (
           <div
             className="w-full h-full opacity-30"
@@ -112,7 +122,14 @@ export function UserProfileScreen() {
         <div className="relative z-10 flex items-end justify-between -mt-10 md:-mt-12 mb-4">
           <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-4 border-paper bg-paper flex-shrink-0">
             {profile.avatarUrl ? (
-              <img src={profile.avatarUrl} alt={profile.firstName} className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => setViewer(profile.avatarUrl!)}
+                className="block w-full h-full cursor-zoom-in"
+                aria-label="Ver foto"
+              >
+                <img src={profile.avatarUrl} alt={profile.firstName} className="w-full h-full object-cover" />
+              </button>
             ) : (
               <Avatar initials={profile.initials} color={profile.color} size={96} />
             )}
@@ -176,6 +193,10 @@ export function UserProfileScreen() {
           NO BOLÃO DESDE {profile.since} · SUPREMA GAMING
         </p>
       </div>
+
+      <AnimatePresence>
+        {viewer && <ImageViewer url={viewer} onClose={() => setViewer(null)} />}
+      </AnimatePresence>
     </div>
   )
 }

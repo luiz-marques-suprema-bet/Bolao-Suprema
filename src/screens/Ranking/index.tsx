@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Avatar } from '@/components/shared/Avatar'
 import { FloatingTooltip } from '@/components/shared/FloatingTooltip'
@@ -176,6 +177,117 @@ function RankingRow({ r, large = false }: { r: RankingEntry; large?: boolean }) 
   )
 }
 
+// ─── Busca de palpiteiro ─────────────────────────────────────────────────────
+
+interface ParticipantHit {
+  id: string
+  name: string
+  dept: string
+  initials: string
+  color: string
+  avatarUrl?: string
+}
+
+type ProfileRow = {
+  id: string
+  first_name: string | null
+  last_name: string | null
+  dept: string | null
+  initials: string | null
+  color: string | null
+  avatar_url: string | null
+  participant_status: string | null
+  privacy_hide_profile: boolean | null
+}
+
+function ParticipantSearch() {
+  const navigate = useNavigate()
+  const me = useAuthStore(s => s.user)
+  const [query, setQuery]     = useState('')
+  const [results, setResults] = useState<ParticipantHit[]>([])
+  const [loading, setLoading] = useState(false)
+  const [open, setOpen]       = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  const search = (raw: string) => {
+    clearTimeout(timer.current)
+    const term = raw.replace(/[,%()*\\]/g, '').trim()
+    if (term.length < 2 || isMockMode) { setResults([]); setOpen(false); return }
+    timer.current = setTimeout(async () => {
+      setLoading(true)
+      const { data } = await supabase
+        .from('public_profiles')
+        .select('id, first_name, last_name, dept, initials, color, avatar_url, participant_status, privacy_hide_profile')
+        .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`)
+        .neq('participant_status', 'removed')
+        .limit(8)
+      const hits = ((data ?? []) as ProfileRow[])
+        .filter(r => me?.isAdmin || !r.privacy_hide_profile || r.id === me?.id)
+        .map(r => ({
+          id: r.id,
+          name: `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim() || 'Sem nome',
+          dept: r.dept ?? '',
+          initials: r.initials ?? '',
+          color: r.color ?? '#00A651',
+          avatarUrl: r.avatar_url ?? undefined,
+        }))
+      setResults(hits)
+      setLoading(false)
+      setOpen(true)
+    }, 350)
+  }
+
+  const goTo = (id: string) => {
+    setOpen(false)
+    setQuery('')
+    setResults([])
+    navigate(id === me?.id ? '/profile' : `/u/${id}`)
+  }
+
+  return (
+    <div className="relative">
+      <div className="flex items-center gap-2 border border-line bg-card px-3 py-2">
+        <span className="font-mono text-[13px] text-ink-4">⌕</span>
+        <input
+          value={query}
+          onChange={e => { setQuery(e.target.value); search(e.target.value) }}
+          onFocus={() => { if (results.length) setOpen(true) }}
+          onBlur={() => setTimeout(() => setOpen(false), 200)}
+          placeholder="Buscar palpiteiro…"
+          className="flex-1 bg-transparent font-sans text-[13px] text-ink outline-none placeholder:text-ink-4"
+        />
+        {loading && <span className="font-mono text-[9px] text-ink-3 animate-pulse">…</span>}
+        {query && !loading && (
+          <button type="button" onClick={() => { setQuery(''); setResults([]); setOpen(false) }}
+            className="font-mono text-[11px] text-ink-4 hover:text-ink">✕</button>
+        )}
+      </div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.12 }}
+            className="absolute z-50 left-0 right-0 mt-1 bg-paper border border-line shadow-card overflow-hidden max-h-72 overflow-y-auto"
+          >
+            {results.length > 0 ? results.map(r => (
+              <button key={r.id} type="button" onMouseDown={() => goTo(r.id)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors text-left border-b border-hairline last:border-b-0">
+                <Avatar initials={r.initials} color={r.color} src={r.avatarUrl} size={30} />
+                <div className="min-w-0">
+                  <div className="font-mono text-[12px] font-bold truncate">{r.name}</div>
+                  <div className="font-mono text-[10px] text-ink-3 truncate">{r.dept}</div>
+                </div>
+              </button>
+            )) : (
+              <div className="px-3 py-3 font-mono text-[10px] text-ink-3">Nenhum palpiteiro encontrado.</div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
 function EmptyRanking() {
@@ -345,6 +457,10 @@ function RankingMobile() {
         ))}
       </div>
 
+      <div className="px-4 pt-3">
+        <ParticipantSearch />
+      </div>
+
       {(loading || error) && (
         <div className="border-b border-hairline bg-card px-4 py-2 font-mono text-[10px] text-ink-3">
           {loading ? 'Atualizando ranking…' : error}
@@ -437,6 +553,9 @@ function RankingDesktop() {
             )}
 
             {/* Full table */}
+            <div className="mb-3">
+              <ParticipantSearch />
+            </div>
             <div className="ui-panel">
               <div className="grid grid-cols-[40px_1fr_100px_48px_48px_48px_80px] gap-2 px-5 py-2 border-b border-hairline font-mono text-[9px] tracking-eyebrow text-ink-4">
                 <span>#</span><span>JOGADOR</span><span>DEPT</span>

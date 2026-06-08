@@ -508,11 +508,16 @@ export function ResenhaScreen() {
               {timeline.map((item, index) => {
                 if (item.kind === 'date') return <DateMarker key={item.key} label={item.label} />
                 const messagesAfter = timeline.slice(index + 1).filter(next => next.kind === 'message').length
+                // Avatar fica na ÚLTIMA mensagem de cada bloco (cauda, estilo WhatsApp):
+                // é "tail" quando a próxima linha não é uma mensagem agrupada a esta.
+                const nextItem = timeline[index + 1]
+                const isGroupTail = !nextItem || nextItem.kind !== 'message' || !nextItem.grouped
                 return (
                   <MessageRow
                     key={item.message.id}
                     message={item.message}
                     grouped={item.grouped}
+                    showAvatar={isGroupTail}
                     currentUserId={user?.id}
                     profiles={profiles}
                     isAdmin={isAdmin}
@@ -676,6 +681,7 @@ export function ResenhaScreen() {
 function MessageRow({
   message,
   grouped,
+  showAvatar,
   currentUserId,
   profiles,
   isAdmin,
@@ -694,6 +700,7 @@ function MessageRow({
 }: {
   message: ChatMessage
   grouped: boolean
+  showAvatar: boolean
   currentUserId?: string
   profiles: ChatProfile[]
   isAdmin: boolean
@@ -767,7 +774,7 @@ function MessageRow({
     >
       {!mine && (
         <div className="w-9 shrink-0 self-end">
-          {!grouped && (
+          {showAvatar && (
             <button type="button" onClick={onOpenProfile} className="transition hover:scale-105">
               <Avatar initials={message.initials} color={message.color} src={message.avatarUrl} size={34} />
             </button>

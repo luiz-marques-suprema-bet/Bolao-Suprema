@@ -3,6 +3,7 @@ import { useParams, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Flag } from '@/components/shared/Flag'
 import { Tooltip } from '@/components/shared/Tooltip'
+import { PlayerSearchPicker } from '@/components/shared/PlayerSearchPicker'
 import { usePredictionStore } from '@/stores/prediction.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { WC2026_MATCHES, WC2026_GROUP_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
@@ -1154,7 +1155,7 @@ function ChampionTab() {
     lastError, clearError, savingGeneral,
   } = usePredictionStore()
 
-  const [scorerInput, setScorerInput] = useState(scorerPick ?? '')
+  const [scorerDraft, setScorerDraft] = useState<{ name: string; img?: string }>({ name: scorerPick ?? '' })
   const [activeSection, setActiveSection] = useState<GeneralSection>(
     !championPick ? 'champion' : !vicePick ? 'vice' : 'champion'
   )
@@ -1327,15 +1328,15 @@ function ChampionTab() {
                   </p>
                   <div className="ui-card p-4">
                     <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-2">NOME DO JOGADOR</p>
-                    <input
-                      value={scorerInput}
-                      onChange={e => setScorerInput(e.target.value)}
+                    <PlayerSearchPicker
+                      value={scorerDraft.name}
+                      imgUrl={scorerDraft.img}
+                      onChange={(name, img) => setScorerDraft({ name, img })}
                       placeholder="ex: Mbappé, Vinicius Jr, Haaland..."
-                      className="w-full bg-paper-deep border border-line px-3 py-2.5 font-sans text-[14px] outline-none focus:border-ink placeholder:text-ink-4"
                     />
                     <button
-                      onClick={() => { if (scorerInput.trim()) setScorerPick(scorerInput.trim()) }}
-                      disabled={!scorerInput.trim() || scorerInput.trim() === scorerPick}
+                      onClick={() => { if (scorerDraft.name.trim()) setScorerPick(scorerDraft.name.trim()) }}
+                      disabled={!scorerDraft.name.trim() || scorerDraft.name.trim() === scorerPick}
                       className="mt-3 btn-yellow w-full py-2.5 text-[10px] font-bold tracking-eyebrow disabled:opacity-40"
                     >
                       {scorerPick ? `ALTERAR — ${scorerPick}` : 'CONFIRMAR ARTILHEIRO ✓'}
