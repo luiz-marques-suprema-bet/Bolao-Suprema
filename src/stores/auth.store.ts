@@ -5,7 +5,7 @@ import { supabase, isExplicitMockMode, isSupabaseConfigured, uploadFile } from '
 import { MOCK_ME } from '@/data/mock'
 import { getInitials } from '@/lib/utils'
 import { normalizeParticipantStatus } from '@/lib/participantStatus'
-import { allowedCorporateDomainsLabel, isAllowedCorporateEmail } from '@/lib/emailDomains'
+import { allowedCorporateDomainsLabel, isAllowedCorporateEmail, isPasswordLoginEmail } from '@/lib/emailDomains'
 import { usePredictionStore } from './prediction.store'
 import { useBracketStore } from './bracket.store'
 
@@ -75,6 +75,7 @@ interface AuthState {
   setRememberMe: (v: boolean) => void
   sendOtp: (email: string) => Promise<{ error?: string }>
   verifyOtp: (email: string, token: string) => Promise<{ error?: string }>
+  signInWithPassword: (email: string, password: string) => Promise<{ error?: string }>
   signOut: () => Promise<void>
   loadSession: () => Promise<void>
   updateProfile: (data: Partial<AppUser>, photoFile?: File, bannerFile?: File) => Promise<void>
@@ -161,6 +162,64 @@ export const useAuthStore = create<AuthState>()(
           const stub: AppUser = {
             id: data.user.id,
             email: data.user.email ?? email,
+            firstName: '',
+            lastName: '',
+            dept: '',
+            initials: '',
+            color: '#00A651',
+            since: String(new Date().getFullYear()),
+            isAdmin: false,
+            isMarketing: false,
+            isOwner: false,
+            userRole: 'user',
+            participantStatus: 'active',
+            privacyHideEmail: true,
+            privacyHideProfile: false,
+            createdAt: new Date().toISOString(),
+          }
+          set({ user: stub, isAuthenticated: true, profileComplete: false, isLoading: false })
+        }
+        return {}
+      },
+
+      // Login por senha — exceção operacional restrita (ver isPasswordLoginEmail).
+      // Só funciona para a conta que tiver senha definida no Supabase Auth.
+      signInWithPassword: async (email, password) => {
+        const normalized = email.trim().toLowerCase()
+        if (!isPasswordLoginEmail(normalized)) {
+          return { error: 'Este e-mail não usa login por senha.' }
+        }
+        if (isExplicitMockMode) {
+          set({ user: MOCK_ME, isAuthenticated: true, profileComplete: true, isLoading: false })
+          syncUserStores(MOCK_ME.id)
+          return {}
+        }
+        if (!isSupabaseConfigured) return { error: 'Supabase nao esta configurado. Login real indisponivel.' }
+
+        const { data, error } = await supabase.auth.signInWithPassword({ email: normalized, password })
+        if (error) return { error: 'E-mail ou senha inválidos.' }
+        if (!data.user) return { error: 'Erro ao validar acesso.' }
+
+        // Mesma regra de "manter conectado" do fluxo OTP.
+        if (!get().rememberMe) {
+          sessionStorage.setItem('bolao-session', data.user.id)
+        }
+
+        const { data: profile } = await supabase
+          .from('users').select('*').eq('id', data.user.id).single()
+        if (profile) {
+          const user = mapUser(profile as UserRow)
+          set({
+            user,
+            isAuthenticated: true,
+            profileComplete: !!(user.firstName && user.dept),
+            isLoading: false,
+          })
+          syncUserStores(user.id)
+        } else {
+          const stub: AppUser = {
+            id: data.user.id,
+            email: data.user.email ?? normalized,
             firstName: '',
             lastName: '',
             dept: '',

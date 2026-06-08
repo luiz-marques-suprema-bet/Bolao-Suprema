@@ -6,7 +6,7 @@ import { TourneyMark } from '@/components/shared/TourneyMark'
 import { useAuthStore } from '@/stores/auth.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { useForceLightMode } from '@/hooks/useForceLightMode'
-import { isAllowedCorporateEmail } from '@/lib/emailDomains'
+import { isAllowedCorporateEmail, isPasswordLoginEmail } from '@/lib/emailDomains'
 import { asset } from '@/lib/utils'
 
 // ─── OTP logic (shared) ───────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ function startOtpCooldown(email: string) {
 }
 
 function useOtpFlow() {
-  const { sendOtp, verifyOtp, rememberMe, setRememberMe } = useAuthStore()
+  const { sendOtp, verifyOtp, signInWithPassword, rememberMe, setRememberMe } = useAuthStore()
   const navigate = useNavigate()
 
   const [step, setStep] = useState<Step>('email')
@@ -44,6 +44,8 @@ function useOtpFlow() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
+  const [password, setPassword] = useState('')
+  const [passwordMode, setPasswordMode] = useState(false)
 
   // Cooldown timer
   useEffect(() => {
@@ -58,6 +60,7 @@ function useOtpFlow() {
 
   const canSendEmail = isAllowedCorporateEmail(email)
   const codeComplete = code.length >= 6
+  const showPasswordOption = isPasswordLoginEmail(email)
 
   const handleSendOtp = async () => {
     const activeCooldown = getOtpCooldownLeft(email)
@@ -113,11 +116,26 @@ function useOtpFlow() {
     setError('')
   }
 
+  const handlePasswordLogin = async () => {
+    if (!password || loading) return
+    setLoading(true)
+    setError('')
+    const res = await signInWithPassword(email.trim(), password)
+    setLoading(false)
+    if (res.error) {
+      setError(res.error)
+    } else {
+      navigate('/home', { replace: true })
+    }
+  }
+
   return {
     step, email, setEmail, code, setCode,
     error, loading, canSendEmail, codeComplete,
     resendCooldown, rememberMe, setRememberMe,
     handleSendOtp, handleVerify, handleResend, handleBack,
+    password, setPassword, passwordMode, setPasswordMode,
+    showPasswordOption, handlePasswordLogin,
   }
 }
 
@@ -246,6 +264,44 @@ function LoginMobile() {
                 />
                 <span className="font-mono text-[10px] text-ink-3">Manter conectado</span>
               </label>
+
+              {f.showPasswordOption && (
+                f.passwordMode ? (
+                  <div className="mt-5 border-t border-hairline pt-4">
+                    <p className="font-mono text-[9px] tracking-eyebrow text-ink-3 mb-1.5">SENHA</p>
+                    <input
+                      type="password"
+                      value={f.password}
+                      onChange={e => f.setPassword(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && f.handlePasswordLogin()}
+                      placeholder="••••••••"
+                      autoFocus
+                      autoComplete="current-password"
+                      className="w-full bg-card border border-line focus:border-ink px-3 py-3 font-sans text-[14px] text-ink placeholder:text-ink-4 outline-none transition-colors"
+                    />
+                    <button
+                      onClick={f.handlePasswordLogin}
+                      disabled={!f.password || f.loading}
+                      className="btn-yellow w-full justify-center disabled:opacity-50 mt-3"
+                    >
+                      {f.loading ? 'ENTRANDO…' : 'ENTRAR COM SENHA →'}
+                    </button>
+                    <button
+                      onClick={() => f.setPasswordMode(false)}
+                      className="font-mono text-[10px] text-ink-4 hover:text-ink text-center w-full mt-3 transition-colors"
+                    >
+                      USAR CÓDIGO POR E-MAIL
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => f.setPasswordMode(true)}
+                    className="font-mono text-[10px] text-ink-3 hover:text-ink underline underline-offset-2 mt-4 transition-colors"
+                  >
+                    Entrar com senha
+                  </button>
+                )
+              )}
 
               <p className="font-mono text-[10px] text-ink-4 tracking-eyebrow text-center mt-5">
                 ACESSO RESTRITO À SUPREMA GAMING · USO INTERNO
@@ -407,6 +463,44 @@ function LoginDesktop() {
                 />
                 <span className="font-mono text-[10px] text-ink-4">Manter conectado</span>
               </label>
+
+              {f.showPasswordOption && (
+                f.passwordMode ? (
+                  <div className="mt-5 border-t border-hairline pt-4">
+                    <p className="font-mono text-[9px] tracking-eyebrow text-ink-4 mb-1.5">SENHA</p>
+                    <input
+                      type="password"
+                      value={f.password}
+                      onChange={e => f.setPassword(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && f.handlePasswordLogin()}
+                      placeholder="••••••••"
+                      autoFocus
+                      autoComplete="current-password"
+                      className="w-full bg-paper-deep border border-line focus:border-ink px-3 py-3 font-sans text-[14px] outline-none transition-colors placeholder:text-ink-4"
+                    />
+                    <button
+                      onClick={f.handlePasswordLogin}
+                      disabled={!f.password || f.loading}
+                      className="btn-yellow w-full justify-center disabled:opacity-50 mt-3"
+                    >
+                      {f.loading ? 'ENTRANDO…' : 'ENTRAR COM SENHA →'}
+                    </button>
+                    <button
+                      onClick={() => f.setPasswordMode(false)}
+                      className="font-mono text-[10px] text-ink-4 hover:text-ink text-center w-full mt-3 transition-colors"
+                    >
+                      USAR CÓDIGO POR E-MAIL
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => f.setPasswordMode(true)}
+                    className="font-mono text-[10px] text-ink-4 hover:text-ink underline underline-offset-2 mt-4 transition-colors"
+                  >
+                    Entrar com senha
+                  </button>
+                )
+              )}
 
               <p className="font-mono text-[10px] text-ink-4 text-center mt-4">
                 Acesso restrito a colaboradores da Suprema Gaming.
