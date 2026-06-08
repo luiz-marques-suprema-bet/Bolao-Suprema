@@ -467,7 +467,21 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         },
       })
       .on('presence', { event: 'sync' }, () => {
-        set(extractPresence(channel.presenceState() as Record<string, PresencePayload[]>, get()._myUserId))
+        const presence = extractPresence(channel.presenceState() as Record<string, PresencePayload[]>, get()._myUserId)
+        set(presence)
+        // Garante perfil de todos os online (a lista pode exceder o diretório inicial),
+        // para a contagem e a lista de "online agora" baterem.
+        void fetchProfiles(presence.onlineUserIds).then(() => {
+          set(s => {
+            const byId = new Map(s.profiles.map(p => [p.id, p]))
+            let added = false
+            for (const id of presence.onlineUserIds) {
+              const cached = profileCache.get(id)
+              if (cached && !byId.has(id)) { byId.set(id, cached); added = true }
+            }
+            return added ? { profiles: Array.from(byId.values()) } : {}
+          })
+        })
       })
       .on(
         'postgres_changes',

@@ -175,7 +175,6 @@ export function ResenhaScreen() {
   const isAdmin = Boolean(user?.isAdmin || user?.isOwner)
   const combinedError = error || lastError
   const pinnedMsg = pinnedId ? messages.find(message => message.id === pinnedId) : null
-  const onlineCount = onlineUserIds.length || 1
 
   const onlineProfiles = useMemo(() => {
     const ids = onlineUserIds.length > 0 ? onlineUserIds : user?.id ? [user.id] : []
@@ -200,6 +199,9 @@ export function ResenhaScreen() {
       .filter((profile): profile is ChatProfile => Boolean(profile))
       .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'pt-BR'))
   }, [onlineUserIds, profiles, user])
+
+  // Conta apenas quem conseguimos exibir, para o número bater com a lista.
+  const onlineCount = onlineProfiles.length || 1
 
   const typingLabel = useMemo(() => {
     if (typingUserIds.length === 0) return ''
