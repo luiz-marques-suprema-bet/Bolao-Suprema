@@ -173,10 +173,13 @@ function HitChip({ kind, label }: { kind: string; label: string }) {
   return (
     <span className={cn(
       'inline-flex items-center justify-center rounded-md font-mono text-[9px] font-bold tracking-eyebrow uppercase px-1.5 py-0.5 min-w-[44px]',
-      kind === 'exact'   && 'bg-green text-white',
-      kind === 'partial' && 'border border-hairline text-ink-2 bg-surface-2',
-      kind === 'miss'    && 'text-ink-4',
-      kind === 'pending' && 'text-ink-3 border border-dashed border-hairline',
+      kind === 'exact'        && 'bg-green text-white',
+      kind === 'partial'      && 'border border-hairline text-ink-2 bg-surface-2',
+      kind === 'miss'         && 'text-ink-4',
+      kind === 'pending'      && 'text-ink-3 border border-dashed border-hairline',
+      kind === 'live_exact'   && 'bg-green text-white animate-pulse',
+      kind === 'live_outcome' && 'bg-yellow text-[#0D0D0D]',
+      kind === 'live_off'     && 'text-ink-4',
     )}>
       {label}
     </span>
@@ -202,6 +205,9 @@ function StatusBadge({ em }: { em: EspiaMatch }) {
 function MatchCard({ em, meId, query }: { em: EspiaMatch; meId?: string; query: string }) {
   const navigate = useNavigate()
   const { match } = em
+  const isLive = match.status === 'live'
+  const cravando = em.guesses.filter(g => g.hit.kind === 'live_exact').length
+  const noCaminho = em.guesses.filter(g => g.hit.kind === 'live_outcome').length
   const guesses = query
     ? em.guesses.filter(g => norm(g.user.name).includes(norm(query)))
     : em.guesses
@@ -269,7 +275,9 @@ function MatchCard({ em, meId, query }: { em: EspiaMatch; meId?: string; query: 
 
       <div className="border-t border-hairline px-4 py-2 font-mono text-[9px] text-ink-4">
         {em.guesses.length} {em.guesses.length === 1 ? 'palpite' : 'palpites'}
-        {em.settled ? ' · apurado' : ' · pontos saem na apuração'}
+        {isLive
+          ? ` · ${cravando} cravando agora · ${noCaminho} no caminho`
+          : em.settled ? ' · apurado' : ' · pontos saem na apuração'}
       </div>
     </div>
   )
