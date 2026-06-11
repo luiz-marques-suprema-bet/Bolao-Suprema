@@ -304,6 +304,15 @@ function EmptyRanking() {
   )
 }
 
+function RankingLoading() {
+  return (
+    <div className="flex flex-col items-center gap-3 py-16 text-center px-6">
+      <span className="inline-block h-5 w-5 rounded-full border-2 border-ink-4 border-t-transparent animate-spin" />
+      <span className="font-mono text-[11px] tracking-eyebrow text-ink-3 animate-pulse">CARREGANDO RANKING…</span>
+    </div>
+  )
+}
+
 const SCORING_SECTIONS = [
   {
     label: 'FASE DE GRUPOS',
@@ -428,6 +437,8 @@ function RankingMobile() {
               )
             })}
           </div>
+        ) : loading && fullRanking.length === 0 ? (
+          <RankingLoading />
         ) : (
           <EmptyRanking />
         )}
@@ -481,7 +492,7 @@ function RankingMobile() {
         <div className="divide-y divide-hairline">
           {ranking.map(r => <RankingRow key={r.userId} r={r} />)}
         </div>
-      ) : (
+      ) : loading ? null : (
         <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
           <p className="font-mono text-[11px] text-ink-3">Nenhum palpite pontuado ainda.</p>
         </div>
@@ -546,6 +557,10 @@ function RankingDesktop() {
                   )
                 })}
               </div>
+            ) : loading && ranking.length === 0 ? (
+              <div className="mb-6 border-b border-hairline pb-6">
+                <RankingLoading />
+              </div>
             ) : (
               <div className="mb-6 border-b border-hairline pb-6">
                 <EmptyRanking />
@@ -583,7 +598,7 @@ function RankingDesktop() {
                   <span className="font-mono text-[12px] text-center">{r.streak}</span>
                   <span className="font-display text-xl text-right">{fmtPts(r.pts)}</span>
                 </div>
-              )) : (
+              )) : loading ? null : (
                 <div className="px-5 py-8 text-center">
                   <p className="font-mono text-[11px] text-ink-3">
                     Nenhum palpite pontuado ainda · torneio começa em 11 Jun

@@ -26,6 +26,18 @@ import {
 
 const norm = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 
+// Filtros de fase — todas as fases da Copa (não só grupos/mata-mata).
+const PHASE_FILTERS: Array<{ id: string; label: string; stages: string[] | null }> = [
+  { id: 'all',   label: 'TODAS',      stages: null },
+  { id: 'group', label: 'GRUPOS',     stages: ['group'] },
+  { id: 'r32',   label: 'FASE DE 32', stages: ['round_of_32'] },
+  { id: 'r16',   label: 'OITAVAS',    stages: ['round_of_16'] },
+  { id: 'qf',    label: 'QUARTAS',    stages: ['quarter_final'] },
+  { id: 'sf',    label: 'SEMIS',      stages: ['semi_final'] },
+  { id: '3rd',   label: '3º LUGAR',   stages: ['third_place'] },
+  { id: 'final', label: 'FINAL',      stages: ['final'] },
+]
+
 type ProfileRow = {
   id: string
   first_name: string | null
@@ -363,12 +375,13 @@ export function EspiadinhaScreen() {
   const me = useAuthStore(s => s.user)
   const { view, loading } = useEspiadinhaData()
 
-  const [phase, setPhase] = useState<'all' | 'group' | 'ko'>('all')
+  const [phaseId, setPhaseId] = useState('all')
   const [query, setQuery] = useState('')
 
+  const activeFilter = PHASE_FILTERS.find(f => f.id === phaseId) ?? PHASE_FILTERS[0]
   const filteredMatches = useMemo(() => view.matches.filter(em =>
-    phase === 'all' ? true : phase === 'group' ? em.match.stage === 'group' : em.match.stage !== 'group',
-  ), [view.matches, phase])
+    activeFilter.stages === null ? true : activeFilter.stages.includes(em.match.stage),
+  ), [view.matches, activeFilter])
 
   const standings = useMemo(() => {
     if (!query) return view.standings
@@ -407,22 +420,22 @@ export function EspiadinhaScreen() {
         ) : (
           <>
             {/* controles */}
-            <div className="mb-5 flex flex-wrap items-center gap-3">
-              <div className="flex border border-line">
-                {([['all', 'TODAS'], ['group', 'GRUPOS'], ['ko', 'MATA-MATA']] as const).map(([id, label]) => (
+            <div className="mb-5 space-y-2.5">
+              <div className="flex flex-wrap gap-1.5">
+                {PHASE_FILTERS.map(f => (
                   <button
-                    key={id}
-                    onClick={() => setPhase(id)}
+                    key={f.id}
+                    onClick={() => setPhaseId(f.id)}
                     className={cn(
-                      'px-3 py-1.5 font-mono text-[10px] font-bold tracking-eyebrow uppercase transition-colors',
-                      phase === id ? 'bg-yellow text-[#0D0D0D]' : 'text-ink-3 hover:bg-surface-hover',
+                      'px-3 py-1.5 font-mono text-[10px] font-bold tracking-eyebrow uppercase border transition-colors',
+                      phaseId === f.id ? 'bg-yellow text-[#0D0D0D] border-ink' : 'border-line text-ink-3 hover:bg-surface-hover',
                     )}
                   >
-                    {label}
+                    {f.label}
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-2 border border-line bg-card px-3 py-1.5 flex-1 min-w-[180px]">
+              <div className="flex items-center gap-2 border border-line bg-card px-3 py-1.5">
                 <span className="font-mono text-[13px] text-ink-4">⌕</span>
                 <input
                   value={query}
