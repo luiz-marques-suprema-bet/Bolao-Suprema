@@ -56,10 +56,9 @@ export function tierForAccuracy(accuracy: number): EspiaTier {
 
 // ─── Acerto de um palpite ───────────────────────────────────────────────────────
 
-// Encerrado: exact/partial/miss. Ao vivo (jogo rolando): live_exact (cravando o
-// placar atual), live_outcome (no caminho — mesmo vencedor/empate) e live_off.
-// pending: começou mas ainda sem placar ao vivo confiável.
-export type HitKind = 'exact' | 'partial' | 'miss' | 'pending' | 'live_exact' | 'live_outcome' | 'live_off'
+// Encerrado: exact/partial/miss (pontos). pending: jogo em andamento, ainda
+// sem apuração — não mostramos placar ao vivo, só o palpite.
+export type HitKind = 'exact' | 'partial' | 'miss' | 'pending'
 
 export interface Hit {
   kind: HitKind
@@ -74,39 +73,6 @@ export function hitFor(points: number | null, stage: string, settled: boolean): 
   if (p >= max) return { kind: 'exact', label: 'CRAVOU', points: p }
   if (p > 0)    return { kind: 'partial', label: `+${p}`, points: p }
   return { kind: 'miss', label: 'errou', points: 0 }
-}
-
-function outcome(home: number, away: number): 'home' | 'draw' | 'away' {
-  if (home > away) return 'home'
-  if (away > home) return 'away'
-  return 'draw'
-}
-
-// Comparação do palpite com o placar ATUAL de um jogo ao vivo.
-export function liveHit(pred: { homeScore: number; awayScore: number }, result: MatchResultLike): Hit {
-  if (pred.homeScore === result.homeScore && pred.awayScore === result.awayScore) {
-    return { kind: 'live_exact', label: 'CRAVANDO', points: null }
-  }
-  if (outcome(pred.homeScore, pred.awayScore) === outcome(result.homeScore, result.awayScore)) {
-    return { kind: 'live_outcome', label: 'NO CAMINHO', points: null }
-  }
-  return { kind: 'live_off', label: 'FORA', points: null }
-}
-
-interface MatchResultLike { homeScore: number; awayScore: number }
-
-// Peso de ordenação dentro de um jogo (maior = mais perto de acertar).
-function hitRank(hit: Hit): number {
-  switch (hit.kind) {
-    case 'exact':        return 1000 + (hit.points ?? 0)
-    case 'partial':      return 100 + (hit.points ?? 0)
-    case 'miss':         return 1
-    case 'live_exact':   return 1000
-    case 'live_outcome': return 100
-    case 'live_off':     return 1
-    case 'pending':      return 0
-    default:             return 0
-  }
 }
 
 // ─── Tipos da view ──────────────────────────────────────────────────────────────
@@ -191,7 +157,6 @@ export function buildEspiadinha(
 
   const espiaMatches: EspiaMatch[] = revealed.map(match => {
     const settled = matchIsSettled(match)
-    const isLive = match.status === 'live'
     const stage = match.stage
     const result = { homeScore: match.homeScore ?? 0, awayScore: match.awayScore ?? 0 }
 
@@ -202,13 +167,7 @@ export function buildEspiadinha(
         const pts = settled
           ? (pred.points ?? calculatePoints({ homeScore: pred.homeScore, awayScore: pred.awayScore }, result, stage))
           : null
-
-        // Encerrado → pontos; ao vivo → comparação com o placar atual; senão pendente.
-        const hit = settled
-          ? hitFor(pts, stage, true)
-          : isLive
-            ? liveHit({ homeScore: pred.homeScore, awayScore: pred.awayScore }, result)
-            : hitFor(null, stage, false)
+        const hit = hitFor(pts, stage, settled)
 
         if (settled) {
           const max = maxPointsFor(stage)
@@ -224,7 +183,7 @@ export function buildEspiadinha(
         return { user, homeScore: pred.homeScore, awayScore: pred.awayScore, hit } as EspiaGuess
       })
       .filter((g): g is EspiaGuess => g !== null)
-      .sort((a, b) => hitRank(b.hit) - hitRank(a.hit) || a.user.name.localeCompare(b.user.name))
+      .sort((a, b) => (b.hit.points ?? -1) - (a.hit.points ?? -1) || a.user.name.localeCompare(b.user.name))
 
     return { match, settled, guesses }
   })

@@ -173,13 +173,10 @@ function HitChip({ kind, label }: { kind: string; label: string }) {
   return (
     <span className={cn(
       'inline-flex items-center justify-center rounded-md font-mono text-[9px] font-bold tracking-eyebrow uppercase px-1.5 py-0.5 min-w-[44px]',
-      kind === 'exact'        && 'bg-green text-white',
-      kind === 'partial'      && 'border border-hairline text-ink-2 bg-surface-2',
-      kind === 'miss'         && 'text-ink-4',
-      kind === 'pending'      && 'text-ink-3 border border-dashed border-hairline',
-      kind === 'live_exact'   && 'bg-green text-white animate-pulse',
-      kind === 'live_outcome' && 'bg-yellow text-[#0D0D0D]',
-      kind === 'live_off'     && 'text-ink-4',
+      kind === 'exact'   && 'bg-green text-white',
+      kind === 'partial' && 'border border-hairline text-ink-2 bg-surface-2',
+      kind === 'miss'    && 'text-ink-4',
+      kind === 'pending' && 'text-ink-3 border border-dashed border-hairline',
     )}>
       {label}
     </span>
@@ -187,27 +184,16 @@ function HitChip({ kind, label }: { kind: string; label: string }) {
 }
 
 function StatusBadge({ em }: { em: EspiaMatch }) {
-  const { match } = em
-  if (match.status === 'live') {
-    return (
-      <span className="inline-flex items-center gap-1.5 font-mono text-[9px] font-bold tracking-eyebrow text-red">
-        <span className="h-1.5 w-1.5 rounded-full bg-red animate-pulse" />
-        AO VIVO{match.liveMinute ? ` · ${match.liveMinute}` : ''}
-      </span>
-    )
-  }
-  if (em.settled) {
-    return <span className="font-mono text-[9px] font-bold tracking-eyebrow text-ink-3">ENCERRADO</span>
-  }
-  return <span className="font-mono text-[9px] font-bold tracking-eyebrow text-ink-3">EM ANDAMENTO</span>
+  return em.settled
+    ? <span className="font-mono text-[9px] font-bold tracking-eyebrow text-ink-3">ENCERRADO</span>
+    : <span className="font-mono text-[9px] font-bold tracking-eyebrow text-ink-3">EM ANDAMENTO</span>
 }
 
 function MatchCard({ em, meId, query }: { em: EspiaMatch; meId?: string; query: string }) {
   const navigate = useNavigate()
   const { match } = em
-  const isLive = match.status === 'live'
-  const cravando = em.guesses.filter(g => g.hit.kind === 'live_exact').length
-  const noCaminho = em.guesses.filter(g => g.hit.kind === 'live_outcome').length
+  // Placar só aparece quando o jogo ENCERROU (resultado real do fim do jogo).
+  // Enquanto está em andamento mostramos só "MEX × RSA" — sem placar ao vivo.
   const guesses = query
     ? em.guesses.filter(g => norm(g.user.name).includes(norm(query)))
     : em.guesses
@@ -221,16 +207,20 @@ function MatchCard({ em, meId, query }: { em: EspiaMatch; meId?: string; query: 
         <StatusBadge em={em} />
       </div>
 
-      {/* placar */}
+      {/* confronto (placar só quando encerrado) */}
       <div className="flex items-center justify-center gap-3 px-4 py-4">
         <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
           <span className="font-display text-2xl leading-none text-ink truncate">{match.home.code}</span>
           <Flag team={match.home} size={26} />
         </div>
         <div className="flex flex-col items-center">
-          <div className="font-display text-3xl leading-none text-ink tabular-nums">
-            {match.homeScore ?? 0}<span className="text-ink-4 px-1">×</span>{match.awayScore ?? 0}
-          </div>
+          {em.settled ? (
+            <div className="font-display text-3xl leading-none text-ink tabular-nums">
+              {match.homeScore ?? 0}<span className="text-ink-4 px-1">×</span>{match.awayScore ?? 0}
+            </div>
+          ) : (
+            <span className="font-display text-2xl leading-none text-ink-4">×</span>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <Flag team={match.away} size={26} />
@@ -275,9 +265,7 @@ function MatchCard({ em, meId, query }: { em: EspiaMatch; meId?: string; query: 
 
       <div className="border-t border-hairline px-4 py-2 font-mono text-[9px] text-ink-4">
         {em.guesses.length} {em.guesses.length === 1 ? 'palpite' : 'palpites'}
-        {isLive
-          ? ` · ${cravando} cravando agora · ${noCaminho} no caminho`
-          : em.settled ? ' · apurado' : ' · pontos saem na apuração'}
+        {em.settled ? ' · apurado' : ' · pontos saem na apuração'}
       </div>
     </div>
   )
