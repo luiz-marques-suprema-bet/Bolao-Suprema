@@ -492,7 +492,7 @@ function TeamStrip() {
     <div className="relative z-10 mt-auto overflow-hidden border-t border-hairline bg-surface/85 backdrop-blur-sm">
       <div
         className="flex gap-5 py-2.5 px-3 animate-marquee"
-        style={{ width: 'max-content' }}
+        style={{ width: 'max-content', animationDuration: '80s' }}
       >
         {doubled.map((code, i) => {
           const team = TEAMS[code]
