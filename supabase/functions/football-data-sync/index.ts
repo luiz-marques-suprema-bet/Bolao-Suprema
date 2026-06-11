@@ -45,6 +45,7 @@ interface CurrentMatchRow {
   match_code: string
   home_code?: string | null
   away_code?: string | null
+  status?: string | null
   market_status?: string | null
   lock_reason?: string | null
 }
@@ -256,7 +257,7 @@ Deno.serve(async (req) => {
   for (const fdMatch of matches) {
     const { data: idRows, error: idFindError } = await supabase
       .from('matches')
-      .select('match_code,home_code,away_code,market_status,lock_reason')
+      .select('match_code,home_code,away_code,status,market_status,lock_reason')
       .eq('football_data_id', fdMatch.id)
       .limit(1)
 
@@ -267,7 +268,7 @@ Deno.serve(async (req) => {
     if (!current && fdMatch.homeTeam.tla && fdMatch.awayTeam.tla) {
       const { data: codeRows, error: codeFindError } = await supabase
         .from('matches')
-        .select('match_code,home_code,away_code,market_status,lock_reason')
+        .select('match_code,home_code,away_code,status,market_status,lock_reason')
         .eq('home_code', fdMatch.homeTeam.tla)
         .eq('away_code', fdMatch.awayTeam.tla)
         .eq('kickoff_utc', fdMatch.utcDate)
@@ -288,12 +289,20 @@ Deno.serve(async (req) => {
       current.lock_reason &&
       !String(current.lock_reason).startsWith('api_')
 
+    // Resultado ja apurado (admin OU sync) tem autoridade: a fonte NUNCA rebaixa
+    // um jogo finished/settled de volta para scheduled/live so porque o provedor
+    // ainda o reporta como TIMED. So sobrescreve se o provedor tambem disser
+    // FINISHED (ex.: para corrigir o placar final).
+    const dbSettled = current.status === 'finished' || current.market_status === 'settled'
+    const providerFinished = fdMatch.status === 'FINISHED'
+    const freeze = isManualLock || (dbSettled && !providerFinished)
+
     // M9 hardening: um lock MANUAL de admin (lock_reason != 'api_*') tem
     // autoridade final. A API nunca pode sobrescrever status/placar/mercado de
     // uma partida travada pelo admin — nem com LIVE nem com FINISHED. Gravamos
     // apenas os metadados football_data_* para diagnostico. Para liberar/apurar,
     // o admin usa admin_update_match_status / settle_match_result.
-    const safePatch = isManualLock
+    const safePatch = freeze
       ? {
           football_data_id: fdMatch.id,
           football_data_status: fdMatch.status,
