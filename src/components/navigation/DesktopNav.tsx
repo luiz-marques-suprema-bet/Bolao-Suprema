@@ -6,13 +6,17 @@ import { Tooltip } from '@/components/shared/Tooltip'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { NotificationBell } from '@/components/navigation/NotificationBell'
 import { useAuthStore } from '@/stores/auth.store'
+import { useSeenFlag } from '@/hooks/useSeenFlag'
 import { cn } from '@/lib/utils'
+
+const ESPIADINHA_NEW_KEY = 'bolao-espiadinha-novo-v2'
 
 const NAV_ITEMS = [
   { id: 'home',       label: 'HOME',     path: '/home',           tip: 'Resumo do dia, boletim rápido e destaques do bolão' },
   { id: 'prediction',label: 'PALPITAR', path: '/prediction',     tip: 'Faça seus palpites por grupo, mata-mata e apostas gerais' },
   { id: 'mine',      label: 'MEUS PALPITES', path: '/meus-palpites',  tip: 'Histórico de todos os seus palpites com pontuação detalhada' },
   { id: 'ranking',   label: 'RANKING',  path: '/ranking',        tip: 'Classificação geral — veja quem está na frente e a quantos pts você está' },
+  { id: 'espiadinha',label: 'ESPIADINHA', path: '/espiadinha',   tip: 'Espie os palpites dos outros — só de jogos que já começaram. Sem cola!' },
   { id: 'rules',     label: 'REGRAS',   path: '/regulamento',    tip: 'Regulamento completo e tabela de pontos do bolão' },
   { id: 'alerts',    label: 'AVISOS',   path: '/notificacoes',   tip: 'Comunicados e notificações importantes do admin' },
   { id: 'resenha',   label: 'RESENHA',  path: '/resenha',        tip: 'Chat ao vivo com todos os participantes — resenha garantida' },
@@ -25,6 +29,7 @@ export function DesktopNav() {
   const signOut = useAuthStore(s => s.signOut)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const [espiadinhaSeen, markEspiadinhaSeen] = useSeenFlag(ESPIADINHA_NEW_KEY)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -53,10 +58,14 @@ export function DesktopNav() {
         <nav className="flex items-center gap-1 flex-1 overflow-x-auto no-scrollbar">
           {NAV_ITEMS.map((item) => {
             const active = pathname === item.path
+            const showNew = item.id === 'espiadinha' && !espiadinhaSeen
             return (
               <Tooltip key={item.id} content={item.tip} side="bottom">
                 <button
-                  onClick={() => navigate(item.path)}
+                  onClick={() => {
+                    if (item.id === 'espiadinha') markEspiadinhaSeen()
+                    navigate(item.path)
+                  }}
                   className={cn(
                     'whitespace-nowrap px-3 py-1.5 font-mono text-[11px] font-bold tracking-eyebrow uppercase transition-all active:scale-95 active:opacity-70',
                     active
@@ -64,7 +73,14 @@ export function DesktopNav() {
                       : 'text-ink-3 hover:text-ink hover:bg-surface-hover'
                   )}
                 >
-                  {item.label}
+                  <span className="inline-flex items-center gap-1.5">
+                    {item.label}
+                    {showNew && (
+                      <span className="rounded-full bg-red px-1.5 py-0.5 text-[7px] font-bold leading-none tracking-wide text-white animate-pulse">
+                        NOVO
+                      </span>
+                    )}
+                  </span>
                 </button>
               </Tooltip>
             )

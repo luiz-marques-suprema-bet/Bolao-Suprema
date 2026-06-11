@@ -8,9 +8,10 @@ import { Stamp } from '@/components/shared/Stamp'
 import { useAuthStore } from '@/stores/auth.store'
 import { usePredictionStore } from '@/stores/prediction.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
+import { useTheme } from '@/context/ThemeContext'
 import { TEAMS } from '@/data/teams'
 import { TeamSearchPicker } from '@/components/shared/TeamSearchPicker'
-import { getInitials, fmtPts } from '@/lib/utils'
+import { getInitials, fmtPts, cn } from '@/lib/utils'
 import { searchPlayers } from '@/lib/thesportsdb'
 import { supabase, isMockMode } from '@/lib/supabase'
 import type { PlayerResult } from '@/lib/thesportsdb'
@@ -151,6 +152,35 @@ function ApostasGeraisSummary({ championPick, vicePick, scorerPick, onEdit }: {
           <button onClick={onEdit} className="btn-yellow text-[10px] px-3 py-2 flex-shrink-0">FAZER →</button>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Aparência (tema) ─────────────────────────────────────────────────────────
+
+function ThemeControl() {
+  const { theme, setTheme } = useTheme()
+  return (
+    <div>
+      <label className="font-mono text-[10px] tracking-eyebrow text-ink-3 block mb-1.5">
+        APARÊNCIA <span className="text-ink-4 normal-case">· aplicado na hora</span>
+      </label>
+      <div className="flex border-2 border-ink">
+        {([['light', 'CLARO', '☀'], ['dark', 'ESCURO', '☾']] as const).map(([id, label, icon]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTheme(id)}
+            aria-pressed={theme === id}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 py-2.5 font-mono text-[11px] font-bold tracking-eyebrow uppercase transition-colors',
+              theme === id ? 'bg-yellow text-[#0D0D0D]' : 'text-ink-3 hover:bg-surface-hover',
+            )}
+          >
+            <span aria-hidden="true">{icon}</span>{label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -370,6 +400,10 @@ function ProfileMobile() {
           onEdit={() => navigate('/prediction', { state: { tab: 'champion' } })}
         />
 
+        <div className="border-t border-hairline pt-5">
+          <ThemeControl />
+        </div>
+
         {f.saveError && (
           <div className="border border-red/40 bg-red/5 px-3 py-2 font-mono text-[10px] text-red">
             ✕ {f.saveError}
@@ -515,6 +549,10 @@ function ProfileDesktop() {
                 championPick={f.championPick} vicePick={f.vicePick} scorerPick={f.scorerPick}
                 onEdit={() => navigate('/prediction', { state: { tab: 'champion' } })}
               />
+
+              <div className="border-t border-hairline pt-5">
+                <ThemeControl />
+              </div>
 
               {f.saveError && (
                 <div className="border border-red/40 bg-red/5 px-3 py-2 font-mono text-[10px] text-red">

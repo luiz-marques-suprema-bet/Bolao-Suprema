@@ -1,0 +1,277 @@
+import type { Match } from '@/types'
+import { POINT_RULES } from '@/types'
+import { WC2026_MATCHES } from '@/data/wc2026'
+import { calculatePoints } from '@/lib/scoring'
+import { isMatchClosed } from '@/lib/markets'
+import { isPlaceholderMatch } from '@/lib/matchGuards'
+
+// ─── Espiadinha — "espie os palpites alheios" ────────────────────────────────
+//
+// Regra de ouro (anti-cola): só revelamos palpites de partidas que JÁ começaram
+// (kickoff passou) ou estão ao vivo/encerradas. Jogo que ainda vai rolar fica
+// escondido para ninguém copiar. O gate é `isMatchClosed` — o MESMO momento em
+// que o mercado fecha.
+//
+// As CLASSES dos palpiteiros derivam da acurácia (pontos ganhos ÷ pontos
+// possíveis nos jogos já apurados). POINT_RULES é a única fonte das regras.
+
+const pointsFor = (id: string) => POINT_RULES.find(r => r.id === id)?.points ?? 0
+const GROUP_EXACT = pointsFor('group_exact') // 10
+const KO_EXACT = pointsFor('ko_exact')       // 12
+
+export const STAGE_BY_CODE: Record<string, string> = Object.fromEntries(
+  WC2026_MATCHES.map(m => [m.id, m.stage]),
+)
+
+export function maxPointsFor(stage: string): number {
+  return stage === 'group' ? GROUP_EXACT : KO_EXACT
+}
+
+// ─── Classes / Tiers ──────────────────────────────────────────────────────────
+
+export interface EspiaTier {
+  id: string
+  label: string
+  tagline: string
+  /** Acurácia mínima (0..1) para entrar nesta classe. */
+  min: number
+  /** Classe Tailwind do selo. */
+  badgeClass: string
+  /** Cor da barrinha de acurácia. */
+  barClass: string
+}
+
+// Ordem do melhor para o pior — `tierForAccuracy` pega o primeiro cujo min bate.
+export const ESPIA_TIERS: EspiaTier[] = [
+  { id: 'goat',      label: 'G.O.A.T',                  tagline: 'craque dos palpites',     min: 0.66, badgeClass: 'bg-yellow text-[#0D0D0D] border-transparent', barClass: 'bg-yellow' },
+  { id: 'genio',     label: 'Gênio',                    tagline: 'acima da média',          min: 0.45, badgeClass: 'bg-green/15 text-green-deep border-green/40',  barClass: 'bg-green' },
+  { id: 'medio',     label: 'Palpiteiro médio',         tagline: 'em cima do muro',         min: 0.27, badgeClass: 'bg-surface-2 text-ink-2 border-hairline',      barClass: 'bg-ink-3' },
+  { id: 'tentando',  label: 'Tá tentando',              tagline: 'ainda vai pegar o jeito', min: 0.12, badgeClass: 'bg-surface-2 text-ink-3 border-hairline',      barClass: 'bg-ink-4' },
+  { id: 'participar',label: 'O importante é participar', tagline: 'presença garantida',      min: 0,    badgeClass: 'bg-surface-2 text-ink-4 border-hairline border-dashed', barClass: 'bg-ink-4/60' },
+]
+
+export function tierForAccuracy(accuracy: number): EspiaTier {
+  return ESPIA_TIERS.find(t => accuracy >= t.min) ?? ESPIA_TIERS[ESPIA_TIERS.length - 1]
+}
+
+// ─── Acerto de um palpite ───────────────────────────────────────────────────────
+
+export type HitKind = 'exact' | 'partial' | 'miss' | 'pending'
+
+export interface Hit {
+  kind: HitKind
+  label: string
+  points: number | null
+}
+
+export function hitFor(points: number | null, stage: string, settled: boolean): Hit {
+  if (!settled) return { kind: 'pending', label: 'no jogo', points: null }
+  const max = maxPointsFor(stage)
+  const p = points ?? 0
+  if (p >= max) return { kind: 'exact', label: 'CRAVOU', points: p }
+  if (p > 0)    return { kind: 'partial', label: `+${p}`, points: p }
+  return { kind: 'miss', label: 'errou', points: 0 }
+}
+
+// ─── Tipos da view ──────────────────────────────────────────────────────────────
+
+export interface EspiaProfile {
+  id: string
+  name: string
+  firstName: string
+  initials: string
+  color: string
+  avatarUrl?: string
+  dept: string
+}
+
+export interface EspiaPredRow {
+  userId: string
+  matchId: string
+  homeScore: number
+  awayScore: number
+  points: number | null
+}
+
+export interface EspiaGuess {
+  user: EspiaProfile
+  homeScore: number
+  awayScore: number
+  hit: Hit
+}
+
+export interface EspiaMatch {
+  match: Match
+  settled: boolean
+  guesses: EspiaGuess[]
+}
+
+export interface EspiaStanding {
+  user: EspiaProfile
+  points: number
+  settledCount: number
+  accuracy: number
+  exact: number
+  correct: number
+  tier: EspiaTier
+}
+
+export interface EspiaView {
+  matches: EspiaMatch[]
+  standings: EspiaStanding[]
+}
+
+function matchIsSettled(m: Match): boolean {
+  return m.status === 'finished' || !!m.settledAt
+}
+
+/**
+ * Monta a visão da Espiadinha a partir das partidas (com status do banco),
+ * dos palpites e dos perfis. Função pura — usada tanto para os dados reais
+ * quanto para a prévia/exemplo.
+ */
+export function buildEspiadinha(
+  matches: Match[],
+  predictions: EspiaPredRow[],
+  profiles: EspiaProfile[],
+): EspiaView {
+  const profileById = new Map(profiles.map(p => [p.id, p]))
+
+  const revealed = matches
+    .filter(m => !isPlaceholderMatch(m) && isMatchClosed(m))
+    .sort((a, b) => new Date(b.kickoffUtc).getTime() - new Date(a.kickoffUtc).getTime())
+
+  const revealedCodes = new Set(revealed.map(m => m.id))
+  const predsByMatch = new Map<string, EspiaPredRow[]>()
+  for (const pred of predictions) {
+    if (!revealedCodes.has(pred.matchId)) continue
+    const list = predsByMatch.get(pred.matchId) ?? []
+    list.push(pred)
+    predsByMatch.set(pred.matchId, list)
+  }
+
+  // Acumuladores por usuário (só jogos já apurados contam para a classe).
+  const acc: Record<string, { points: number; max: number; settled: number; exact: number; correct: number }> = {}
+
+  const espiaMatches: EspiaMatch[] = revealed.map(match => {
+    const settled = matchIsSettled(match)
+    const stage = match.stage
+    const result = { homeScore: match.homeScore ?? 0, awayScore: match.awayScore ?? 0 }
+
+    const guesses: EspiaGuess[] = (predsByMatch.get(match.id) ?? [])
+      .map(pred => {
+        const user = profileById.get(pred.userId)
+        if (!user) return null
+        const pts = settled
+          ? (pred.points ?? calculatePoints({ homeScore: pred.homeScore, awayScore: pred.awayScore }, result, stage))
+          : null
+        const hit = hitFor(pts, stage, settled)
+
+        if (settled) {
+          const max = maxPointsFor(stage)
+          const bucket = acc[user.id] ?? { points: 0, max: 0, settled: 0, exact: 0, correct: 0 }
+          bucket.points += pts ?? 0
+          bucket.max += max
+          bucket.settled += 1
+          if (hit.kind === 'exact') bucket.exact += 1
+          if ((pts ?? 0) > 0) bucket.correct += 1
+          acc[user.id] = bucket
+        }
+
+        return { user, homeScore: pred.homeScore, awayScore: pred.awayScore, hit } as EspiaGuess
+      })
+      .filter((g): g is EspiaGuess => g !== null)
+      .sort((a, b) => (b.hit.points ?? -1) - (a.hit.points ?? -1) || a.user.name.localeCompare(b.user.name))
+
+    return { match, settled, guesses }
+  })
+
+  const standings: EspiaStanding[] = Object.entries(acc)
+    .map(([userId, b]) => {
+      const user = profileById.get(userId)!
+      const accuracy = b.max > 0 ? b.points / b.max : 0
+      return {
+        user,
+        points: b.points,
+        settledCount: b.settled,
+        accuracy,
+        exact: b.exact,
+        correct: b.correct,
+        tier: tierForAccuracy(accuracy),
+      }
+    })
+    .filter(s => s.user)
+    .sort((a, b) => b.points - a.points || b.accuracy - a.accuracy || b.exact - a.exact)
+
+  return { matches: espiaMatches, standings }
+}
+
+// ─── Prévia / exemplo (para ver o design antes da bola rolar) ────────────────────
+
+const DEMO_PROFILES: EspiaProfile[] = [
+  { id: 'demo-1', name: 'Rafael Couto',    firstName: 'Rafael',  initials: 'RC', color: '#00A651', dept: 'Comercial' },
+  { id: 'demo-2', name: 'Marina Alves',    firstName: 'Marina',  initials: 'MA', color: '#C8102E', dept: 'Marketing' },
+  { id: 'demo-3', name: 'João Vitor',      firstName: 'João',    initials: 'JV', color: '#0057B8', dept: 'TI' },
+  { id: 'demo-4', name: 'Letícia Prado',   firstName: 'Letícia', initials: 'LP', color: '#6D28D9', dept: 'RH' },
+  { id: 'demo-5', name: 'Diego Fonseca',   firstName: 'Diego',   initials: 'DF', color: '#EA580C', dept: 'Operações' },
+  { id: 'demo-6', name: 'Bruna Teixeira',  firstName: 'Bruna',   initials: 'BT', color: '#0891B2', dept: 'Financeiro' },
+  { id: 'demo-7', name: 'Caio Mendes',     firstName: 'Caio',    initials: 'CM', color: '#7C3AED', dept: 'Comercial' },
+]
+
+interface DemoMatchSeed {
+  id: string
+  homeScore: number
+  awayScore: number
+  picks: Array<[string, number, number]> // [userId, home, away]
+}
+
+const DEMO_SEEDS: DemoMatchSeed[] = [
+  {
+    id: 'g-a-1', homeScore: 2, awayScore: 1, // MEX 2 × 1 RSA
+    picks: [
+      ['demo-1', 2, 1], // 10 cravou
+      ['demo-2', 2, 0], //  7 resultado + gols mandante
+      ['demo-3', 1, 0], //  5 resultado
+      ['demo-4', 0, 0], //  0 errou (empate)
+      ['demo-5', 2, 1], // 10 cravou
+      ['demo-6', 1, 1], //  0 errou (empate)
+      ['demo-7', 1, 2], //  0 errou
+    ],
+  },
+  {
+    id: 'g-c-1', homeScore: 3, awayScore: 0, // BRA 3 × 0 MAR
+    picks: [
+      ['demo-1', 2, 0], //  7 resultado + gols visitante  → total 17 (G.O.A.T)
+      ['demo-2', 1, 1], //  0 errou                        → total  7 (Palpiteiro médio)
+      ['demo-3', 3, 0], // 10 cravou                        → total 15 (G.O.A.T)
+      ['demo-4', 2, 1], //  5 resultado                     → total  5 (Tá tentando)
+      ['demo-5', 3, 1], //  7 resultado + gols mandante     → total 17 (G.O.A.T)
+      ['demo-6', 3, 0], // 10 cravou                         → total 10 (Gênio)
+      ['demo-7', 1, 3], //  0 errou                          → total  0 (O importante é participar)
+    ],
+  },
+]
+
+/** Constrói partidas/palpites de exemplo (encerrados) reutilizando seleções reais. */
+export function buildDemoView(): EspiaView {
+  const matches: Match[] = []
+  const predictions: EspiaPredRow[] = []
+
+  for (const seed of DEMO_SEEDS) {
+    const base = WC2026_MATCHES.find(m => m.id === seed.id)
+    if (!base) continue
+    matches.push({
+      ...base,
+      status: 'finished',
+      marketStatus: 'settled',
+      homeScore: seed.homeScore,
+      awayScore: seed.awayScore,
+      settledAt: base.kickoffUtc,
+    })
+    for (const [userId, home, away] of seed.picks) {
+      predictions.push({ userId, matchId: seed.id, homeScore: home, awayScore: away, points: null })
+    }
+  }
+
+  return buildEspiadinha(matches, predictions, DEMO_PROFILES)
+}

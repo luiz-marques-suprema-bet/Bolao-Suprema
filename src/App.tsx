@@ -18,6 +18,7 @@ import { SetupScreen } from '@/screens/Setup'
 import { HomeScreen } from '@/screens/Home'
 import { PredictionScreen } from '@/screens/Prediction'
 import { RankingScreen } from '@/screens/Ranking'
+import { EspiadinhaScreen } from '@/screens/Espiadinha'
 import { ResenhaScreen } from '@/screens/Resenha'
 import { AdminScreen } from '@/screens/Admin'
 import { UserProfileScreen } from '@/screens/UserProfile'
@@ -189,6 +190,7 @@ const router = createHashRouter([
           { path: '/prediction', element: <PredictionScreen /> },
           { path: '/prediction/:matchId', element: <PredictionScreen /> },
           { path: '/ranking', element: <RankingScreen /> },
+          { path: '/espiadinha', element: <EspiadinhaScreen /> },
           { path: '/resenha', element: <ResenhaScreen /> },
           { path: '/u/:userId', element: <UserProfileScreen /> },
           { path: '/admin', element: <AdminScreen /> },

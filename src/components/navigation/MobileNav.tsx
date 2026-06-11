@@ -1,15 +1,18 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth.store'
-import { useTheme } from '@/context/ThemeContext'
 import { Avatar } from '@/components/shared/Avatar'
 import { useNavAlerts } from '@/hooks/useNavAlerts'
+import { useSeenFlag } from '@/hooks/useSeenFlag'
 import { cn } from '@/lib/utils'
+
+const ESPIADINHA_NEW_KEY = 'bolao-espiadinha-novo-v2'
 
 const NAV_ITEMS = [
   { id: 'home',       label: 'HOME',    icon: '⌂',  path: '/home' },
   { id: 'prediction', label: 'PALPITAR',icon: '⊕',  path: '/prediction' },
   { id: 'mine',       label: 'PALPITES',icon: '≡',  path: '/meus-palpites' },
   { id: 'ranking',    label: 'RANKING', icon: '★',  path: '/ranking' },
+  { id: 'espiadinha', label: 'ESPIA',   icon: '⊙',  path: '/espiadinha' },
   { id: 'alerts',     label: 'AVISOS',  icon: '◈',  path: '/notificacoes' },
   { id: 'resenha',    label: 'RESENHA', icon: '◉',  path: '/resenha' },
   { id: 'profile',    label: 'EU',      icon: '◈',  path: '/profile' },
@@ -19,9 +22,8 @@ export function MobileNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const user = useAuthStore(s => s.user)
-  const { theme, toggleTheme } = useTheme()
   const { totalCount, hasUrgentPick } = useNavAlerts()
-  const isDark = theme === 'dark'
+  const [espiadinhaSeen, markEspiadinhaSeen] = useSeenFlag(ESPIADINHA_NEW_KEY)
 
   return (
     <nav
@@ -33,11 +35,15 @@ export function MobileNav() {
           const active = pathname === item.path
           const isProfile = item.id === 'profile'
           const showAlertBadge = item.id === 'alerts' && totalCount > 0
+          const showNew = item.id === 'espiadinha' && !espiadinhaSeen
 
           return (
             <button
               key={item.id}
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                if (item.id === 'espiadinha') markEspiadinhaSeen()
+                navigate(item.path)
+              }}
               className={cn(
                 'relative flex min-w-0 flex-col items-center justify-center gap-0.5 py-2.5 transition-all active:scale-90 active:opacity-60',
                 active ? 'text-ink' : 'text-ink-4'
@@ -67,19 +73,12 @@ export function MobileNav() {
                   {totalCount > 9 ? '9+' : totalCount}
                 </span>
               )}
+              {showNew && (
+                <span className="absolute right-2.5 top-1.5 h-2 w-2 rounded-full bg-red ring-2 ring-paper animate-pulse" />
+              )}
             </button>
           )
         })}
-
-        {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          aria-label={isDark ? 'Ativar tema claro' : 'Ativar tema escuro'}
-          className="flex min-w-0 flex-col items-center justify-center gap-0.5 py-2.5 text-ink-4 transition-all active:scale-90 active:opacity-60"
-        >
-          <span className="text-[13px] leading-none">{isDark ? '☾' : '☀'}</span>
-          <span className="font-mono text-[6.5px] font-bold tracking-eyebrow">TEMA</span>
-        </button>
       </div>
     </nav>
   )
