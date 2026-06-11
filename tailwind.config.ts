@@ -79,8 +79,13 @@ export default {
         marquee: 'marquee 40s linear infinite',
         'pulse-live': 'pulse-live 1.4s ease-in-out infinite',
         appear: 'appear 0.5s ease both',
+        'news-progress': 'news-progress 9s linear forwards',
       },
       keyframes: {
+        'news-progress': {
+          from: { width: '0%' },
+          to: { width: '100%' },
+        },
         marquee: {
           '0%': { transform: 'translateX(0)' },
           '100%': { transform: 'translateX(-50%)' },

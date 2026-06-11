@@ -190,11 +190,9 @@ function NewsProgressBar({
     <span className={cn('relative block overflow-hidden bg-hairline', className)}>
       <span className="absolute inset-0 bg-ink/20" />
       {isActive && (
-        <motion.span
-          className="absolute inset-y-0 left-0 bg-yellow"
-          initial={{ width: '0%' }}
-          animate={{ width: '100%' }}
-          transition={{ duration: NEWS_SLIDE_MS / 1000, ease: 'linear' }}
+        <span
+          className="absolute inset-y-0 left-0 w-0 bg-yellow animate-news-progress"
+          style={{ animationDuration: `${NEWS_SLIDE_MS}ms` }}
         />
       )}
     </span>
@@ -492,10 +490,8 @@ function TeamStrip() {
   const doubled = [...allCodes, ...allCodes]
   return (
     <div className="relative z-10 mt-auto overflow-hidden border-t border-hairline bg-surface/85 backdrop-blur-sm">
-      <motion.div
-        className="flex gap-5 py-2.5 px-3"
-        animate={{ x: [0, -(allCodes.length * 48)] }}
-        transition={{ duration: 90, repeat: Infinity, ease: 'linear' }}
+      <div
+        className="flex gap-5 py-2.5 px-3 animate-marquee"
         style={{ width: 'max-content' }}
       >
         {doubled.map((code, i) => {
@@ -507,7 +503,7 @@ function TeamStrip() {
             </div>
           ) : null
         })}
-      </motion.div>
+      </div>
     </div>
   )
 }
