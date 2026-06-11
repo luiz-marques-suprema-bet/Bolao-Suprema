@@ -11,8 +11,12 @@ interface PollCardProps {
   onVote: (optId: string) => void
 }
 
+// Quantos votantes mostrar por opção antes de colapsar num "+N".
+const VOTER_PREVIEW = 8
+
 export function PollCard({ poll, userId, profiles = [], onVote }: PollCardProps) {
   const [showVoters, setShowVoters] = useState(false)
+  const [expandedOptions, setExpandedOptions] = useState<Record<string, boolean>>({})
   const myVote = userId ? poll.votes[userId] : null
   const hasVoted = !!myVote
   const total = Object.keys(poll.votes).length
@@ -31,6 +35,9 @@ export function PollCard({ poll, userId, profiles = [], onVote }: PollCardProps)
           const count = voters.length
           const pct = total > 0 ? Math.round((count / total) * 100) : 0
           const isMyPick = myVote === option.id
+          const votersOpen = expandedOptions[option.id]
+          const shownVoters = votersOpen ? voters : voters.slice(0, VOTER_PREVIEW)
+          const hiddenVoters = count - shownVoters.length
           return (
             <div key={option.id}>
               <button
@@ -58,8 +65,8 @@ export function PollCard({ poll, userId, profiles = [], onVote }: PollCardProps)
               </button>
 
               {showVoters && count > 0 && (
-                <div className="mt-1.5 mb-0.5 flex flex-wrap items-center gap-1.5 pl-1">
-                  {voters.map(uid => {
+                <div className={cn('mt-1.5 mb-0.5 flex flex-wrap items-center gap-1.5 pl-1', votersOpen && 'max-h-40 overflow-y-auto')}>
+                  {shownVoters.map(uid => {
                     const profile = profiles.find(item => item.id === uid)
                     return (
                       <span key={uid} className="inline-flex items-center gap-1 rounded-full border border-hairline bg-surface-2 px-1.5 py-0.5">
@@ -68,6 +75,24 @@ export function PollCard({ poll, userId, profiles = [], onVote }: PollCardProps)
                       </span>
                     )
                   })}
+                  {hiddenVoters > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedOptions(prev => ({ ...prev, [option.id]: true }))}
+                      className="rounded-full border border-hairline bg-surface-2 px-2 py-0.5 font-mono text-[9px] font-bold text-ink-3 hover:text-ink"
+                    >
+                      +{hiddenVoters}
+                    </button>
+                  )}
+                  {votersOpen && count > VOTER_PREVIEW && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedOptions(prev => ({ ...prev, [option.id]: false }))}
+                      className="font-mono text-[9px] text-ink-4 hover:text-ink"
+                    >
+                      ver menos
+                    </button>
+                  )}
                 </div>
               )}
             </div>
