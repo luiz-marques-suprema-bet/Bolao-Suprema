@@ -263,9 +263,9 @@ function WC26News({
       <div className="ui-panel-header flex items-baseline justify-between">
         <div className="flex items-baseline gap-1.5">
           <span className="font-display text-base">COPA 2026</span>
-          <span className="font-mono text-[10px] text-paper/40">radar da copa</span>
+          <span className="font-mono text-[10px] text-inverse-text/50">radar da copa</span>
         </div>
-        <div className="flex items-center gap-2 font-mono text-[8px] text-paper/30 tracking-eyebrow">
+        <div className="flex items-center gap-2 font-mono text-[8px] text-inverse-text/45 tracking-eyebrow">
           <motion.span
             key={`header-${activeIndex}`}
             initial={{ rotate: -90, opacity: 0.35 }}
@@ -299,7 +299,7 @@ function WC26News({
               animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
               exit={{ opacity: 0, x: -22, filter: 'blur(6px)' }}
               transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-              className="relative block min-h-[380px] overflow-hidden border-b border-yellow bg-ink text-paper group"
+              className="relative block min-h-[380px] overflow-hidden border-b border-hairline bg-ink text-paper group"
             >
               {featuredHasImage && (
                 <div className="absolute inset-0 overflow-hidden bg-ink">
@@ -316,7 +316,7 @@ function WC26News({
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/78 to-black/20" />
               <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/65 to-transparent" />
-              <div className="absolute right-4 top-4 z-10 border border-paper/30 bg-black/35 px-2.5 py-1 font-mono text-[8px] font-bold tracking-eyebrow text-paper/70 backdrop-blur-sm">
+              <div className="absolute right-4 top-4 z-10 border border-inverse-text/30 bg-black/35 px-2.5 py-1 font-mono text-[8px] font-bold tracking-eyebrow text-inverse-text/70 backdrop-blur-sm">
                 {String(featuredPosition + 1).padStart(2, '0')} / {String(displayItems.length).padStart(2, '0')}
               </div>
               <div className="relative z-10 flex min-h-[380px] flex-col justify-end p-5">
@@ -326,10 +326,10 @@ function WC26News({
                   transition={{ delay: 0.08, duration: 0.22 }}
                   className="mb-2 flex items-center gap-2 font-mono text-[8px] tracking-eyebrow text-yellow"
                 >
-                  <span className="font-display text-paper/45">FOCO</span>
+                  <span className="font-display text-inverse-text/45">FOCO</span>
                   <span>{featured.source}</span>
-                  <span className="text-paper/45">·</span>
-                  <span className="text-paper/60">{timeAgo(featured.publishedAt)}</span>
+                  <span className="text-inverse-text/45">·</span>
+                  <span className="text-inverse-text/65">{timeAgo(featured.publishedAt)}</span>
                 </motion.div>
                 <motion.h3
                   initial={{ opacity: 0, y: 8 }}
@@ -349,12 +349,11 @@ function WC26News({
                   href={featured.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 inline-flex items-center gap-2 border border-paper/40 px-3 py-2 font-mono text-[9px] font-bold tracking-eyebrow text-paper transition-colors hover:border-yellow hover:text-yellow"
+                  className="mt-3 inline-flex items-center gap-2 border border-inverse-text/40 px-3 py-2 font-mono text-[9px] font-bold tracking-eyebrow text-inverse-text transition-colors hover:border-yellow hover:text-yellow"
                 >
                   LER MATERIA <span>→</span>
                 </motion.a>
               </div>
-              <NewsProgressBar key={`hero-progress-${activeIndex}`} isActive className="absolute inset-x-0 bottom-0 z-20 h-1" />
             </motion.article>
           )}
           </AnimatePresence>
@@ -385,15 +384,6 @@ function WC26News({
                     <span className="font-mono text-[7px] text-ink-4">{timeAgo(item.publishedAt)}</span>
                   </div>
                 </div>
-                {isActive && (
-                  <motion.span
-                    key={`row-${activeIndex}`}
-                    className="absolute bottom-0 left-0 h-0.5 bg-yellow"
-                    initial={{ width: '0%' }}
-                    animate={{ width: '100%' }}
-                    transition={{ duration: NEWS_SLIDE_MS / 1000, ease: 'linear' }}
-                  />
-                )}
               </motion.button>
               )
             })}
