@@ -7,6 +7,8 @@ interface PollModalProps {
   onClose: () => void
 }
 
+const MAX_OPTIONS = 15
+
 export function PollModal({ onCreate, onClose }: PollModalProps) {
   const [question, setQuestion] = useState('')
   const [options, setOptions] = useState(['', ''])
@@ -16,7 +18,7 @@ export function PollModal({ onCreate, onClose }: PollModalProps) {
   }
 
   const addOpt = () => {
-    if (options.length < 5) setOptions(items => [...items, ''])
+    if (options.length < MAX_OPTIONS) setOptions(items => [...items, ''])
   }
 
   const submit = () => {
@@ -43,7 +45,7 @@ export function PollModal({ onCreate, onClose }: PollModalProps) {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.94, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 340, damping: 26 }}
-        className="ui-card w-full max-w-sm p-6 flex flex-col gap-4"
+        className="ui-card w-full max-w-sm p-6 flex flex-col gap-4 max-h-[92dvh] overflow-y-auto"
         onClick={event => event.stopPropagation()}
       >
         <div>
@@ -59,22 +61,24 @@ export function PollModal({ onCreate, onClose }: PollModalProps) {
         />
 
         <div className="flex flex-col gap-2">
-          {options.map((option, index) => (
-            <input
-              key={index}
-              value={option}
-              onChange={event => setOpt(index, event.target.value)}
-              placeholder={`Opcao ${index + 1}`}
-              className="border border-hairline bg-paper-deep px-3 py-2 font-sans text-[13px] outline-none focus:border-ink w-full"
-            />
-          ))}
-          {options.length < 5 && (
+          <div className="flex flex-col gap-2 max-h-[42vh] overflow-y-auto pr-1">
+            {options.map((option, index) => (
+              <input
+                key={index}
+                value={option}
+                onChange={event => setOpt(index, event.target.value)}
+                placeholder={`Opcao ${index + 1}`}
+                className="border border-hairline bg-paper-deep px-3 py-2 font-sans text-[13px] outline-none focus:border-ink w-full"
+              />
+            ))}
+          </div>
+          {options.length < MAX_OPTIONS && (
             <button
               type="button"
               onClick={addOpt}
               className="font-mono text-[10px] text-ink-3 hover:text-ink border border-dashed border-hairline py-2 transition-colors"
             >
-              + OPCAO
+              + OPCAO ({options.length}/{MAX_OPTIONS})
             </button>
           )}
         </div>
