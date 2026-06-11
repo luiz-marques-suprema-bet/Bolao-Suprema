@@ -1069,7 +1069,9 @@ function HomeMobile() {
   const [quickPickMatch, setQuickPickMatch] = useState<Match | null>(null)
 
   const totalMatches   = WC2026_MATCHES.length
-  const totalPreds     = Object.keys(predictions).length
+  const groupMatches   = WC2026_MATCHES.filter(m => m.stage === 'group')
+  const groupTotal     = groupMatches.length
+  const groupPreds     = groupMatches.filter(m => predictions[m.id]).length
   const apostasFeitas  = [championPick, vicePick, scorerPick].filter(Boolean).length
   const top3   = ranking.slice(0, 3)
   const myRank = ranking.find(r => r.isYou)
@@ -1089,15 +1091,15 @@ function HomeMobile() {
               OLÁ{user?.firstName ? `, ${user.firstName.toUpperCase()}` : ''}
             </div>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="font-display text-4xl leading-none">{totalPreds}</span>
-              <span className="font-mono text-[10px] text-ink-3">de {totalMatches} palpites feitos</span>
+              <span className="font-display text-4xl leading-none">{groupPreds}</span>
+              <span className="font-mono text-[10px] text-ink-3">de {groupTotal} palpites feitos</span>
             </div>
           </div>
           <div className="px-4 py-3 space-y-3">
-            <PredProgress done={totalPreds} total={totalMatches} label="FASE DE GRUPOS" color="bg-yellow" />
+            <PredProgress done={groupPreds} total={groupTotal} label="FASE DE GRUPOS" color="bg-yellow" />
             <PredProgress done={apostasFeitas} total={3} label="APOSTAS ESPECIAIS" color="bg-green" />
             <button onClick={() => navigate('/prediction')} className="btn-yellow w-full justify-center text-[11px] mt-1">
-              {totalPreds === 0 ? 'COMEÇAR A PALPITAR →' : 'CONTINUAR PALPITANDO →'}
+              {groupPreds === 0 ? 'COMEÇAR A PALPITAR →' : 'CONTINUAR PALPITANDO →'}
             </button>
           </div>
         </div>
@@ -1237,7 +1239,9 @@ function HomeDesktop() {
   const [quickPickMatch, setQuickPickMatch] = useState<Match | null>(null)
 
   const totalMatches  = WC2026_MATCHES.length
-  const totalPreds    = Object.keys(predictions).length
+  const groupMatches  = WC2026_MATCHES.filter(m => m.stage === 'group')
+  const groupTotal    = groupMatches.length
+  const groupPreds    = groupMatches.filter(m => predictions[m.id]).length
   const apostasFeitas = [championPick, vicePick, scorerPick].filter(Boolean).length
   const top5   = ranking.slice(0, 5)
   const myRank = ranking.find(r => r.isYou)
@@ -1258,17 +1262,17 @@ function HomeDesktop() {
               <div className="font-mono text-[9px] tracking-eyebrow text-ink-4 mb-1">
                 OLÁ{user?.firstName ? `, ${user.firstName.toUpperCase()}` : ''}
               </div>
-              <div className="font-display text-5xl leading-none">{totalPreds}</div>
-              <div className="font-mono text-[10px] text-ink-3 mt-1">de {totalMatches} palpites feitos</div>
+              <div className="font-display text-5xl leading-none">{groupPreds}</div>
+              <div className="font-mono text-[10px] text-ink-3 mt-1">de {groupTotal} palpites feitos</div>
             </div>
             <div className="px-6 py-4 space-y-4 flex-1">
               <div>
                 <div className="flex justify-between mb-1.5">
                   <span className="font-mono text-[9px] text-ink-4 tracking-eyebrow">FASE DE GRUPOS</span>
-                  <span className="font-mono text-[9px] text-ink-3">{totalPreds}/{totalMatches}</span>
+                  <span className="font-mono text-[9px] text-ink-3">{groupPreds}/{groupTotal}</span>
                 </div>
                 <div className="h-1.5 bg-hairline overflow-hidden">
-                  <div className="h-full bg-yellow transition-all duration-700" style={{ width: `${totalMatches > 0 ? (totalPreds / totalMatches) * 100 : 0}%` }} />
+                  <div className="h-full bg-yellow transition-all duration-700" style={{ width: `${groupTotal > 0 ? (groupPreds / groupTotal) * 100 : 0}%` }} />
                 </div>
               </div>
               <div>
@@ -1283,7 +1287,7 @@ function HomeDesktop() {
             </div>
             <div className="px-6 pb-6 space-y-2">
               <button onClick={() => navigate('/prediction')} className="btn-yellow w-full justify-center active:scale-95 transition-transform">
-                {totalPreds === 0 ? 'COMEÇAR →' : 'CONTINUAR →'}
+                {groupPreds === 0 ? 'COMEÇAR →' : 'CONTINUAR →'}
               </button>
               {apostasFeitas < 3 && (
                 <button onClick={() => navigate('/prediction', { state: { tab: 'champion' } })}
