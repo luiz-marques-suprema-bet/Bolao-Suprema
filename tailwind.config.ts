@@ -2,6 +2,10 @@ import type { Config } from 'tailwindcss'
 
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  // Tema é controlado pela classe .dark no <html> (ThemeContext), não pela
+  // preferência do SO. Sem isto, utilitários dark:* seguiam o SO e brigavam
+  // com o tema do app (ex.: texto dark:text-yellow ilegível no tema claro).
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
