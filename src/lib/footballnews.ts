@@ -20,6 +20,32 @@ export interface FootballNewsItem {
   publishedAt: string
 }
 
+// Filtro de exibição: esconde manchetes negativas/políticas do "radar da copa".
+// É só UX (o proxy continua trazendo tudo; aqui descartamos antes de mostrar).
+// Para ajustar, basta adicionar/remover termos abaixo (sem acento, minúsculo).
+const BLOCKED_NEWS_PATTERNS = [
+  'vergonha', 'politic', 'protest', 'boicote', 'corrupc', 'escandalo', 'polemic',
+  'tragedia', 'morte', 'morto', 'guerra', 'racism', 'homofob', 'xenofob',
+  'genocidio', 'manifestac', 'manifestant', 'crise', 'denunc', 'investigac',
+  'prisao', 'preso', 'detido', 'violencia', 'ditadura', 'deportac', 'imigrac',
+  'greve', 'terror', 'atentado', 'abuso', 'escravidao', 'massacre', 'fraude',
+]
+
+const BLOCKED_NEWS_RE = new RegExp('\\b(' + BLOCKED_NEWS_PATTERNS.join('|') + ')', 'i')
+
+function normalizeNewsText(text: string): string {
+  return text.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+}
+
+function isBlockedNews(item: FootballNewsItem): boolean {
+  const haystack = normalizeNewsText(`${item.title} ${(item.tags ?? []).join(' ')}`)
+  return BLOCKED_NEWS_RE.test(haystack)
+}
+
+function filterNews(items: FootballNewsItem[]): FootballNewsItem[] {
+  return items.filter(item => !isBlockedNews(item))
+}
+
 let _cache: FootballNewsItem[] | null = null
 let _fetchedAt = 0
 const TTL = 15 * 60 * 1000 // 15 min
@@ -52,14 +78,14 @@ function writeStoredNews(news: FootballNewsItem[]) {
 }
 
 export function getCachedWC26News(limit = 10): FootballNewsItem[] {
-  const news = _cache ?? readStoredNews()
+  const news = filterNews(_cache ?? readStoredNews())
   return news.slice(0, limit)
 }
 
 export async function fetchWC26News(limit = 10): Promise<FootballNewsItem[]> {
   const cached = getCachedWC26News(limit)
   if (_cache && Date.now() - _fetchedAt < TTL) {
-    return _cache.slice(0, limit)
+    return filterNews(_cache).slice(0, limit)
   }
 
   // Em mock mode nao ha backend; nao tenta a Edge Function.
@@ -67,18 +93,19 @@ export async function fetchWC26News(limit = 10): Promise<FootballNewsItem[]> {
 
   try {
     const { data, error } = await supabase.functions.invoke('news-proxy', {
-      body: { limit },
+      body: { limit: Math.min(20, Math.max(limit * 2, 12)) },
     })
     if (error) {
       // Falha real do proxy: nao mascarar como sucesso. Reaproveita cache se houver.
       return cached
     }
     const news = ((data as { news?: FootballNewsItem[] } | null)?.news ?? []) as FootballNewsItem[]
-    if (news.length > 0) {
-      _cache = news
+    const clean = filterNews(news)
+    if (clean.length > 0) {
+      _cache = clean
       _fetchedAt = Date.now()
-      writeStoredNews(news)
-      return news.slice(0, limit)
+      writeStoredNews(clean)
+      return clean.slice(0, limit)
     }
     return cached
   } catch {
