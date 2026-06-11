@@ -290,7 +290,7 @@
   .dark .shadow-card,
   .dark .shadow-btn,
   .dark .shadow-btn-hover {
-    box-shadow: 3px 3px 0 rgb(0 0 0), 0 18px 42px rgb(0 0 0 / 0.28);
+    box-shadow: 3px 3px 0 rgb(0 0 0);
   }
 
   .dark img {

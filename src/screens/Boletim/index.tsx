@@ -89,7 +89,7 @@ export function BoletimCard({
         tabIndex={onOpen ? 0 : undefined}
         onClick={onOpen ? () => onOpen(b) : undefined}
         onKeyDown={onOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(b) } } : undefined}
-        className={`grid overflow-hidden border-2 border-line bg-inverse text-inverse-text shadow-card md:grid-cols-[minmax(220px,340px)_1fr] lg:grid-cols-[minmax(260px,380px)_1fr] ${onOpen ? 'cursor-pointer transition-colors hover:border-yellow' : ''}`}
+        className={`grid overflow-hidden border-2 border-line bg-inverse text-inverse-text shadow-card md:grid-cols-[minmax(220px,340px)_1fr] lg:grid-cols-[minmax(260px,380px)_1fr] ${onOpen ? 'cursor-pointer transition-colors hover:border-line-strong' : ''}`}
       >
         <div className="relative aspect-[4/5] min-h-[260px] bg-inverse-text/10 md:min-h-0">
           {b.imageUrl ? (
@@ -149,7 +149,7 @@ export function BoletimCard({
               )}
             </div>
 
-            <p className="font-sans text-[14px] leading-relaxed text-inverse-text/80 line-clamp-4">
+            <p className="whitespace-pre-wrap font-sans text-[14px] leading-relaxed text-inverse-text/80 line-clamp-4">
               {renderLinkedText(b.body, 'break-all text-yellow underline underline-offset-2 hover:text-inverse-text')}
             </p>
           </div>
@@ -219,7 +219,7 @@ export function BoletimCard({
           </div>
         )}
 
-        <p className={compactHome ? 'font-sans text-[13px] text-inverse-text/80 leading-relaxed line-clamp-3' : 'font-sans text-[14px] text-inverse-text/80 leading-relaxed'}>
+        <p className={compactHome ? 'whitespace-pre-wrap font-sans text-[13px] text-inverse-text/80 leading-relaxed line-clamp-3' : 'whitespace-pre-wrap font-sans text-[14px] text-inverse-text/80 leading-relaxed'}>
           {renderLinkedText(b.body, 'break-all text-yellow underline underline-offset-2 hover:text-inverse-text')}
         </p>
 
@@ -272,7 +272,7 @@ export function BoletimCard({
                   <SafeImage src={b.imageUrl} alt={b.title} fit={b.imageFitMode ?? 'contain'} className="absolute inset-0 h-full w-full" />
                 </div>
               )}
-              <p className="font-sans text-[13px] text-ink-2 leading-relaxed">
+              <p className="whitespace-pre-wrap font-sans text-[13px] text-ink-2 leading-relaxed">
                 {renderLinkedText(b.body, 'break-all text-green-deep underline underline-offset-2 hover:text-ink')}
               </p>
               {canEdit && (
