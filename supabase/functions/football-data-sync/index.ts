@@ -48,6 +48,8 @@ interface CurrentMatchRow {
   status?: string | null
   market_status?: string | null
   lock_reason?: string | null
+  home_score?: number | null
+  away_score?: number | null
 }
 
 function finishedScore(match: FootballDataMatch, side: 'home' | 'away') {
@@ -257,7 +259,7 @@ Deno.serve(async (req) => {
   for (const fdMatch of matches) {
     const { data: idRows, error: idFindError } = await supabase
       .from('matches')
-      .select('match_code,home_code,away_code,status,market_status,lock_reason')
+      .select('match_code,home_code,away_code,status,market_status,lock_reason,home_score,away_score')
       .eq('football_data_id', fdMatch.id)
       .limit(1)
 
@@ -268,7 +270,7 @@ Deno.serve(async (req) => {
     if (!current && fdMatch.homeTeam.tla && fdMatch.awayTeam.tla) {
       const { data: codeRows, error: codeFindError } = await supabase
         .from('matches')
-        .select('match_code,home_code,away_code,status,market_status,lock_reason')
+        .select('match_code,home_code,away_code,status,market_status,lock_reason,home_score,away_score')
         .eq('home_code', fdMatch.homeTeam.tla)
         .eq('away_code', fdMatch.awayTeam.tla)
         .eq('kickoff_utc', fdMatch.utcDate)
@@ -289,13 +291,23 @@ Deno.serve(async (req) => {
       current.lock_reason &&
       !String(current.lock_reason).startsWith('api_')
 
-    // Resultado ja apurado (admin OU sync) tem autoridade: a fonte NUNCA rebaixa
-    // um jogo finished/settled de volta para scheduled/live so porque o provedor
-    // ainda o reporta como TIMED. So sobrescreve se o provedor tambem disser
-    // FINISHED (ex.: para corrigir o placar final).
+    // Protecao de placar apurado. A football-data (free) costuma marcar o jogo
+    // como FINISHED mas com placar NULL — isso NAO pode apagar um placar real
+    // que ja temos (apurado por admin ou por uma fonte com placar).
+    // Regras de "congelar" (manter o que esta no banco):
+    //   1) lock manual de admin;
+    //   2) jogo ja finalizado/settled e o provedor NAO diz FINISHED (ex.: TIMED);
+    //   3) ja temos placar real e o provedor NAO traz placar (null) -> nunca apagar.
     const dbSettled = current.status === 'finished' || current.market_status === 'settled'
+    const dbHasScore = current.home_score != null && current.away_score != null
     const providerFinished = fdMatch.status === 'FINISHED'
-    const freeze = isManualLock || (dbSettled && !providerFinished)
+    const providerHomeScore = providerFinished ? finishedScore(fdMatch, 'home') : liveScore(fdMatch, 'home')
+    const providerAwayScore = providerFinished ? finishedScore(fdMatch, 'away') : liveScore(fdMatch, 'away')
+    const providerHasScore = providerHomeScore != null && providerAwayScore != null
+    const freeze =
+      isManualLock ||
+      (dbSettled && !providerFinished) ||
+      (dbHasScore && !providerHasScore)
 
     // M9 hardening: um lock MANUAL de admin (lock_reason != 'api_*') tem
     // autoridade final. A API nunca pode sobrescrever status/placar/mercado de
