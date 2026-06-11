@@ -904,7 +904,7 @@ function MessageBody({
   onImage: (url: string) => void
 }) {
   if (message.type === 'poll' && message.poll) {
-    return <PollCard poll={message.poll} userId={currentUserId} onVote={onVote} />
+    return <PollCard poll={message.poll} userId={currentUserId} profiles={profiles} onVote={onVote} />
   }
   if (message.type === 'gif' && isSafeHttpUrl(message.gifUrl)) {
     return <img src={message.gifUrl} alt="GIF" loading="lazy" className="max-h-72 w-full rounded-2xl object-contain" />
