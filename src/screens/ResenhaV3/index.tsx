@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { isSafeHttpUrl } from '@/lib/security'
 import type { ChatMessage, ChatPoll } from '@/types'
 import { Avatar } from '@/components/shared/Avatar'
+import { FloatingTooltip } from '@/components/shared/FloatingTooltip'
 import { PollModal } from '@/screens/ResenhaV2/components/PollModal'
 import { ProfileSheet } from '@/screens/ResenhaV2/components/ProfileSheet'
 import { ImageViewer } from '@/screens/ResenhaV2/components/ImageViewer'
@@ -719,7 +720,24 @@ function MessageRow({
   const [menuAnchor, setMenuAnchor] = useState<DOMRect | null>(null)
   const reactions = message.reactions ?? []
   const groupedReactions = QUICK_REACTIONS
-    .map(emoji => ({ emoji, count: reactions.filter(reaction => reaction.emoji === emoji).length, mine: reactions.some(reaction => reaction.userId === currentUserId && reaction.emoji === emoji) }))
+    .map(emoji => {
+      const who = reactions.filter(reaction => reaction.emoji === emoji)
+      return {
+        emoji,
+        count: who.length,
+        mine: who.some(reaction => reaction.userId === currentUserId),
+        reactors: who.map(reaction => {
+          const profile = profiles.find(p => p.id === reaction.userId)
+          return {
+            id: reaction.userId,
+            name: profile ? (`${profile.firstName} ${profile.lastName}`.trim() || profile.initials) : 'Participante',
+            initials: profile?.initials ?? '?',
+            color: profile?.color ?? '#777',
+            avatarUrl: profile?.avatarUrl,
+          }
+        }),
+      }
+    })
     .filter(reaction => reaction.count > 0)
 
   useEffect(() => {
@@ -843,9 +861,25 @@ function MessageRow({
         {groupedReactions.length > 0 && (
           <div className={cn('mt-1 flex flex-wrap gap-1', mine && 'justify-end')}>
             {groupedReactions.map(reaction => (
-              <button key={reaction.emoji} type="button" onClick={() => onReact(reaction.emoji)} className={cn('rounded-full border px-2 py-1 text-xs', reaction.mine ? 'border-green bg-green text-white' : 'border-hairline bg-card')}>
-                {reaction.emoji} <span className="font-mono text-[10px]">{reaction.count}</span>
-              </button>
+              <FloatingTooltip
+                key={reaction.emoji}
+                className="cursor-pointer"
+                label={
+                  <div className="space-y-1">
+                    <div className="text-[11px] opacity-60">{reaction.emoji} {reaction.count === 1 ? 'reagiu' : 'reagiram'}</div>
+                    {reaction.reactors.map(r => (
+                      <div key={r.id} className="flex items-center gap-2">
+                        <Avatar initials={r.initials} color={r.color} src={r.avatarUrl} size={18} />
+                        <span>{r.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                }
+              >
+                <span className={cn('inline-flex items-center rounded-full border px-2 py-1 text-xs', reaction.mine ? 'border-green bg-green text-white' : 'border-hairline bg-card')}>
+                  {reaction.emoji} <span className="ml-1 font-mono text-[10px]">{reaction.count}</span>
+                </span>
+              </FloatingTooltip>
             ))}
           </div>
         )}

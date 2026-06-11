@@ -168,7 +168,7 @@ async function fetchDirectory(): Promise<ChatProfile[]> {
     .from('public_profiles')
     .select('id,first_name,last_name,dept,initials,color,avatar_url')
     .order('first_name', { ascending: true })
-    .limit(120)
+    .limit(300)
 
   if (error) {
     console.error('[Chat] directory:', error.message)
