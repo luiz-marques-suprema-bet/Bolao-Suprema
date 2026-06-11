@@ -9,7 +9,7 @@ import { usePredictionStore } from '@/stores/prediction.store'
 import { useChatStore } from '@/stores/chat.store'
 import { useMatchStore } from '@/stores/match.store'
 import { useBoletimStore } from '@/stores/boletim.store'
-import { BoletimCard, CreateModal } from '@/screens/Boletim'
+import { BoletimCard, CreateModal, BoletimViewModal } from '@/screens/Boletim'
 import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
 import { fmtPts, cn, clamp } from '@/lib/utils'
@@ -816,6 +816,7 @@ function HomeBoletimSection({ compact = false, className }: { compact?: boolean;
   const canEdit = (user?.isAdmin || user?.isMarketing) ?? false
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Boletim | null>(null)
+  const [viewing, setViewing] = useState<Boletim | null>(null)
 
   useEffect(() => {
     init()
@@ -870,6 +871,7 @@ function HomeBoletimSection({ compact = false, className }: { compact?: boolean;
               onDelete={deleteBoletim}
               onEdit={setEditing}
               onTogglePin={togglePin}
+              onOpen={setViewing}
               featured
               compactHome
             />
@@ -892,6 +894,9 @@ function HomeBoletimSection({ compact = false, className }: { compact?: boolean;
       )}
 
       <AnimatePresence>
+        {viewing && (
+          <BoletimViewModal b={viewing} onClose={() => setViewing(null)} />
+        )}
         {creating && (
           <CreateModal
             onClose={() => setCreating(false)}

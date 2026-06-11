@@ -64,6 +64,7 @@ export function BoletimCard({
   onDelete,
   onEdit,
   onTogglePin,
+  onOpen,
   featured = false,
   compactHome = false,
 }: {
@@ -72,6 +73,7 @@ export function BoletimCard({
   onDelete: (id: string) => void
   onEdit: (b: Boletim) => void
   onTogglePin: (id: string) => void
+  onOpen?: (b: Boletim) => void
   featured?: boolean
   compactHome?: boolean
 }) {
@@ -82,7 +84,13 @@ export function BoletimCard({
 
   if (featured && compactHome) {
     return (
-      <div className="grid overflow-hidden border-2 border-line bg-inverse text-inverse-text shadow-card md:grid-cols-[minmax(220px,340px)_1fr] lg:grid-cols-[minmax(260px,380px)_1fr]">
+      <div
+        role={onOpen ? 'button' : undefined}
+        tabIndex={onOpen ? 0 : undefined}
+        onClick={onOpen ? () => onOpen(b) : undefined}
+        onKeyDown={onOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(b) } } : undefined}
+        className={`grid overflow-hidden border-2 border-line bg-inverse text-inverse-text shadow-card md:grid-cols-[minmax(220px,340px)_1fr] lg:grid-cols-[minmax(260px,380px)_1fr] ${onOpen ? 'cursor-pointer transition-colors hover:border-yellow' : ''}`}
+      >
         <div className="relative aspect-[4/5] min-h-[260px] bg-inverse-text/10 md:min-h-0">
           {b.imageUrl ? (
             <SafeImage src={b.imageUrl} alt={b.title} fit={b.imageFitMode ?? 'cover'} className="absolute inset-0 h-full w-full" />
@@ -118,7 +126,7 @@ export function BoletimCard({
                 )}
               </div>
               {canEdit && (
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1.5" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => onEdit(b)}
                     className="border border-inverse-text/30 px-2 py-1 font-mono text-[8px] text-inverse-text/60 transition-colors hover:border-inverse-text hover:text-inverse-text"
@@ -151,7 +159,7 @@ export function BoletimCard({
               {b.authorName} · {date}
             </p>
             <span className="font-mono text-[9px] font-bold tracking-eyebrow text-yellow">
-              LER BOLETIM
+              LER BOLETIM →
             </span>
           </div>
         </div>
@@ -531,6 +539,69 @@ export function CreateModal({
           >
             {saving ? (isEditing ? 'SALVANDO...' : 'PUBLICANDO...') : (isEditing ? 'SALVAR ALTERACOES' : 'PUBLICAR BOLETIM')}
           </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ─── View modal (post completo, estilo Instagram) ─────────────────────────────
+
+export function BoletimViewModal({ b, onClose }: { b: Boletim; onClose: () => void }) {
+  const date = new Date(b.createdAt).toLocaleDateString('pt-BR', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  }).toUpperCase()
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/75 px-0 md:px-4 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <motion.div
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+        className="w-full md:max-w-lg bg-paper-white border-2 border-line shadow-card max-h-[92dvh] overflow-y-auto"
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-hairline bg-inverse px-4 py-3 text-inverse-text">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className={`inline-block px-2 py-0.5 font-mono text-[9px] tracking-eyebrow ${labelColor(b.label)}`}>
+              {b.label}
+            </span>
+            {b.isPinned && (
+              <span className="inline-block bg-yellow px-2 py-0.5 font-mono text-[9px] tracking-eyebrow text-[#0D0D0D]">
+                FIXADO
+              </span>
+            )}
+          </div>
+          <button onClick={onClose} className="flex-shrink-0 font-mono text-[10px] text-inverse-text/60 transition-colors hover:text-inverse-text">
+            FECHAR ✕
+          </button>
+        </div>
+
+        {b.imageUrl && (
+          <div className="relative max-h-[60dvh] w-full bg-paper-deep">
+            <SafeImage src={b.imageUrl} alt={b.title} fit="contain" className="mx-auto block max-h-[60dvh] w-full" />
+          </div>
+        )}
+
+        <div className="p-5 md:p-6">
+          <div className="font-display text-3xl leading-tight text-ink md:text-4xl">
+            {b.title.toUpperCase()}
+          </div>
+          {b.subtitle && (
+            <div className="mt-1 font-serif-it text-lg text-green-deep">{b.subtitle}</div>
+          )}
+          <p className="mt-4 whitespace-pre-wrap font-sans text-[15px] leading-relaxed text-ink-2">
+            {renderLinkedText(b.body, 'break-all text-green-deep underline underline-offset-2 hover:text-ink')}
+          </p>
+          <p className="mt-6 border-t border-hairline pt-3 font-mono text-[10px] text-ink-4">
+            {b.authorName} · {date}
+          </p>
         </div>
       </motion.div>
     </motion.div>
