@@ -16,7 +16,7 @@ import { fmtPts, cn, clamp } from '@/lib/utils'
 import { fetchRanking, subscribeRankingUpdates } from '@/lib/ranking'
 import { fetchFeaturedVideos } from '@/lib/scorebat'
 import type { ScorebatVideo } from '@/lib/scorebat'
-import { formatMatchDate, formatMatchTime, getBettingDeadline } from '@/lib/matchTime'
+import { formatMatchDate, formatMatchTime } from '@/lib/matchTime'
 import { getEffectiveMarketStatus, isBetOpen } from '@/lib/markets'
 import { isPlaceholderMatch } from '@/lib/matchGuards'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
@@ -430,9 +430,51 @@ function WC26News({
 
 // ─── Rotating Hero ────────────────────────────────────────────────────────────
 
-const TOURNAMENT_START = getBettingDeadline(WC2026_MATCHES[0])
-function daysUntil(target: Date): number {
-  return Math.max(0, Math.ceil((target.getTime() - new Date().getTime()) / 86_400_000))
+function calendarDaysUntil(target: Date): number {
+  const start = new Date(); start.setHours(0, 0, 0, 0)
+  const end = new Date(target); end.setHours(0, 0, 0, 0)
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86_400_000))
+}
+
+function isSameLocalDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+interface HeroSchedule {
+  mode: 'pre' | 'live' | 'next' | 'over'
+  days: number
+  isToday: boolean
+  match: Match | null
+}
+
+// Estado do herói dirigido pelo status real das partidas: antes do torneio
+// conta os dias (HOJE / 1 DIA / N DIAS) até o 1º jogo; durante, mostra o jogo
+// ao vivo ou o próximo; no fim, encerrado.
+function heroSchedule(matches: Match[]): HeroSchedule {
+  const now = Date.now()
+  const known = matches.filter(m => !isPlaceholderMatch(m) && Boolean(m.kickoffUtc))
+  const sorted = [...known].sort((a, b) => new Date(a.kickoffUtc).getTime() - new Date(b.kickoffUtc).getTime())
+  if (sorted.length === 0) return { mode: 'pre', days: 0, isToday: false, match: null }
+
+  const firstKick = new Date(sorted[0].kickoffUtc).getTime()
+  if (now < firstKick) {
+    const target = new Date(sorted[0].kickoffUtc)
+    return { mode: 'pre', days: calendarDaysUntil(target), isToday: isSameLocalDay(new Date(), target), match: sorted[0] }
+  }
+
+  const live = sorted.find(m => m.status === 'live')
+  if (live) return { mode: 'live', days: 0, isToday: true, match: live }
+
+  const nextUp = sorted.find(m => m.status !== 'finished' && new Date(m.kickoffUtc).getTime() > now)
+  if (nextUp) {
+    const target = new Date(nextUp.kickoffUtc)
+    return { mode: 'next', days: calendarDaysUntil(target), isToday: isSameLocalDay(new Date(), target), match: nextUp }
+  }
+
+  if (sorted.every(m => m.status === 'finished')) {
+    return { mode: 'over', days: 0, isToday: false, match: sorted[sorted.length - 1] }
+  }
+  return { mode: 'next', days: 0, isToday: false, match: sorted[sorted.length - 1] }
 }
 
 function useRotatingHero() {
@@ -507,7 +549,91 @@ function HeroAccentBands({ theme }: { theme: typeof HERO_THEMES[number] }) {
   )
 }
 
-function RotatingHeroMobile({ days, onCta }: { days: number; onCta: () => void }) {
+function HeroMatchLine({ match, large = false, showScore = false }: { match: Match; large?: boolean; showScore?: boolean }) {
+  const codeCls = large ? 'text-2xl' : 'text-xl'
+  const flagSize = large ? 22 : 18
+  return (
+    <div className="flex items-center gap-1.5">
+      <Flag team={match.home} size={flagSize} />
+      <span className={`font-display leading-none text-ink ${codeCls}`}>{match.home.code}</span>
+      <span className="px-0.5 font-mono text-[10px] font-bold text-ink-3">
+        {showScore ? `${match.homeScore ?? 0}–${match.awayScore ?? 0}` : '×'}
+      </span>
+      <span className={`font-display leading-none text-ink ${codeCls}`}>{match.away.code}</span>
+      <Flag team={match.away} size={flagSize} />
+    </div>
+  )
+}
+
+function HeroInfo({ schedule, large = false }: { schedule: HeroSchedule; large?: boolean }) {
+  const m = schedule.match
+  const numCls = large ? 'text-[72px]' : 'text-[52px]'
+  const wordCls = large ? 'text-[40px]' : 'text-[30px]'
+
+  if (schedule.mode === 'live' && m) {
+    return (
+      <div>
+        <div className="mb-1 inline-flex items-center gap-1.5 font-mono text-[8px] font-bold tracking-eyebrow text-red">
+          <span className="h-1.5 w-1.5 rounded-full bg-red animate-pulse-live" /> AO VIVO
+        </div>
+        <HeroMatchLine match={m} large={large} showScore />
+        <div className="mt-0.5 font-mono text-[7px] text-ink-4">{m.stageLabel}</div>
+      </div>
+    )
+  }
+
+  if (schedule.mode === 'next' && m) {
+    return (
+      <div>
+        <div className="mb-1 font-mono text-[8px] font-bold tracking-eyebrow text-green-deep dark:text-yellow">
+          PRÓXIMO JOGO{schedule.isToday ? ' · HOJE' : ''}
+        </div>
+        <HeroMatchLine match={m} large={large} />
+        <div className="mt-1 font-mono text-[7px] text-ink-4">{formatMatchDate(m)} · {formatMatchTime(m)} · Brasília</div>
+      </div>
+    )
+  }
+
+  if (schedule.mode === 'over') {
+    return (
+      <div className="flex items-baseline gap-2">
+        <span className={`font-display ${wordCls} leading-none text-ink`}>FIM</span>
+        <span className="font-mono text-[8px] tracking-eyebrow text-ink-3">Copa encerrada · 🏆</span>
+      </div>
+    )
+  }
+
+  // Pré-torneio
+  if (schedule.isToday) {
+    return (
+      <div>
+        <div className="flex items-baseline gap-2">
+          <span className={`font-display ${wordCls} leading-none text-ink`}>HOJE!</span>
+          <span className="font-mono text-[8px] font-bold tracking-eyebrow text-green-deep dark:text-yellow">A BOLA ROLA HOJE</span>
+        </div>
+        {m && (
+          <div className="mt-1.5">
+            <HeroMatchLine match={m} large={large} />
+            <div className="mt-1 font-mono text-[7px] text-ink-4">{formatMatchTime(m)} · Horário de Brasília</div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-baseline gap-2">
+      <span className={`font-display ${numCls} leading-none text-ink`}>{schedule.days}</span>
+      <div>
+        <div className="font-mono text-[8px] tracking-eyebrow text-ink-3">{schedule.days === 1 ? 'DIA' : 'DIAS'}</div>
+        <div className="font-mono text-[8px] font-bold text-ink-2">para a bola rolar</div>
+        {m && <div className="font-mono text-[7px] text-ink-4">{formatMatchDate(m)} · {formatMatchTime(m)}</div>}
+      </div>
+    </div>
+  )
+}
+
+function RotatingHeroMobile({ schedule, onCta }: { schedule: HeroSchedule; onCta: () => void }) {
   const { idx, setIdx, theme } = useRotatingHero()
   const team = TEAMS[theme.code]
 
@@ -546,14 +672,7 @@ function RotatingHeroMobile({ days, onCta }: { days: number; onCta: () => void }
       {/* Countdown + CTA + dots */}
       <div className="relative z-10 px-5 pb-3">
         <div className="flex items-end justify-between">
-          <div className="flex items-baseline gap-2">
-            <span className="font-display text-[52px] leading-none text-ink">{days}</span>
-            <div>
-              <div className="font-mono text-[8px] tracking-eyebrow text-ink-3">DIAS</div>
-              <div className="font-mono text-[8px] font-bold text-green-deep dark:text-yellow">para a bola rolar</div>
-              <div className="font-mono text-[7px] text-ink-4">11 Jun · 16:00 · Brasília</div>
-            </div>
-          </div>
+          <HeroInfo schedule={schedule} />
           <div className="flex flex-col items-end gap-2 pb-0.5">
             <button onClick={onCta} className="btn-yellow text-[10px] px-3 py-1.5 active:scale-95 transition-transform">
               PALPITAR →
@@ -577,7 +696,7 @@ function RotatingHeroMobile({ days, onCta }: { days: number; onCta: () => void }
   )
 }
 
-function RotatingHeroDesktop({ days, onCta }: { days: number; onCta: () => void }) {
+function RotatingHeroDesktop({ schedule, onCta }: { schedule: HeroSchedule; onCta: () => void }) {
   const { idx, setIdx, theme } = useRotatingHero()
   const team = TEAMS[theme.code]
 
@@ -613,16 +732,7 @@ function RotatingHeroDesktop({ days, onCta }: { days: number; onCta: () => void 
 
       <div className="relative z-10 px-6 pb-4">
         <div className="flex items-end justify-between mb-3">
-          <div className="flex items-end gap-5">
-            <div className="flex items-baseline gap-2">
-              <span className="font-display text-[72px] leading-none text-ink">{days}</span>
-              <span className="font-mono text-[10px] tracking-eyebrow text-ink-3 pb-1.5">DIAS</span>
-            </div>
-            <div className="pb-1">
-              <div className="font-mono text-[10px] font-bold text-green-deep dark:text-yellow">para a bola rolar</div>
-              <div className="font-mono text-[9px] text-ink-4 mt-0.5">11 Jun · 16:00 · Horário de Brasília</div>
-            </div>
-          </div>
+          <HeroInfo schedule={schedule} large />
           <div className="flex flex-col items-end gap-2.5">
             <button onClick={onCta} className="btn-yellow active:scale-95 transition-transform">FAZER PALPITES AGORA →</button>
             <div className="flex items-center gap-1.5">
@@ -1100,12 +1210,12 @@ function HomeMobile() {
   const user = useAuthStore(s => s.user)
   const { predictions, championPick, vicePick, scorerPick } = usePredictionStore()
   const { ranking, upcoming } = useHomeData()
-  const days = daysUntil(TOURNAMENT_START)
   const [quickPickMatch, setQuickPickMatch] = useState<Match | null>(null)
 
   const totalMatches   = WC2026_MATCHES.length
   const liveMatches    = useMatchesWithStatus(WC2026_MATCHES)
   const phase          = activePhaseProgress(liveMatches, predictions)
+  const schedule       = heroSchedule(liveMatches)
   const apostasFeitas  = [championPick, vicePick, scorerPick].filter(Boolean).length
   const top3   = ranking.slice(0, 3)
   const myRank = ranking.find(r => r.isYou)
@@ -1114,7 +1224,7 @@ function HomeMobile() {
     <div className="min-h-dvh bg-paper pb-24">
 
       {/* Hero */}
-      <RotatingHeroMobile days={days} onCta={() => navigate('/prediction')} />
+      <RotatingHeroMobile schedule={schedule} onCta={() => navigate('/prediction')} />
 
       <div className="px-4 space-y-4 pt-4">
 
@@ -1269,12 +1379,12 @@ function HomeDesktop() {
   const user = useAuthStore(s => s.user)
   const { predictions, championPick, vicePick, scorerPick } = usePredictionStore()
   const { ranking, upcoming } = useHomeData()
-  const days = daysUntil(TOURNAMENT_START)
   const [quickPickMatch, setQuickPickMatch] = useState<Match | null>(null)
 
   const totalMatches  = WC2026_MATCHES.length
   const liveMatches   = useMatchesWithStatus(WC2026_MATCHES)
   const phase         = activePhaseProgress(liveMatches, predictions)
+  const schedule      = heroSchedule(liveMatches)
   const apostasFeitas = [championPick, vicePick, scorerPick].filter(Boolean).length
   const top5   = ranking.slice(0, 5)
   const myRank = ranking.find(r => r.isYou)
@@ -1287,7 +1397,7 @@ function HomeDesktop() {
         <div className="grid grid-cols-[1.5fr_1fr_0.9fr] gap-5">
 
           {/* Hero countdown */}
-          <RotatingHeroDesktop days={days} onCta={() => navigate('/prediction')} />
+          <RotatingHeroDesktop schedule={schedule} onCta={() => navigate('/prediction')} />
 
           {/* Progress card */}
           <div className="ui-card text-ink flex flex-col overflow-hidden">
