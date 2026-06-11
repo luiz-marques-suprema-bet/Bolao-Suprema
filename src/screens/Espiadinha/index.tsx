@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Flag } from '@/components/shared/Flag'
 import { Avatar } from '@/components/shared/Avatar'
 import { useAuthStore } from '@/stores/auth.store'
+import { useMatchStore } from '@/stores/match.store'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { WC2026_MATCHES } from '@/data/wc2026'
@@ -12,7 +13,6 @@ import { formatMatchDate, formatMatchTime } from '@/lib/matchTime'
 import { cn } from '@/lib/utils'
 import {
   buildEspiadinha,
-  buildDemoView,
   ESPIA_TIERS,
   type EspiaView,
   type EspiaMatch,
@@ -50,13 +50,19 @@ type PredRow = {
 
 function useEspiadinhaData(): { view: EspiaView; loading: boolean } {
   const matches = useMatchesWithStatus(WC2026_MATCHES)
+  const matchStoreLoaded = useMatchStore(s => s.isLoaded)
   const [predictions, setPredictions] = useState<EspiaPredRow[]>([])
   const [profiles, setProfiles] = useState<EspiaProfile[]>([])
-  const [loading, setLoading] = useState(true)
+  const [predLoading, setPredLoading] = useState(true)
+  const [loadedOnce, setLoadedOnce] = useState(false)
 
+  // Só consideramos jogos revelados depois que o status do banco carregou —
+  // evita revelar (e depois "desrevelar") partidas com dados estáticos parciais.
   const revealedCodes = useMemo(
-    () => matches.filter(m => !isPlaceholderMatch(m) && isMatchClosed(m)).map(m => m.id),
-    [matches],
+    () => matchStoreLoaded
+      ? matches.filter(m => !isPlaceholderMatch(m) && isMatchClosed(m)).map(m => m.id)
+      : [],
+    [matches, matchStoreLoaded],
   )
   const codesKey = useMemo(() => revealedCodes.slice().sort().join(','), [revealedCodes])
 
@@ -93,10 +99,10 @@ function useEspiadinhaData(): { view: EspiaView; loading: boolean } {
     void (async () => {
       if (isMockMode || revealedCodes.length === 0) {
         setPredictions([])
-        setLoading(false)
+        setPredLoading(false)
         return
       }
-      setLoading(true)
+      setPredLoading(true)
       const { data } = await supabase
         .from('predictions')
         .select('user_id, match_code, home_score, away_score, points_earned')
@@ -109,7 +115,7 @@ function useEspiadinhaData(): { view: EspiaView; loading: boolean } {
         awayScore: r.away_score,
         points: r.points_earned ?? null,
       })))
-      setLoading(false)
+      setPredLoading(false)
     })()
     return () => { active = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,12 +141,18 @@ function useEspiadinhaData(): { view: EspiaView; loading: boolean } {
     }
   }, [loadPredictions])
 
+  // Marca "já carregou ao menos uma vez" — daí o spinner inicial não volta a
+  // cada atualização em tempo real (a tela atualiza no lugar, sem piscar).
+  useEffect(() => {
+    if (matchStoreLoaded && !predLoading) setLoadedOnce(true)
+  }, [matchStoreLoaded, predLoading])
+
   const view = useMemo(
     () => buildEspiadinha(matches, predictions, profiles),
     [matches, predictions, profiles],
   )
 
-  return { view, loading }
+  return { view, loading: (!matchStoreLoaded || predLoading) && !loadedOnce }
 }
 
 // ─── peças visuais ──────────────────────────────────────────────────────────────
@@ -227,15 +239,13 @@ function MatchCard({ em, meId, query }: { em: EspiaMatch; meId?: string; query: 
       <div className="border-t border-hairline divide-y divide-hairline max-h-[420px] overflow-y-auto">
         {guesses.map(g => {
           const isMe = g.user.id === meId
-          const isDemo = g.user.id.startsWith('demo-')
           return (
             <div
               key={g.user.id}
-              onClick={() => { if (!isDemo) navigate(isMe ? '/profile' : `/u/${g.user.id}`) }}
+              onClick={() => navigate(isMe ? '/profile' : `/u/${g.user.id}`)}
               className={cn(
-                'flex items-center gap-2.5 px-4 py-2 transition-colors',
+                'flex items-center gap-2.5 px-4 py-2 transition-colors cursor-pointer hover:bg-surface-hover',
                 isMe && 'bg-yellow/15',
-                !isDemo && 'cursor-pointer hover:bg-surface-hover',
               )}
             >
               <Avatar initials={g.user.initials} color={g.user.color} src={g.user.avatarUrl} size={26} />
@@ -268,13 +278,11 @@ function MatchCard({ em, meId, query }: { em: EspiaMatch; meId?: string; query: 
 function StandingRow({ s, rank, meId }: { s: EspiaStanding; rank: number; meId?: string }) {
   const navigate = useNavigate()
   const isMe = s.user.id === meId
-  const isDemo = s.user.id.startsWith('demo-')
   return (
     <div
-      onClick={() => { if (!isDemo) navigate(s.user.id === meId ? '/profile' : `/u/${s.user.id}`) }}
+      onClick={() => navigate(isMe ? '/profile' : `/u/${s.user.id}`)}
       className={cn(
-        'flex items-center gap-2.5 px-3 py-2.5 border-b border-hairline transition-colors',
-        isDemo ? 'cursor-default' : 'cursor-pointer hover:bg-surface-hover',
+        'flex items-center gap-2.5 px-3 py-2.5 border-b border-hairline transition-colors cursor-pointer hover:bg-surface-hover',
         isMe && 'bg-yellow/15',
       )}
     >
@@ -320,17 +328,44 @@ function ClassesLegend() {
 
 // ─── tela ─────────────────────────────────────────────────────────────────────
 
+function EspiaHeader() {
+  return (
+    <div className="border-b border-hairline pb-5 mb-5">
+      <div className="font-mono text-[10px] tracking-eyebrow text-ink-3">SÓ JOGO QUE JÁ ROLOU · SEM COLA</div>
+      <div className="font-display text-6xl md:text-8xl leading-none text-ink">ESPIADINHA</div>
+      <div className="flex items-baseline gap-3">
+        <span className="font-serif-it text-3xl md:text-5xl text-green-deep leading-none">dos palpites,</span>
+        <span className="font-mono text-[10px] tracking-eyebrow text-ink-3 self-end mb-1">olho no alheio.</span>
+      </div>
+    </div>
+  )
+}
+
+function StandingsCard({ standings, meId }: { standings: EspiaStanding[]; meId?: string }) {
+  return (
+    <div className="ui-card overflow-hidden">
+      <div className="px-4 py-3 border-b border-hairline bg-ink text-paper">
+        <div className="font-mono text-[10px] tracking-eyebrow text-paper/50">RANKING DA ESPIADINHA</div>
+        <div className="font-display text-2xl leading-none">QUEM ESTÁ CRAVANDO</div>
+      </div>
+      {standings.length > 0 ? (
+        <div className="max-h-[60vh] overflow-y-auto">
+          {standings.map((s, i) => (
+            <StandingRow key={s.user.id} s={s} rank={i + 1} meId={meId} />
+          ))}
+        </div>
+      ) : (
+        <div className="px-4 py-6 text-center font-mono text-[10px] text-ink-3">
+          As classes aparecem quando os primeiros jogos forem apurados.
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function EspiadinhaScreen() {
   const me = useAuthStore(s => s.user)
-  const { view: real, loading } = useEspiadinhaData()
-  const demo = useMemo(() => buildDemoView(), [])
-
-  // Só sai da prévia quando há pelo menos um palpite real revelado — evita
-  // mostrar cartões vazios quando um jogo "abre" antes de ter palpites apurados.
-  const hasReal = real.matches.some(em => em.guesses.length > 0)
-  const [forcePreview, setForcePreview] = useState(false)
-  const preview = forcePreview || !hasReal
-  const view = preview ? demo : real
+  const { view, loading } = useEspiadinhaData()
 
   const [phase, setPhase] = useState<'all' | 'group' | 'ko'>('all')
   const [query, setQuery] = useState('')
@@ -344,130 +379,93 @@ export function EspiadinhaScreen() {
     return view.standings.filter(s => norm(s.user.name).includes(norm(query)))
   }, [view.standings, query])
 
+  const hasAny = view.matches.length > 0
+
   return (
     <div className="min-h-dvh bg-paper pb-24 lg:pb-10">
       <div className="app-shell py-7 lg:py-9">
-        {/* título */}
-        <div className="border-b border-hairline pb-5 mb-5">
-          <div className="font-mono text-[10px] tracking-eyebrow text-ink-3">SÓ JOGO QUE JÁ ROLOU · SEM COLA</div>
-          <div className="font-display text-6xl md:text-8xl leading-none text-ink">ESPIADINHA</div>
-          <div className="flex items-baseline gap-3">
-            <span className="font-serif-it text-3xl md:text-5xl text-green-deep leading-none">dos palpites,</span>
-            <span className="font-mono text-[10px] tracking-eyebrow text-ink-3 self-end mb-1">olho no alheio.</span>
-          </div>
-        </div>
+        <EspiaHeader />
 
-        {/* banner de prévia */}
-        {preview && (
-          <div className="mb-5 border border-ink bg-yellow/90 text-[#0D0D0D] px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
-            <div>
-              <div className="font-mono text-[10px] font-bold tracking-eyebrow">
-                {hasReal ? 'PRÉVIA — exemplo de como fica' : 'AINDA NÃO ROLOU NENHUM JOGO'}
-              </div>
-              <div className="font-mono text-[10px] mt-0.5 leading-snug">
-                {hasReal
-                  ? 'Você está vendo dados de exemplo. Toque em "ver dados reais" para voltar.'
-                  : 'Isto é um exemplo. Quando a bola rolar (1ª rodada hoje), os palpites reais aparecem aqui em tempo real.'}
-              </div>
+        {loading ? (
+          <div className="ui-card p-12 text-center">
+            <div className="font-mono text-[11px] tracking-eyebrow text-ink-3 animate-pulse">
+              CARREGANDO A ESPIADINHA…
             </div>
-            {hasReal && (
-              <button
-                type="button"
-                onClick={() => setForcePreview(false)}
-                className="font-mono text-[10px] font-bold tracking-eyebrow border border-ink px-3 py-1.5 hover:bg-ink hover:text-yellow transition-colors"
-              >
-                VER DADOS REAIS
-              </button>
-            )}
           </div>
-        )}
-
-        {/* controles */}
-        <div className="mb-5 flex flex-wrap items-center gap-3">
-          <div className="flex border border-line">
-            {([['all', 'TODAS'], ['group', 'GRUPOS'], ['ko', 'MATA-MATA']] as const).map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => setPhase(id)}
-                className={cn(
-                  'px-3 py-1.5 font-mono text-[10px] font-bold tracking-eyebrow uppercase transition-colors',
-                  phase === id ? 'bg-yellow text-[#0D0D0D]' : 'text-ink-3 hover:bg-surface-hover',
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 border border-line bg-card px-3 py-1.5 flex-1 min-w-[180px]">
-            <span className="font-mono text-[13px] text-ink-4">⌕</span>
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Buscar palpiteiro…"
-              className="flex-1 bg-transparent font-sans text-[13px] text-ink outline-none placeholder:text-ink-4"
-            />
-            {query && (
-              <button type="button" onClick={() => setQuery('')} className="font-mono text-[11px] text-ink-4 hover:text-ink">✕</button>
-            )}
-          </div>
-          {!preview && hasReal && (
-            <button
-              type="button"
-              onClick={() => setForcePreview(true)}
-              className="font-mono text-[10px] tracking-eyebrow text-ink-3 hover:text-ink underline decoration-dotted underline-offset-2"
-            >
-              ver exemplo
-            </button>
-          )}
-        </div>
-
-        {loading && !preview && (
-          <div className="mb-4 border border-hairline bg-card px-4 py-2 font-mono text-[10px] text-ink-3">
-            Atualizando palpites…
-          </div>
-        )}
-
-        {/* corpo */}
-        <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
-          {/* espiada por jogo */}
-          <div className="order-2 lg:order-1 space-y-4">
-            {filteredMatches.length > 0 ? (
-              filteredMatches.map(em => <MatchCard key={em.match.id} em={em} meId={me?.id} query={query} />)
-            ) : (
-              <div className="ui-card p-8 text-center">
-                <div className="font-display text-3xl text-ink-4 mb-2">—</div>
-                <p className="font-mono text-[11px] text-ink-3 max-w-[320px] mx-auto leading-relaxed">
-                  {query
-                    ? 'Nenhum palpiteiro encontrado nessa fase.'
-                    : 'Nenhum jogo revelado nessa fase ainda. Assim que um jogo começar, os palpites aparecem aqui.'}
+        ) : !hasAny ? (
+          <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+            <div className="order-2 lg:order-1">
+              <div className="ui-card p-10 text-center">
+                <div className="font-display text-5xl md:text-6xl text-ink-4 mb-3">EM BREVE</div>
+                <p className="font-mono text-[12px] text-ink-3 max-w-[380px] mx-auto leading-relaxed">
+                  Ainda não rolou nenhum jogo. Assim que a bola rolar, os palpites de quem já jogou
+                  aparecem aqui — em tempo real e sem cola.
                 </p>
               </div>
-            )}
+            </div>
+            <aside className="order-1 lg:order-2 space-y-4">
+              <StandingsCard standings={[]} meId={me?.id} />
+              <ClassesLegend />
+            </aside>
           </div>
-
-          {/* classes */}
-          <aside className="order-1 lg:order-2 space-y-4">
-            <div className="ui-card overflow-hidden">
-              <div className="px-4 py-3 border-b border-hairline bg-ink text-paper">
-                <div className="font-mono text-[10px] tracking-eyebrow text-paper/50">RANKING DA ESPIADINHA</div>
-                <div className="font-display text-2xl leading-none">QUEM ESTÁ CRAVANDO</div>
+        ) : (
+          <>
+            {/* controles */}
+            <div className="mb-5 flex flex-wrap items-center gap-3">
+              <div className="flex border border-line">
+                {([['all', 'TODAS'], ['group', 'GRUPOS'], ['ko', 'MATA-MATA']] as const).map(([id, label]) => (
+                  <button
+                    key={id}
+                    onClick={() => setPhase(id)}
+                    className={cn(
+                      'px-3 py-1.5 font-mono text-[10px] font-bold tracking-eyebrow uppercase transition-colors',
+                      phase === id ? 'bg-yellow text-[#0D0D0D]' : 'text-ink-3 hover:bg-surface-hover',
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
-              {standings.length > 0 ? (
-                <div className="max-h-[60vh] overflow-y-auto">
-                  {standings.map((s, i) => (
-                    <StandingRow key={s.user.id} s={s} rank={i + 1} meId={me?.id} />
-                  ))}
-                </div>
-              ) : (
-                <div className="px-4 py-6 text-center font-mono text-[10px] text-ink-3">
-                  As classes aparecem quando os primeiros jogos forem apurados.
-                </div>
-              )}
+              <div className="flex items-center gap-2 border border-line bg-card px-3 py-1.5 flex-1 min-w-[180px]">
+                <span className="font-mono text-[13px] text-ink-4">⌕</span>
+                <input
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder="Buscar palpiteiro…"
+                  className="flex-1 bg-transparent font-sans text-[13px] text-ink outline-none placeholder:text-ink-4"
+                />
+                {query && (
+                  <button type="button" onClick={() => setQuery('')} className="font-mono text-[11px] text-ink-4 hover:text-ink">✕</button>
+                )}
+              </div>
             </div>
 
-            <ClassesLegend />
-          </aside>
-        </div>
+            {/* corpo */}
+            <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+              {/* espiada por jogo */}
+              <div className="order-2 lg:order-1 space-y-4">
+                {filteredMatches.length > 0 ? (
+                  filteredMatches.map(em => <MatchCard key={em.match.id} em={em} meId={me?.id} query={query} />)
+                ) : (
+                  <div className="ui-card p-8 text-center">
+                    <div className="font-display text-3xl text-ink-4 mb-2">—</div>
+                    <p className="font-mono text-[11px] text-ink-3 max-w-[320px] mx-auto leading-relaxed">
+                      {query
+                        ? 'Nenhum palpiteiro encontrado nessa fase.'
+                        : 'Nenhum jogo revelado nessa fase ainda. Assim que um jogo começar, os palpites aparecem aqui.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* classes */}
+              <aside className="order-1 lg:order-2 space-y-4">
+                <StandingsCard standings={standings} meId={me?.id} />
+                <ClassesLegend />
+              </aside>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
