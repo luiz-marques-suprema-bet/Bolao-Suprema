@@ -17,10 +17,12 @@ import { fetchRanking, subscribeRankingUpdates } from '@/lib/ranking'
 import { fetchFeaturedVideos } from '@/lib/scorebat'
 import type { ScorebatVideo } from '@/lib/scorebat'
 import { formatMatchDate, formatMatchTime, getBettingDeadline } from '@/lib/matchTime'
-import { getEffectiveMarketStatus } from '@/lib/markets'
+import { getEffectiveMarketStatus, isBetOpen } from '@/lib/markets'
+import { isPlaceholderMatch } from '@/lib/matchGuards'
+import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { fetchWC26News, getCachedWC26News, isConfigured as newsConfigured } from '@/lib/footballnews'
 import type { FootballNewsItem } from '@/lib/footballnews'
-import type { RankingEntry, Match, Boletim } from '@/types'
+import type { RankingEntry, Match, Boletim, MatchStage } from '@/types'
 
 // ─── All 48 teams as hero themes ─────────────────────────────────────────────
 
@@ -657,6 +659,39 @@ function PredProgress({ done, total, label, color = 'bg-green' }: { done: number
   )
 }
 
+// ─── Fase ativa do torneio (progresso automático) ────────────────────────────
+// O card de progresso segue sozinho a fase atual: começa em FASE DE GRUPOS e,
+// conforme cada fase abre (mercado aberto / times definidos), avança até a FINAL.
+
+const PHASE_SEQUENCE: { stage: MatchStage; label: string }[] = [
+  { stage: 'group',         label: 'FASE DE GRUPOS' },
+  { stage: 'round_of_32',   label: 'FASE DE 32' },
+  { stage: 'round_of_16',   label: 'OITAVAS' },
+  { stage: 'quarter_final', label: 'QUARTAS' },
+  { stage: 'semi_final',    label: 'SEMIFINAIS' },
+  { stage: 'third_place',   label: 'DISPUTA DE 3º' },
+  { stage: 'final',         label: 'FINAL' },
+]
+
+function activePhaseProgress(matches: Match[], predictions: Record<string, unknown>) {
+  const phases = PHASE_SEQUENCE.map(p => {
+    const stageMatches = matches.filter(m => m.stage === p.stage)
+    const predictable = stageMatches.filter(m => !isPlaceholderMatch(m))
+    return {
+      label: p.label,
+      total: predictable.length,
+      done: predictable.filter(m => predictions[m.id] != null).length,
+      hasOpen: stageMatches.some(m => isBetOpen(m)),
+      hasPredictable: predictable.length > 0,
+    }
+  })
+  // Fase ativa = a mais avançada com aposta aberta; se nenhuma estiver aberta
+  // (entre fases ou torneio encerrado), a mais avançada já alcançada.
+  const reversed = [...phases].reverse()
+  const active = reversed.find(p => p.hasOpen) ?? reversed.find(p => p.hasPredictable) ?? phases[0]
+  return { label: active.label, done: active.done, total: active.total }
+}
+
 // ─── Groups grid ─────────────────────────────────────────────────────────────
 
 function GroupsGrid({ predictions }: { predictions: Record<string, unknown> }) {
@@ -1069,9 +1104,8 @@ function HomeMobile() {
   const [quickPickMatch, setQuickPickMatch] = useState<Match | null>(null)
 
   const totalMatches   = WC2026_MATCHES.length
-  const groupMatches   = WC2026_MATCHES.filter(m => m.stage === 'group')
-  const groupTotal     = groupMatches.length
-  const groupPreds     = groupMatches.filter(m => predictions[m.id]).length
+  const liveMatches    = useMatchesWithStatus(WC2026_MATCHES)
+  const phase          = activePhaseProgress(liveMatches, predictions)
   const apostasFeitas  = [championPick, vicePick, scorerPick].filter(Boolean).length
   const top3   = ranking.slice(0, 3)
   const myRank = ranking.find(r => r.isYou)
@@ -1091,15 +1125,15 @@ function HomeMobile() {
               OLÁ{user?.firstName ? `, ${user.firstName.toUpperCase()}` : ''}
             </div>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="font-display text-4xl leading-none">{groupPreds}</span>
-              <span className="font-mono text-[10px] text-ink-3">de {groupTotal} palpites feitos</span>
+              <span className="font-display text-4xl leading-none">{phase.done}</span>
+              <span className="font-mono text-[10px] text-ink-3">de {phase.total} palpites feitos</span>
             </div>
           </div>
           <div className="px-4 py-3 space-y-3">
-            <PredProgress done={groupPreds} total={groupTotal} label="FASE DE GRUPOS" color="bg-yellow" />
+            <PredProgress done={phase.done} total={phase.total} label={phase.label} color="bg-yellow" />
             <PredProgress done={apostasFeitas} total={3} label="APOSTAS ESPECIAIS" color="bg-green" />
             <button onClick={() => navigate('/prediction')} className="btn-yellow w-full justify-center text-[11px] mt-1">
-              {groupPreds === 0 ? 'COMEÇAR A PALPITAR →' : 'CONTINUAR PALPITANDO →'}
+              {phase.done === 0 ? 'COMEÇAR A PALPITAR →' : 'CONTINUAR PALPITANDO →'}
             </button>
           </div>
         </div>
@@ -1239,9 +1273,8 @@ function HomeDesktop() {
   const [quickPickMatch, setQuickPickMatch] = useState<Match | null>(null)
 
   const totalMatches  = WC2026_MATCHES.length
-  const groupMatches  = WC2026_MATCHES.filter(m => m.stage === 'group')
-  const groupTotal    = groupMatches.length
-  const groupPreds    = groupMatches.filter(m => predictions[m.id]).length
+  const liveMatches   = useMatchesWithStatus(WC2026_MATCHES)
+  const phase         = activePhaseProgress(liveMatches, predictions)
   const apostasFeitas = [championPick, vicePick, scorerPick].filter(Boolean).length
   const top5   = ranking.slice(0, 5)
   const myRank = ranking.find(r => r.isYou)
@@ -1262,17 +1295,17 @@ function HomeDesktop() {
               <div className="font-mono text-[9px] tracking-eyebrow text-ink-4 mb-1">
                 OLÁ{user?.firstName ? `, ${user.firstName.toUpperCase()}` : ''}
               </div>
-              <div className="font-display text-5xl leading-none">{groupPreds}</div>
-              <div className="font-mono text-[10px] text-ink-3 mt-1">de {groupTotal} palpites feitos</div>
+              <div className="font-display text-5xl leading-none">{phase.done}</div>
+              <div className="font-mono text-[10px] text-ink-3 mt-1">de {phase.total} palpites feitos</div>
             </div>
             <div className="px-6 py-4 space-y-4 flex-1">
               <div>
                 <div className="flex justify-between mb-1.5">
-                  <span className="font-mono text-[9px] text-ink-4 tracking-eyebrow">FASE DE GRUPOS</span>
-                  <span className="font-mono text-[9px] text-ink-3">{groupPreds}/{groupTotal}</span>
+                  <span className="font-mono text-[9px] text-ink-4 tracking-eyebrow">{phase.label}</span>
+                  <span className="font-mono text-[9px] text-ink-3">{phase.done}/{phase.total}</span>
                 </div>
                 <div className="h-1.5 bg-hairline overflow-hidden">
-                  <div className="h-full bg-yellow transition-all duration-700" style={{ width: `${groupTotal > 0 ? (groupPreds / groupTotal) * 100 : 0}%` }} />
+                  <div className="h-full bg-yellow transition-all duration-700" style={{ width: `${phase.total > 0 ? (phase.done / phase.total) * 100 : 0}%` }} />
                 </div>
               </div>
               <div>
@@ -1287,7 +1320,7 @@ function HomeDesktop() {
             </div>
             <div className="px-6 pb-6 space-y-2">
               <button onClick={() => navigate('/prediction')} className="btn-yellow w-full justify-center active:scale-95 transition-transform">
-                {groupPreds === 0 ? 'COMEÇAR →' : 'CONTINUAR →'}
+                {phase.done === 0 ? 'COMEÇAR →' : 'CONTINUAR →'}
               </button>
               {apostasFeitas < 3 && (
                 <button onClick={() => navigate('/prediction', { state: { tab: 'champion' } })}
