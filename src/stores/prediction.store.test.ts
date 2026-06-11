@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WC2026_MATCHES } from '@/data/wc2026'
 import { useMatchStore } from '@/stores/match.store'
 import { usePredictionStore } from './prediction.store'
@@ -13,9 +13,17 @@ vi.mock('@/lib/supabase', () => ({
 
 describe('prediction store flow safeguards', () => {
   beforeEach(() => {
+    // Congela o relogio antes do inicio da Copa para que os mercados dos jogos
+    // de exemplo estejam ABERTOS (kickoff no futuro), independente da data real.
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-01T00:00:00Z'))
     usePredictionStore.getState().resetLocalPredictionState()
     usePredictionStore.getState().setUserId(undefined)
     useMatchStore.getState().destroy()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('saves only submitted batch items and never creates implicit 0x0 predictions', async () => {
