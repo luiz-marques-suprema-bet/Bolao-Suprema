@@ -300,14 +300,9 @@ function StandingRow({ s, rank, meId }: { s: EspiaStanding; rank: number; meId?:
         <div className="font-mono text-[11px] font-bold text-ink truncate">{s.user.firstName}</div>
         <div className="mt-0.5"><TierBadge tier={s.tier} small /></div>
       </div>
-      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
         <span className="font-display text-base text-ink leading-none">{s.points} <span className="font-mono text-[8px] text-ink-4">pts</span></span>
-        <div className="flex items-center gap-1.5">
-          <div className="h-1 w-12 rounded-full bg-hairline overflow-hidden">
-            <div className={cn('h-full rounded-full', s.tier.barClass)} style={{ width: `${Math.round(s.accuracy * 100)}%` }} />
-          </div>
-          <span className="font-mono text-[8px] text-ink-4 w-7 text-right">{Math.round(s.accuracy * 100)}%</span>
-        </div>
+        <span className="font-mono text-[8px] text-ink-4">{s.exact} {s.exact === 1 ? 'cravada' : 'cravadas'}</span>
       </div>
     </div>
   )
@@ -322,13 +317,13 @@ function ClassesLegend() {
           <div key={tier.id} className="border-b border-hairline last:border-b-0 pb-2.5 last:pb-0">
             <TierBadge tier={tier} />
             <div className="font-mono text-[10px] text-ink-2 mt-1.5 leading-snug">
-              {tier.tagline} <span className="text-ink-4">· {Math.round(tier.min * 100)}%+</span>
+              {tier.tagline} <span className="text-ink-4">· {tier.rankHint}</span>
             </div>
           </div>
         ))}
       </div>
       <p className="font-mono text-[9px] text-ink-4 mt-3 leading-relaxed">
-        Acurácia = pontos que você fez ÷ pontos possíveis nos jogos já apurados.
+        A classe vem da sua posição no ranking — mais pontos, classe melhor.
       </p>
     </div>
   )

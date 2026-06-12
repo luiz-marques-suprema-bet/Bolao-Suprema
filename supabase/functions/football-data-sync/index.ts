@@ -97,13 +97,7 @@ interface CurrentRow {
   lock_reason?: string | null
   home_score?: number | null
   away_score?: number | null
-  stage?: string | null
-  kickoff_utc?: string | null
 }
-
-// Jogo de grupos (90 min, sem prorrogacao) acaba ~2h apos o inicio. Passado
-// isso, se a fonte ainda diz "ao vivo" mas temos placar, encerramos com ele.
-const GROUP_AUTOCLOSE_MIN = 125
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
@@ -164,7 +158,7 @@ Deno.serve(async (req) => {
       // Acha a nossa partida pelo par de selecoes (unico no Mundial).
       const { data: rows, error: findErr } = await supabase
         .from('matches')
-        .select('match_code,status,market_status,lock_reason,home_score,away_score,stage,kickoff_utc')
+        .select('match_code,status,market_status,lock_reason,home_score,away_score')
         .eq('home_code', homeCode)
         .eq('away_code', awayCode)
         .limit(1)
@@ -182,18 +176,8 @@ Deno.serve(async (req) => {
         !String(current.lock_reason).startsWith('api_')
       if (isManualLock) continue
 
-      // Auto-encerra jogos de GRUPOS cujo FT a fonte demora/trava: se esta "ao
-      // vivo" com placar e ja passou o tempo de um jogo (kickoff + 125 min),
-      // encerra com o placar atual. Mata-mata NAO entra (pode ter prorrogacao/
-      // penaltis). Se a fonte marcar FT diferente depois, o placar se corrige.
-      let effectivePhase = phase
-      if (phase === 'live' && current.stage === 'group' && current.kickoff_utc) {
-        const elapsedMin = (Date.now() - new Date(current.kickoff_utc).getTime()) / 60_000
-        if (elapsedMin >= GROUP_AUTOCLOSE_MIN) effectivePhase = 'finished'
-      }
-
       const winner = h > a ? homeCode : a > h ? awayCode : 'draw'
-      const patch = effectivePhase === 'finished'
+      const patch = phase === 'finished'
         ? { status: 'finished', market_status: 'settled', home_score: h, away_score: a, winner, live_minute: null, settled_at: new Date().toISOString() }
         : { status: 'live', market_status: 'closed', home_score: h, away_score: a, winner: null }
 

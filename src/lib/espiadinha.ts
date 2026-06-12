@@ -33,25 +33,32 @@ export interface EspiaTier {
   id: string
   label: string
   tagline: string
-  /** Acurácia mínima (0..1) para entrar nesta classe. */
-  min: number
+  /** Dica da faixa no ranking (mostrada na legenda). */
+  rankHint: string
   /** Classe Tailwind do selo. */
   badgeClass: string
-  /** Cor da barrinha de acurácia. */
+  /** Cor da barrinha. */
   barClass: string
 }
 
-// Ordem do melhor para o pior — `tierForAccuracy` pega o primeiro cujo min bate.
+// Ordem do melhor para o pior. A classe é atribuída por POSIÇÃO no ranking
+// (percentil) em buildEspiadinha — congruente com a lista ordenada por pontos
+// (topo = G.O.A.T), e ninguém vira G.O.A.T cravando 1 jogo só.
 export const ESPIA_TIERS: EspiaTier[] = [
-  { id: 'goat',      label: 'G.O.A.T',                  tagline: 'craque dos palpites',     min: 0.66, badgeClass: 'bg-yellow text-[#0D0D0D] border-transparent', barClass: 'bg-yellow' },
-  { id: 'genio',     label: 'Gênio',                    tagline: 'acima da média',          min: 0.45, badgeClass: 'bg-green/15 text-green-deep border-green/40',  barClass: 'bg-green' },
-  { id: 'medio',     label: 'Palpiteiro médio',         tagline: 'em cima do muro',         min: 0.27, badgeClass: 'bg-surface-2 text-ink-2 border-hairline',      barClass: 'bg-ink-3' },
-  { id: 'tentando',  label: 'Tá tentando',              tagline: 'ainda vai pegar o jeito', min: 0.12, badgeClass: 'bg-surface-2 text-ink-3 border-hairline',      barClass: 'bg-ink-4' },
-  { id: 'participar',label: 'O importante é participar', tagline: 'presença garantida',      min: 0,    badgeClass: 'bg-surface-2 text-ink-4 border-hairline border-dashed', barClass: 'bg-ink-4/60' },
+  { id: 'goat',      label: 'G.O.A.T',                  tagline: 'craque dos palpites',     rankHint: 'topo ~10%',      badgeClass: 'bg-yellow text-[#0D0D0D] border-transparent', barClass: 'bg-yellow' },
+  { id: 'genio',     label: 'Gênio',                    tagline: 'acima da média',          rankHint: 'topo ~30%',      badgeClass: 'bg-green/15 text-green-deep border-green/40',  barClass: 'bg-green' },
+  { id: 'medio',     label: 'Palpiteiro médio',         tagline: 'no meio da tabela',       rankHint: 'meio',           badgeClass: 'bg-surface-2 text-ink-2 border-hairline',      barClass: 'bg-ink-3' },
+  { id: 'tentando',  label: 'Tá tentando',              tagline: 'ainda vai pegar o jeito', rankHint: 'parte de baixo', badgeClass: 'bg-surface-2 text-ink-3 border-hairline',      barClass: 'bg-ink-4' },
+  { id: 'participar',label: 'O importante é participar', tagline: 'presença garantida',      rankHint: '~10% finais',    badgeClass: 'bg-surface-2 text-ink-4 border-hairline border-dashed', barClass: 'bg-ink-4/60' },
 ]
 
-export function tierForAccuracy(accuracy: number): EspiaTier {
-  return ESPIA_TIERS.find(t => accuracy >= t.min) ?? ESPIA_TIERS[ESPIA_TIERS.length - 1]
+// Classe pela fração de posição no ranking (0 = topo).
+function tierByRankFraction(fraction: number): EspiaTier {
+  if (fraction < 0.10) return ESPIA_TIERS[0] // goat
+  if (fraction < 0.30) return ESPIA_TIERS[1] // genio
+  if (fraction < 0.65) return ESPIA_TIERS[2] // medio
+  if (fraction < 0.90) return ESPIA_TIERS[3] // tentando
+  return ESPIA_TIERS[4]                       // participar
 }
 
 // ─── Acerto de um palpite ───────────────────────────────────────────────────────
@@ -188,22 +195,27 @@ export function buildEspiadinha(
     return { match, settled, guesses }
   })
 
-  const standings: EspiaStanding[] = Object.entries(acc)
+  // Leaderboard ordenado por pontos (depois cravadas, depois acurácia).
+  const ranked = Object.entries(acc)
     .map(([userId, b]) => {
       const user = profileById.get(userId)!
       const accuracy = b.max > 0 ? b.points / b.max : 0
-      return {
-        user,
-        points: b.points,
-        settledCount: b.settled,
-        accuracy,
-        exact: b.exact,
-        correct: b.correct,
-        tier: tierForAccuracy(accuracy),
-      }
+      return { user, points: b.points, settledCount: b.settled, accuracy, exact: b.exact, correct: b.correct }
     })
     .filter(s => s.user)
-    .sort((a, b) => b.points - a.points || b.accuracy - a.accuracy || b.exact - a.exact)
+    .sort((a, b) => b.points - a.points || b.exact - a.exact || b.accuracy - a.accuracy)
+
+  // Classe por POSIÇÃO no ranking (percentil). Mesma pontuação → mesma classe
+  // (o empate herda a classe do primeiro com aquela pontuação). Assim a lista
+  // (ordenada por pontos) fica congruente com os selos: topo = G.O.A.T.
+  const total = ranked.length
+  const standings: EspiaStanding[] = []
+  for (let i = 0; i < ranked.length; i++) {
+    const tier = (i > 0 && ranked[i].points === ranked[i - 1].points)
+      ? standings[i - 1].tier
+      : tierByRankFraction(total > 0 ? i / total : 0)
+    standings.push({ ...ranked[i], tier })
+  }
 
   return { matches: espiaMatches, standings }
 }

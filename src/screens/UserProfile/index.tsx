@@ -8,7 +8,7 @@ import { Stamp } from '@/components/shared/Stamp'
 import { useAuthStore } from '@/stores/auth.store'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { TEAMS } from '@/data/teams'
-import { cn } from '@/lib/utils'
+import { cn, fmtPts } from '@/lib/utils'
 import { normalizeParticipantStatus } from '@/lib/participantStatus'
 import type { AppUser } from '@/types'
 
@@ -42,6 +42,7 @@ export function UserProfileScreen() {
   const navigate = useNavigate()
   const me = useAuthStore(s => s.user)
   const [profile, setProfile] = useState<AppUser | null>(null)
+  const [stats, setStats] = useState<{ pts: number; correct: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [viewer, setViewer] = useState<string | null>(null)
 
@@ -66,6 +67,13 @@ export function UserProfileScreen() {
           setProfile(mapped)
         }
         setLoading(false)
+      })
+
+    // Pontos e acertos do palpiteiro (mesma fonte do ranking).
+    supabase.from('current_ranking').select('pts, correct').eq('user_id', userId).maybeSingle()
+      .then(({ data }) => {
+        if (data) setStats({ pts: data.pts ?? 0, correct: data.correct ?? 0 })
+        else setStats(null)
       })
   }, [userId, me, navigate])
 
@@ -158,11 +166,11 @@ export function UserProfileScreen() {
           (favTeam || profile.favoritePlayer) ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2'
         )}>
           <div className="ui-card p-3 text-center">
-            <div className="font-display text-3xl">—</div>
+            <div className="font-display text-3xl">{stats ? fmtPts(stats.pts) : '—'}</div>
             <div className="font-mono text-[9px] text-ink-4 tracking-eyebrow mt-0.5">PONTOS</div>
           </div>
           <div className="ui-card p-3 text-center">
-            <div className="font-display text-3xl">—</div>
+            <div className="font-display text-3xl">{stats ? stats.correct : '—'}</div>
             <div className="font-mono text-[9px] text-ink-4 tracking-eyebrow mt-0.5">ACERTOS</div>
           </div>
           {favTeam && (

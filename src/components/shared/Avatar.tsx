@@ -29,6 +29,8 @@ export function Avatar({ initials, color = '#0D0D0D', size = 36, className, src 
       <img
         src={optimizeUrl(src, size)}
         alt={initials}
+        loading="lazy"
+        decoding="async"
         className={cn('rounded-full object-cover flex-shrink-0 select-none', className)}
         style={{ width: size, height: size }}
         onError={e => {
