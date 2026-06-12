@@ -5,6 +5,7 @@ import { Flag } from '@/components/shared/Flag'
 import { Tooltip } from '@/components/shared/Tooltip'
 import { PlayerSearchPicker } from '@/components/shared/PlayerSearchPicker'
 import { usePredictionStore } from '@/stores/prediction.store'
+import { useBracketStore } from '@/stores/bracket.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { WC2026_MATCHES, WC2026_GROUP_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
@@ -19,6 +20,18 @@ import type { Match } from '@/types'
 type PredTab = 'groups' | 'knockout' | 'champion'
 
 const GROUP_LABELS = ['A','B','C','D','E','F','G','H','I','J','K','L'] as const
+
+// Converte o código do jogo de mata-mata no slot_id do bracket (espelha o
+// match_slot_id do banco), para casar o palpite de "quem avança" (bracket_picks).
+function matchCodeToSlotId(code: string): string | null {
+  if (/^ko-r32-\d+$/.test(code)) return code.replace('ko-r32-', 'r32_')
+  if (/^ko-r16-\d+$/.test(code)) return code.replace('ko-r16-', 'r16_')
+  if (/^ko-qf-\d+$/.test(code))  return code.replace('ko-qf-', 'qf_')
+  if (/^ko-sf-\d+$/.test(code))  return code.replace('ko-sf-', 'sf_')
+  if (code === 'ko-third-1')     return 'third_1'
+  if (code === 'ko-final-1')     return 'final_1'
+  return null
+}
 
 // ─── Standings engine ─────────────────────────────────────────────────────────
 
@@ -186,6 +199,12 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
   const existing = predictions[match.id]
   const draft = drafts[match.id]
 
+  // Mata-mata: palpite de "quem avança" (vale +2, inclui pênaltis) — bracket_picks.
+  const isKnockout = match.stage !== 'group'
+  const slotId = isKnockout ? matchCodeToSlotId(match.id) : null
+  const advancerPick = useBracketStore(s => (slotId ? s.picks[slotId] : undefined))
+  const setBracketPick = useBracketStore(s => s.setPick)
+
   const [editing, setEditing] = useState(false)
   const [home, setHome] = useState(draft?.home ?? existing?.homeScore ?? 0)
   const [away, setAway] = useState(draft?.away ?? existing?.awayScore ?? 0)
@@ -274,6 +293,33 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
           <ScoreInput value={away} onChange={updateAway} />
         </div>
       </div>
+
+      {isKnockout && !isPlaceholder && slotId && (
+        <div className="mt-5 pt-4 border-t border-hairline">
+          <p className="font-mono text-[10px] tracking-eyebrow text-ink text-center font-bold">QUEM AVANÇA?</p>
+          <p className="font-mono text-[9px] text-ink-2 text-center mb-3">vale +2 · inclui prorrogação e pênaltis</p>
+          <div className="flex gap-2 max-w-[360px] mx-auto">
+            {[match.home, match.away].map(team => {
+              const selected = advancerPick === team.code
+              return (
+                <button
+                  key={team.code}
+                  type="button"
+                  onClick={() => setBracketPick(slotId, team.code)}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 py-2.5 border-2 transition-colors',
+                    selected ? 'border-green bg-green/10 text-green' : 'border-hairline text-ink-2 hover:border-ink',
+                  )}
+                >
+                  <Flag team={team} size={20} />
+                  <span className="font-mono text-[11px] font-bold">{team.code}</span>
+                  {selected && <span className="font-mono text-[11px]">✓</span>}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {saveError && (
         <p className="font-mono text-[10px] text-red text-center mt-3 border border-red/30 bg-red/5 px-2 py-1.5">
