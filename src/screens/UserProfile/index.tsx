@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { TEAMS } from '@/data/teams'
 import { cn, fmtPts } from '@/lib/utils'
+import { optimizedImageUrl } from '@/lib/img'
 import { normalizeParticipantStatus } from '@/lib/participantStatus'
 import type { AppUser } from '@/types'
 
@@ -108,7 +109,7 @@ export function UserProfileScreen() {
             className="block w-full h-full cursor-zoom-in"
             aria-label="Ver banner"
           >
-            <img src={profile.bannerUrl} alt="" className="w-full h-full object-cover opacity-80" />
+            <img src={optimizedImageUrl(profile.bannerUrl, { w: 1000, fit: 'inside' })} alt="" className="w-full h-full object-cover opacity-80" />
           </button>
         ) : (
           <div
@@ -136,7 +137,7 @@ export function UserProfileScreen() {
                 className="block w-full h-full cursor-zoom-in"
                 aria-label="Ver foto"
               >
-                <img src={profile.avatarUrl} alt={profile.firstName} className="w-full h-full object-cover" />
+                <img src={optimizedImageUrl(profile.avatarUrl, { w: 96, h: 96 })} alt={profile.firstName} className="w-full h-full object-cover" />
               </button>
             ) : (
               <Avatar initials={profile.initials} color={profile.color} size={96} />

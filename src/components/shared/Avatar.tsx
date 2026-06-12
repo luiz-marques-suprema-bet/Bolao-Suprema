@@ -1,4 +1,6 @@
+import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { optimizedAvatarUrl } from '@/lib/img'
 
 interface AvatarProps {
   initials: string
@@ -8,37 +10,25 @@ interface AvatarProps {
   src?: string
 }
 
-function optimizeUrl(src: string, px: number): string {
-  try {
-    const url = new URL(src)
-    // Only transform Supabase storage URLs
-    if (!url.pathname.includes('/storage/v1/object/public/')) return src
-    const renderSize = Math.ceil(px * (window.devicePixelRatio || 2))
-    url.searchParams.set('width', String(renderSize))
-    url.searchParams.set('height', String(renderSize))
-    url.searchParams.set('resize', 'cover')
-    return url.toString()
-  } catch {
-    return src
-  }
-}
-
+// Foto via proxy de imagem (ver @/lib/img). Em caso de falha do proxy, cai para
+// a imagem original; se essa tambem falhar, mostramos as iniciais.
 export function Avatar({ initials, color = '#0D0D0D', size = 36, className, src }: AvatarProps) {
-  if (src) {
+  // 0 = proxy otimizado · 1 = original (fallback) · 2 = iniciais (falhou tudo)
+  const [stage, setStage] = useState<0 | 1 | 2>(0)
+  useEffect(() => { setStage(0) }, [src])
+
+  const optimized = useMemo(() => (src ? optimizedAvatarUrl(src, size) : ''), [src, size])
+
+  if (src && stage < 2) {
     return (
       <img
-        src={optimizeUrl(src, size)}
+        src={stage === 0 ? optimized : src}
         alt={initials}
         loading="lazy"
         decoding="async"
-        className={cn('rounded-full object-cover flex-shrink-0 select-none', className)}
+        className={cn('rounded-full object-cover flex-shrink-0 select-none bg-paper-deep', className)}
         style={{ width: size, height: size }}
-        onError={e => {
-          const el = e.currentTarget
-          el.style.display = 'none'
-          const parent = el.parentElement
-          if (parent) parent.dataset.fallback = 'true'
-        }}
+        onError={() => setStage(s => (s + 1) as 0 | 1 | 2)}
       />
     )
   }
@@ -47,7 +37,7 @@ export function Avatar({ initials, color = '#0D0D0D', size = 36, className, src 
     <div
       className={cn(
         'rounded-full flex items-center justify-center font-mono font-bold flex-shrink-0 select-none',
-        className
+        className,
       )}
       style={{
         width: size,

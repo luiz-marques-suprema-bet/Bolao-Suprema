@@ -47,6 +47,20 @@ export function NotificationsScreen() {
   }, [user?.id])
 
   useEffect(() => { load() }, [load])
+
+  // Realtime: avisos da organização e notificações chegam sem refresh.
+  useEffect(() => {
+    if (isMockMode) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const bump = () => { clearTimeout(timer); timer = setTimeout(() => load(), 300) }
+    const channel = supabase
+      .channel(`avisos-${Date.now()}-${Math.random().toString(16).slice(2)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'global_notices' }, bump)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, bump)
+      .subscribe()
+    return () => { clearTimeout(timer); void supabase.removeChannel(channel) }
+  }, [load])
+
   useEffect(() => {
     if (!loading) markGlobalNoticesSeen()
   }, [loading])

@@ -386,9 +386,15 @@ export function EspiadinhaScreen() {
   const hasAny = view.matches.length > 0
 
   return (
-    <div className="min-h-dvh bg-paper pb-24 lg:pb-10">
+    <div className="min-h-dvh bg-paper pb-24 lg:pb-10 overflow-x-hidden">
       <div className="app-shell py-7 lg:py-9">
         <EspiaHeader />
+
+        <div className="mb-5 -mt-2 border-l-2 border-yellow bg-yellow/5 px-3 py-1.5">
+          <span className="font-mono text-[9px] text-ink-3 leading-snug">
+            ⏱ Os pontos podem levar um tempo pra apurar depois que o jogo termina — a fonte de resultados nem sempre é instantânea.
+          </span>
+        </div>
 
         {loading ? (
           <div className="ui-card p-12 text-center">
@@ -398,7 +404,7 @@ export function EspiadinhaScreen() {
           </div>
         ) : !hasAny ? (
           <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
-            <div className="order-2 lg:order-1">
+            <div className="order-2 lg:order-1 min-w-0">
               <div className="ui-card p-10 text-center">
                 <div className="font-display text-5xl md:text-6xl text-ink-4 mb-3">EM BREVE</div>
                 <p className="font-mono text-[12px] text-ink-3 max-w-[380px] mx-auto leading-relaxed">
@@ -407,7 +413,7 @@ export function EspiadinhaScreen() {
                 </p>
               </div>
             </div>
-            <aside className="order-1 lg:order-2 space-y-4">
+            <aside className="order-1 lg:order-2 space-y-4 min-w-0">
               <StandingsCard standings={[]} meId={me?.id} />
               <ClassesLegend />
             </aside>
@@ -447,7 +453,7 @@ export function EspiadinhaScreen() {
             {/* corpo */}
             <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
               {/* espiada por jogo */}
-              <div className="order-2 lg:order-1 space-y-4">
+              <div className="order-2 lg:order-1 space-y-4 min-w-0">
                 {filteredMatches.length > 0 ? (
                   filteredMatches.map(em => <MatchCard key={em.match.id} em={em} meId={me?.id} query={query} />)
                 ) : (
@@ -463,7 +469,7 @@ export function EspiadinhaScreen() {
               </div>
 
               {/* classes */}
-              <aside className="order-1 lg:order-2 space-y-4">
+              <aside className="order-1 lg:order-2 space-y-4 min-w-0">
                 <StandingsCard standings={standings} meId={me?.id} />
                 <ClassesLegend />
               </aside>

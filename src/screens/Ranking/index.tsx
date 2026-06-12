@@ -15,7 +15,7 @@ const MOV_COLOR = (mov: string) =>
   mov.startsWith('+') ? 'text-green' : mov.startsWith('-') ? 'text-red' : 'text-ink-4'
 
 let rankingCache: RankingEntry[] = []
-const RANKING_TIMEOUT_MS = 4500
+const RANKING_TIMEOUT_MS = 8000
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -413,6 +413,9 @@ function RankingMobile() {
             <span className="font-serif-it text-3xl text-green-deep leading-none">geral,</span>
             <span className="font-mono text-[10px] tracking-eyebrow text-ink-3 self-end mb-1">do bolão.</span>
           </div>
+          <div className="mt-3 border-l-2 border-yellow bg-yellow/5 px-3 py-1.5">
+            <span className="font-mono text-[9px] text-ink-3 leading-snug">⏱ Os pontos podem levar um tempo pra apurar após o fim do jogo.</span>
+          </div>
         </div>
 
         {top3.length >= 3 ? (
@@ -523,6 +526,9 @@ function RankingDesktop() {
           <div className="flex items-baseline gap-3">
             <span className="font-serif-it text-3xl md:text-5xl text-green-deep leading-none">geral,</span>
             <span className="font-mono text-[10px] tracking-eyebrow text-ink-3 self-end mb-1">do bolão.</span>
+          </div>
+          <div className="mt-3 border-l-2 border-yellow bg-yellow/5 px-3 py-1.5 inline-block">
+            <span className="font-mono text-[9px] text-ink-3 leading-snug">⏱ Os pontos podem levar um tempo pra apurar após o fim do jogo.</span>
           </div>
         </div>
 
