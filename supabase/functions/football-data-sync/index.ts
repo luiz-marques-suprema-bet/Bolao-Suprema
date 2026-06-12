@@ -89,9 +89,6 @@ async function fetchEvents(path: string): Promise<TsdbEvent[]> {
   return (data.events ?? []).filter(e => e.idLeague === WC_LEAGUE_ID)
 }
 
-function isoDay(d: Date): string {
-  return d.toISOString().slice(0, 10)
-}
 
 interface CurrentRow {
   match_code: string
@@ -118,19 +115,24 @@ Deno.serve(async (req) => {
     const reconcile = url.searchParams.get('reconcile') === '1' // varre todos os jogos (rounds 1-3)
     const dateOverride = url.searchParams.get('date')
 
-    // Coleta eventos. Por padrao: hoje + ontem (UTC) — pega o que acabou agora.
-    // ?reconcile=1: rounds 1,2,3 (todos os jogos de grupos) p/ validar o mapeamento.
+    // Coleta eventos. Fonte confiavel = endpoints POR LIGA (id=4429):
+    //   eventspastleague  → ultimos resultados (FINISHED) p/ apurar;
+    //   eventsnextleague  → proximos + EM ANDAMENTO (ao vivo).
+    // O eventsday e' furado p/ varios jogos do Mundial (nao retorna o jogo
+    // mesmo na data certa), por isso NAO usamos mais ele no fluxo automatico.
+    // ?reconcile=1: rounds 1,2,3 (todos os jogos de grupos) p/ validar mapeamento.
     let events: TsdbEvent[] = []
     if (reconcile) {
       for (const r of [1, 2, 3]) events.push(...await fetchEvents(`eventsround.php?id=${WC_LEAGUE_ID}&r=${r}&s=2026`))
     } else if (dateOverride) {
       events = await fetchEvents(`eventsday.php?d=${dateOverride}&s=Soccer`)
     } else {
-      const now = new Date()
-      const yest = new Date(now.getTime() - 86_400_000)
-      for (const d of [isoDay(now), isoDay(yest)]) {
-        events.push(...await fetchEvents(`eventsday.php?d=${d}&s=Soccer`))
-      }
+      const past = await fetchEvents(`eventspastleague.php?id=${WC_LEAGUE_ID}`)
+      const next = await fetchEvents(`eventsnextleague.php?id=${WC_LEAGUE_ID}`)
+      // Dedupe por idEvent; resultado (past/FT) tem prioridade sobre o ao vivo.
+      const byId = new Map<string, TsdbEvent>()
+      for (const e of [...next, ...past]) byId.set(e.idEvent, e)
+      events = [...byId.values()]
     }
 
     const unmatchedNames: string[] = []
