@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { createHashRouter, RouterProvider, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ThemeProvider } from '@/context/ThemeContext'
@@ -10,21 +10,33 @@ import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { MobileNav } from '@/components/navigation/MobileNav'
 import { DesktopNav } from '@/components/navigation/DesktopNav'
 import { Marquee } from '@/components/shared/Marquee'
+// Entry screens — eager (carregam de cara).
 import { OnboardingScreen } from '@/screens/Onboarding'
 import { LoginScreen } from '@/screens/Login'
 import { RegisterScreen } from '@/screens/Register'
-import { ProfileScreen } from '@/screens/Profile'
-import { SetupScreen } from '@/screens/Setup'
-import { HomeScreen } from '@/screens/Home'
-import { PredictionScreen } from '@/screens/Prediction'
-import { RankingScreen } from '@/screens/Ranking'
-import { EspiadinhaScreen } from '@/screens/Espiadinha'
-import { ResenhaScreen } from '@/screens/Resenha'
-import { AdminScreen } from '@/screens/Admin'
-import { UserProfileScreen } from '@/screens/UserProfile'
-import { RegulamentoScreen } from '@/screens/Regulamento'
-import { MyPredictionsScreen } from '@/screens/MyPredictions'
-import { NotificationsScreen } from '@/screens/Notifications'
+
+// Demais telas — code-splitting por rota (cada uma vira um chunk próprio,
+// carregado só quando acessada → bundle inicial bem menor no 1º load).
+const ProfileScreen        = lazy(() => import('@/screens/Profile').then(m => ({ default: m.ProfileScreen })))
+const SetupScreen          = lazy(() => import('@/screens/Setup').then(m => ({ default: m.SetupScreen })))
+const HomeScreen           = lazy(() => import('@/screens/Home').then(m => ({ default: m.HomeScreen })))
+const PredictionScreen     = lazy(() => import('@/screens/Prediction').then(m => ({ default: m.PredictionScreen })))
+const RankingScreen        = lazy(() => import('@/screens/Ranking').then(m => ({ default: m.RankingScreen })))
+const EspiadinhaScreen     = lazy(() => import('@/screens/Espiadinha').then(m => ({ default: m.EspiadinhaScreen })))
+const ResenhaScreen        = lazy(() => import('@/screens/Resenha').then(m => ({ default: m.ResenhaScreen })))
+const AdminScreen          = lazy(() => import('@/screens/Admin').then(m => ({ default: m.AdminScreen })))
+const UserProfileScreen    = lazy(() => import('@/screens/UserProfile').then(m => ({ default: m.UserProfileScreen })))
+const RegulamentoScreen    = lazy(() => import('@/screens/Regulamento').then(m => ({ default: m.RegulamentoScreen })))
+const MyPredictionsScreen  = lazy(() => import('@/screens/MyPredictions').then(m => ({ default: m.MyPredictionsScreen })))
+const NotificationsScreen  = lazy(() => import('@/screens/Notifications').then(m => ({ default: m.NotificationsScreen })))
+
+function ScreenLoading() {
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-paper">
+      <span className="font-mono text-[11px] tracking-eyebrow text-ink-3 animate-pulse">CARREGANDO…</span>
+    </div>
+  )
+}
 
 // ─── Root redirect — onboarding for first visit ───────────────────────────────
 
@@ -158,7 +170,9 @@ function AnimatedOutlet() {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.12 }}
       >
-        <Outlet />
+        <Suspense fallback={<ScreenLoading />}>
+          <Outlet />
+        </Suspense>
       </motion.div>
     </AnimatePresence>
   )
@@ -176,8 +190,8 @@ const router = createHashRouter([
   {
     element: <RequireAuth />,
     children: [
-      { path: '/setup', element: <SetupScreen /> },
-      { path: '/profile', element: <ProfileScreen /> },
+      { path: '/setup', element: <Suspense fallback={<ScreenLoading />}><SetupScreen /></Suspense> },
+      { path: '/profile', element: <Suspense fallback={<ScreenLoading />}><ProfileScreen /></Suspense> },
       {
         element: <AppLayout />,
         children: [
