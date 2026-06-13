@@ -1012,7 +1012,7 @@ const KO_STAGE_ORDER = ['round_of_32', 'round_of_16', 'quarter_final', 'semi_fin
 const KO_POINTS_GUIDE = [
   { pts: '+2',  label: 'Classificado acertado (incl. prorrogação/pênaltis)' },
   { pts: '+5',  label: 'Resultado correto (vitória/derrota no regulamentar)' },
-  { pts: '+8',  label: 'Resultado + gols de um time' },
+  { pts: '+8',  label: 'Resultado + gols do vencedor' },
   { pts: '+12', label: 'Placar exato (tempo regulamentar)' },
 ]
 

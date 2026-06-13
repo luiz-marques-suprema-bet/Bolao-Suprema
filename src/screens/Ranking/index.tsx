@@ -240,7 +240,7 @@ const SCORING_SECTIONS = [
     label: 'MATA-MATA',
     rules: [
       { pts: 12, label: 'Placar exato (tempo regulamentar)', tip: 'Placar perfeito nos 90 minutos. Prorrogação e pênaltis não contam para este critério.' },
-      { pts: 8,  label: 'Resultado + gols de um time',       tip: 'Acertou o resultado E os gols de ao menos um time no tempo regulamentar.' },
+      { pts: 8,  label: 'Resultado + gols do vencedor',       tip: 'Acertou o resultado E os gols do time vencedor, no tempo regulamentar.' },
       { pts: 5,  label: 'Resultado correto',                  tip: 'Acertou quem venceu no tempo regulamentar (sem contar prorr./pênaltis).' },
       { pts: 2,  label: 'Classificado (incl. prorr./pênaltis)', tip: 'Acertou quem avança de fase — vale o resultado final, incluindo prorrogação e pênaltis.' },
     ],

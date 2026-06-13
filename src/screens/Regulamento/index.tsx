@@ -11,7 +11,7 @@ const GROUP_RULES = [
 
 const KO_RULES = [
   { pts: 12, label: 'Placar exato (tempo regulamentar)', detail: 'apenas 90 min',                     accent: 'bg-green' },
-  { pts: 8,  label: 'Resultado + gols de um time',       detail: 'no tempo regulamentar',              accent: 'bg-yellow' },
+  { pts: 8,  label: 'Resultado + gols do vencedor',      detail: 'no tempo regulamentar',              accent: 'bg-yellow' },
   { pts: 5,  label: 'Resultado correto',                  detail: 'vencedor no regulamentar',           accent: 'bg-yellow/60' },
   { pts: 2,  label: 'Classificado acertado',              detail: 'incluindo prorrogação e pênaltis',   accent: 'bg-paper-deep' },
 ]

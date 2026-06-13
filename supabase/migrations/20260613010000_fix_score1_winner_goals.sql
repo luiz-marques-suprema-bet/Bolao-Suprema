@@ -116,3 +116,8 @@ where m.match_code = p.match_code
 
 -- ── Reconstroi breakdowns + snapshot do ranking com os novos pontos ──────────
 select public.refresh_ranking_snapshots();
+
+-- ── Rotulos internos coerentes com a regra (nao sao exibidos hoje, mas evitam
+--    ambiguidade em admin/auditoria) ──────────────────────────────────────────
+update public.scoring_rules set label = 'Resultado + gols do vencedor'            where id = 'group_score1';
+update public.scoring_rules set label = 'Resultado + gols do vencedor (mata-mata)' where id = 'ko_score1';
