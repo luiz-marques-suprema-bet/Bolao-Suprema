@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Avatar } from '@/components/shared/Avatar'
 import { FloatingTooltip } from '@/components/shared/FloatingTooltip'
@@ -180,113 +179,24 @@ function RankingRow({ r, large = false }: { r: RankingEntry; large?: boolean }) 
   )
 }
 
-// ─── Busca de palpiteiro ─────────────────────────────────────────────────────
+// ─── Busca de palpiteiro (filtro em tempo real na própria lista) ───────────────
 
-interface ParticipantHit {
-  id: string
-  name: string
-  dept: string
-  initials: string
-  color: string
-  avatarUrl?: string
-}
+const norm = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 
-type ProfileRow = {
-  id: string
-  first_name: string | null
-  last_name: string | null
-  dept: string | null
-  initials: string | null
-  color: string | null
-  avatar_url: string | null
-  participant_status: string | null
-  privacy_hide_profile: boolean | null
-}
-
-function ParticipantSearch() {
-  const navigate = useNavigate()
-  const me = useAuthStore(s => s.user)
-  const [query, setQuery]     = useState('')
-  const [results, setResults] = useState<ParticipantHit[]>([])
-  const [loading, setLoading] = useState(false)
-  const [open, setOpen]       = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-  const search = (raw: string) => {
-    clearTimeout(timer.current)
-    const term = raw.replace(/[,%()*\\]/g, '').trim()
-    if (term.length < 2 || isMockMode) { setResults([]); setOpen(false); return }
-    timer.current = setTimeout(async () => {
-      setLoading(true)
-      const { data } = await supabase
-        .from('public_profiles')
-        .select('id, first_name, last_name, dept, initials, color, avatar_url, participant_status, privacy_hide_profile')
-        .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`)
-        .neq('participant_status', 'removed')
-        .limit(8)
-      const hits = ((data ?? []) as ProfileRow[])
-        .filter(r => me?.isAdmin || !r.privacy_hide_profile || r.id === me?.id)
-        .map(r => ({
-          id: r.id,
-          name: `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim() || 'Sem nome',
-          dept: r.dept ?? '',
-          initials: r.initials ?? '',
-          color: r.color ?? '#00A651',
-          avatarUrl: r.avatar_url ?? undefined,
-        }))
-      setResults(hits)
-      setLoading(false)
-      setOpen(true)
-    }, 350)
-  }
-
-  const goTo = (id: string) => {
-    setOpen(false)
-    setQuery('')
-    setResults([])
-    navigate(id === me?.id ? '/profile' : `/u/${id}`)
-  }
-
+function InlineSearch({ query, setQuery }: { query: string; setQuery: (v: string) => void }) {
   return (
-    <div className="relative">
-      <div className="flex items-center gap-2 border border-line bg-card px-3 py-2">
-        <span className="font-mono text-[13px] text-ink-4">⌕</span>
-        <input
-          value={query}
-          onChange={e => { setQuery(e.target.value); search(e.target.value) }}
-          onFocus={() => { if (results.length) setOpen(true) }}
-          onBlur={() => setTimeout(() => setOpen(false), 200)}
-          placeholder="Buscar palpiteiro…"
-          className="flex-1 bg-transparent font-sans text-[13px] text-ink outline-none placeholder:text-ink-4"
-        />
-        {loading && <span className="font-mono text-[9px] text-ink-3 animate-pulse">…</span>}
-        {query && !loading && (
-          <button type="button" onClick={() => { setQuery(''); setResults([]); setOpen(false) }}
-            className="font-mono text-[11px] text-ink-4 hover:text-ink">✕</button>
-        )}
-      </div>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.12 }}
-            className="absolute z-50 left-0 right-0 mt-1 bg-paper border border-line shadow-card overflow-hidden max-h-72 overflow-y-auto"
-          >
-            {results.length > 0 ? results.map(r => (
-              <button key={r.id} type="button" onMouseDown={() => goTo(r.id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors text-left border-b border-hairline last:border-b-0">
-                <Avatar initials={r.initials} color={r.color} src={r.avatarUrl} size={30} />
-                <div className="min-w-0">
-                  <div className="font-mono text-[12px] font-bold truncate">{r.name}</div>
-                  <div className="font-mono text-[10px] text-ink-3 truncate">{r.dept}</div>
-                </div>
-              </button>
-            )) : (
-              <div className="px-3 py-3 font-mono text-[10px] text-ink-3">Nenhum palpiteiro encontrado.</div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className="flex items-center gap-2 border border-line bg-card px-3 py-2">
+      <span className="font-mono text-[13px] text-ink-4">⌕</span>
+      <input
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Buscar palpiteiro…"
+        className="flex-1 bg-transparent font-sans text-[13px] text-ink outline-none placeholder:text-ink-4"
+      />
+      {query && (
+        <button type="button" onClick={() => setQuery('')}
+          className="font-mono text-[11px] text-ink-4 hover:text-ink">✕</button>
+      )}
     </div>
   )
 }
@@ -402,8 +312,12 @@ function BreakdownBox({ items }: { items: RankingBreakdown[] }) {
 function RankingMobile() {
   const [tab, setTab] = useState<'geral' | 'semana'>('geral')
   const { ranking: fullRanking, loading, error } = useRanking()
+  const [query, setQuery] = useState('')
   const myEntry = fullRanking.find(r => r.isYou)
-  const ranking = fullRanking
+  const visible = useMemo(
+    () => query ? fullRanking.filter(r => norm(r.name).includes(norm(query))) : fullRanking,
+    [fullRanking, query],
+  )
 
   const top3 = fullRanking.slice(0, 3)
 
@@ -475,7 +389,7 @@ function RankingMobile() {
       </div>
 
       <div className="px-4 pt-3">
-        <ParticipantSearch />
+        <InlineSearch query={query} setQuery={setQuery} />
       </div>
 
       {(loading || error) && (
@@ -484,7 +398,7 @@ function RankingMobile() {
         </div>
       )}
 
-      {tab === 'geral' && ranking.length === 0 && (
+      {tab === 'geral' && fullRanking.length === 0 && (
         <div className="mx-4 mt-4">
           <ScoringRulesBox rules={[]} />
         </div>
@@ -494,13 +408,19 @@ function RankingMobile() {
         <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
           <p className="font-mono text-[11px] text-ink-3">Ranking semanal disponível após o início dos jogos.</p>
         </div>
-      ) : ranking.length > 0 ? (
+      ) : fullRanking.length === 0 ? (
+        loading ? null : (
+          <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
+            <p className="font-mono text-[11px] text-ink-3">Nenhum palpite pontuado ainda.</p>
+          </div>
+        )
+      ) : visible.length > 0 ? (
         <div className="divide-y divide-hairline">
-          {ranking.map(r => <RankingRow key={r.userId} r={r} />)}
+          {visible.map(r => <RankingRow key={r.userId} r={r} />)}
         </div>
-      ) : loading ? null : (
+      ) : (
         <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
-          <p className="font-mono text-[11px] text-ink-3">Nenhum palpite pontuado ainda.</p>
+          <p className="font-mono text-[11px] text-ink-3">Nenhum palpiteiro encontrado para "{query}".</p>
         </div>
       )}
     </div>
@@ -513,8 +433,13 @@ function RankingDesktop() {
   const navigate = useNavigate()
   const meUser = useAuthStore(s => s.user)
   const { ranking, loading, error } = useRanking()
+  const [query, setQuery] = useState('')
   const rules = useScoring()
   const top3 = ranking.slice(0, 3)
+  const visible = useMemo(
+    () => query ? ranking.filter(r => norm(r.name).includes(norm(query))) : ranking,
+    [ranking, query],
+  )
   const me = ranking.find(r => r.isYou) ?? (meUser ? {
     userId: meUser.id, name: `${meUser.firstName} ${meUser.lastName}`, dept: meUser.dept,
     initials: meUser.initials, color: meUser.color, pts: 0, correct: 0, exact: 0, streak: 0, mov: '—' as Mov, rank: 0, isYou: true
@@ -578,7 +503,7 @@ function RankingDesktop() {
 
             {/* Full table */}
             <div className="mb-3">
-              <ParticipantSearch />
+              <InlineSearch query={query} setQuery={setQuery} />
             </div>
             <div className="ui-panel">
               <div className="grid grid-cols-[40px_1fr_100px_48px_48px_48px_80px] gap-2 px-5 py-2 border-b border-hairline font-mono text-[9px] tracking-eyebrow text-ink-4">
@@ -588,7 +513,7 @@ function RankingDesktop() {
                 <span className="text-center">STK</span>
                 <span className="text-right">PTS</span>
               </div>
-              {ranking.length > 0 ? ranking.map(r => (
+              {ranking.length > 0 ? (visible.length > 0 ? visible.map(r => (
                 <div key={r.userId} onClick={() => navigate(`/u/${r.userId}`)} className={cn(
                   'grid grid-cols-[40px_1fr_100px_48px_48px_48px_80px] gap-2 items-center px-5 py-2.5 border-b border-hairline cursor-pointer transition-colors',
                   r.isYou ? 'bg-yellow text-[#0D0D0D] hover:bg-yellow/90' : 'hover:bg-surface-hover'
@@ -606,6 +531,10 @@ function RankingDesktop() {
                   <span className="font-mono text-[12px] text-center text-green font-bold">{r.exact}</span>
                   <span className="font-mono text-[12px] text-center">{r.streak}</span>
                   <span className="font-display text-xl text-right">{fmtPts(r.pts)}</span>
+                </div>
+              )) : (
+                <div className="px-5 py-8 text-center">
+                  <p className="font-mono text-[11px] text-ink-3">Nenhum palpiteiro encontrado para "{query}".</p>
                 </div>
               )) : loading ? null : (
                 <div className="px-5 py-8 text-center">

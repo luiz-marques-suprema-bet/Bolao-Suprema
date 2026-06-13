@@ -7,6 +7,7 @@ import { useMatchStore } from '@/stores/match.store'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { useTabResync } from '@/hooks/useTabResync'
 import { supabase, isMockMode } from '@/lib/supabase'
+import { fetchRanking, subscribeRankingUpdates } from '@/lib/ranking'
 import { WC2026_MATCHES } from '@/data/wc2026'
 import { isMatchClosed } from '@/lib/markets'
 import { isPlaceholderMatch } from '@/lib/matchGuards'
@@ -22,6 +23,7 @@ import {
   type EspiaProfile,
   type EspiaPredRow,
 } from '@/lib/espiadinha'
+import type { RankingEntry } from '@/types'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -62,12 +64,30 @@ type PredRow = {
 // ─── data hook (real, em tempo real) ────────────────────────────────────────────
 
 function useEspiadinhaData(): { view: EspiaView; loading: boolean } {
+  const me = useAuthStore(s => s.user)
   const matches = useMatchesWithStatus(WC2026_MATCHES)
   const matchStoreLoaded = useMatchStore(s => s.isLoaded)
   const [predictions, setPredictions] = useState<EspiaPredRow[]>([])
   const [profiles, setProfiles] = useState<EspiaProfile[]>([])
+  const [ranking, setRanking] = useState<RankingEntry[]>([])
   const [predLoading, setPredLoading] = useState(true)
   const [loadedOnce, setLoadedOnce] = useState(false)
+
+  // Ranking OFICIAL — mesma fonte do Ranking geral, pra a colocação bater igual.
+  const loadRanking = useCallback(() => {
+    fetchRanking(me?.id).then(setRanking).catch(() => setRanking([]))
+  }, [me?.id])
+
+  useEffect(() => loadRanking(), [loadRanking])
+  useTabResync(loadRanking)
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const unsub = subscribeRankingUpdates(() => {
+      clearTimeout(timer)
+      timer = setTimeout(() => loadRanking(), 250)
+    })
+    return () => { clearTimeout(timer); unsub() }
+  }, [loadRanking])
 
   // Só consideramos jogos revelados depois que o status do banco carregou —
   // evita revelar (e depois "desrevelar") partidas com dados estáticos parciais.
@@ -162,8 +182,8 @@ function useEspiadinhaData(): { view: EspiaView; loading: boolean } {
   }, [matchStoreLoaded, predLoading])
 
   const view = useMemo(
-    () => buildEspiadinha(matches, predictions, profiles),
-    [matches, predictions, profiles],
+    () => buildEspiadinha(matches, predictions, profiles, ranking),
+    [matches, predictions, profiles, ranking],
   )
 
   return { view, loading: (!matchStoreLoaded || predLoading) && !loadedOnce }
@@ -350,7 +370,7 @@ function StandingsCard({ standings, meId }: { standings: EspiaStanding[]; meId?:
   return (
     <div className="ui-card overflow-hidden">
       <div className="px-4 py-3 border-b border-hairline bg-ink text-paper">
-        <div className="font-mono text-[10px] tracking-eyebrow text-paper/50">RANKING DA ESPIADINHA</div>
+        <div className="font-mono text-[10px] tracking-eyebrow text-paper/50">MESMA COLOCAÇÃO DO RANKING GERAL</div>
         <div className="font-display text-2xl leading-none">QUEM ESTÁ CRAVANDO</div>
       </div>
       {standings.length > 0 ? (

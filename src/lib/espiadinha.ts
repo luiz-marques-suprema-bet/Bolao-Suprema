@@ -130,6 +130,52 @@ export interface EspiaView {
   standings: EspiaStanding[]
 }
 
+// Entrada mínima do ranking OFICIAL (mesma fonte do Ranking geral). Usada para a
+// colocação na Espiadinha bater exatamente com a do Ranking, sem recalcular nada.
+export interface RankingLike {
+  userId: string
+  name: string
+  dept?: string
+  initials?: string
+  color?: string
+  avatarUrl?: string
+  pts: number
+  exact?: number
+  correct?: number
+}
+
+// Classes a partir do ranking oficial já ordenado: a classe vem do percentil da
+// posição (topo = G.O.A.T) e empate de pontos herda a classe do primeiro, então
+// a lista fica congruente com os selos — e idêntica à colocação do Ranking geral.
+export function standingsFromRanking(entries: RankingLike[]): EspiaStanding[] {
+  const total = entries.length
+  const standings: EspiaStanding[] = []
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i]
+    const tier = (i > 0 && entries[i].pts === entries[i - 1].pts)
+      ? standings[i - 1].tier
+      : tierByRankFraction(total > 0 ? i / total : 0)
+    standings.push({
+      user: {
+        id: e.userId,
+        name: e.name,
+        firstName: e.name.split(' ')[0] || e.name,
+        initials: e.initials ?? '?',
+        color: e.color ?? '#777',
+        avatarUrl: e.avatarUrl,
+        dept: e.dept ?? '',
+      },
+      points: e.pts,
+      settledCount: 0,
+      accuracy: 0,
+      exact: e.exact ?? 0,
+      correct: e.correct ?? 0,
+      tier,
+    })
+  }
+  return standings
+}
+
 function matchIsSettled(m: Match): boolean {
   return m.status === 'finished' || !!m.settledAt
 }
@@ -143,6 +189,7 @@ export function buildEspiadinha(
   matches: Match[],
   predictions: EspiaPredRow[],
   profiles: EspiaProfile[],
+  ranking?: RankingLike[],
 ): EspiaView {
   const profileById = new Map(profiles.map(p => [p.id, p]))
 
@@ -209,13 +256,17 @@ export function buildEspiadinha(
   // (o empate herda a classe do primeiro com aquela pontuação). Assim a lista
   // (ordenada por pontos) fica congruente com os selos: topo = G.O.A.T.
   const total = ranked.length
-  const standings: EspiaStanding[] = []
+  const accStandings: EspiaStanding[] = []
   for (let i = 0; i < ranked.length; i++) {
     const tier = (i > 0 && ranked[i].points === ranked[i - 1].points)
-      ? standings[i - 1].tier
+      ? accStandings[i - 1].tier
       : tierByRankFraction(total > 0 ? i / total : 0)
-    standings.push({ ...ranked[i], tier })
+    accStandings.push({ ...ranked[i], tier })
   }
+
+  // Quando o ranking oficial é fornecido, a colocação da Espiadinha é a MESMA do
+  // Ranking geral (fonte única). Sem ele, cai no leaderboard local (usado em testes).
+  const standings = ranking ? standingsFromRanking(ranking) : accStandings
 
   return { matches: espiaMatches, standings }
 }

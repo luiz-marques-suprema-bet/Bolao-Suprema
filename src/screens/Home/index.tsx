@@ -260,7 +260,7 @@ function WC26News({
   const showEmpty = !showLoading && !featured
 
   return (
-    <div data-testid="wc26-news" className={cn('ui-panel overflow-hidden', className)}>
+    <div data-testid="wc26-news" className={cn('ui-panel overflow-hidden flex flex-col', className)}>
       <div className="ui-panel-header flex items-baseline justify-between">
         <div className="flex items-baseline gap-1.5">
           <span className="font-display text-base">COPA 2026</span>
@@ -291,7 +291,7 @@ function WC26News({
           </div>
         </div>
       ) : (
-        <div>
+        <div className="flex flex-1 flex-col">
           <AnimatePresence mode="wait">
           {featured && (
             <motion.article
@@ -300,7 +300,7 @@ function WC26News({
               animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
               exit={{ opacity: 0, x: -22, filter: 'blur(6px)' }}
               transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-              className="relative block min-h-[380px] overflow-hidden border-b border-hairline bg-ink text-paper group"
+              className="relative flex-1 block min-h-[380px] overflow-hidden border-b border-hairline bg-ink text-paper group"
             >
               {featuredHasImage && (
                 <div className="absolute inset-0 overflow-hidden bg-ink">
@@ -320,7 +320,7 @@ function WC26News({
               <div className="absolute right-4 top-4 z-10 border border-inverse-text/30 bg-black/35 px-2.5 py-1 font-mono text-[8px] font-bold tracking-eyebrow text-inverse-text/70 backdrop-blur-sm">
                 {String(featuredPosition + 1).padStart(2, '0')} / {String(displayItems.length).padStart(2, '0')}
               </div>
-              <div className="relative z-10 flex min-h-[380px] flex-col justify-end p-5">
+              <div className="relative z-10 flex h-full min-h-[380px] flex-col justify-end p-5">
                 <motion.div
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -1061,13 +1061,13 @@ function HomeBoletimSection({ compact = false, className }: { compact?: boolean;
 function HomeBoletimNewsSection({ compact = false }: { compact?: boolean }) {
   return (
     <div className={cn(
-      'grid items-start gap-4',
+      'grid items-stretch gap-4',
       compact
         ? 'grid-cols-1'
         : 'grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.75fr)]',
     )}>
       <HomeBoletimSection compact={compact} />
-      <WC26News compact className="self-start" />
+      <WC26News compact className="h-full" />
     </div>
   )
 }
