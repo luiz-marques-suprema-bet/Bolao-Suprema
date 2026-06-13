@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/auth.store'
 import { useChatStore, type ChatProfile } from '@/stores/chat.store'
+import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { uploadChatMedia } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { isSafeHttpUrl } from '@/lib/security'
@@ -133,6 +134,7 @@ function useVideoNoteRecorder() {
 }
 
 export function ResenhaScreen() {
+  const isDesktop = useIsDesktop()
   const { user } = useAuthStore()
   const {
     messages,
@@ -250,6 +252,19 @@ export function ResenhaScreen() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' })
   }, [messages.length])
+
+  // Backstop do realtime: enquanto a Resenha está aberta e visível, busca
+  // mensagens novas a cada 12s. Se o WebSocket cair (comum no mobile), as
+  // mensagens ainda aparecem sozinhas — sem F5. Não re-renderiza se nada mudou.
+  useEffect(() => {
+    const tick = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        void useChatStore.getState().pollNewMessages()
+      }
+    }
+    const id = window.setInterval(tick, 12000)
+    return () => window.clearInterval(id)
+  }, [])
 
   useEffect(() => {
     return () => setTyping(false)
@@ -442,7 +457,14 @@ export function ResenhaScreen() {
 
   return (
     <div className="min-h-0 flex-1 bg-app text-ink">
-      <div className="h-[calc(100dvh-3.5rem)] overflow-hidden lg:h-[calc(100dvh-5.75rem)]">
+      <div
+        className="overflow-hidden"
+        style={{
+          height: isDesktop
+            ? 'calc(100dvh - 5.75rem)'
+            : 'calc(100dvh - 3.5rem - env(safe-area-inset-bottom, 0px))',
+        }}
+      >
         <section className="flex h-full min-h-0 flex-col">
           <header className="flex shrink-0 items-center justify-between gap-2 border-b border-hairline bg-paper px-3 py-2 shadow-card sm:gap-3 sm:px-4 sm:py-3">
             <div className="min-w-0">
@@ -800,7 +822,7 @@ function MessageRow({
           className={cn(
             'relative min-w-0 overflow-visible border px-3.5 py-2.5 shadow-sm',
             mine ? 'rounded-[20px] rounded-br-[6px] border-green/40 bg-green/15' : 'rounded-[20px] rounded-bl-[6px] border-hairline bg-card',
-            (message.type === 'image' || message.type === 'gif' || message.type === 'video' || message.type === 'video_note') ? 'p-2' : 'pb-6',
+            (message.type === 'image' || message.type === 'gif' || message.type === 'video' || message.type === 'video_note') ? 'p-2' : 'pb-2',
             mine ? 'pr-4' : 'pl-4',
           )}
         >

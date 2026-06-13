@@ -418,6 +418,7 @@ interface ChatState {
 
   init: (myUserId: string) => Promise<void>
   resync: () => Promise<void>
+  pollNewMessages: () => Promise<void>
   destroy: () => void
   addMessage: (msg: ChatMessage) => void
   clearError: () => void
@@ -569,6 +570,32 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     const snapshot = await loadChatSnapshot(myUserId)
     if ('error' in snapshot) return
     set({ messages: snapshot.messages, pinnedId: snapshot.pinnedId })
+  },
+
+  // Backstop: busca incremental só das mensagens MAIS NOVAS (created_at > a
+  // última que temos). Garante que mensagens apareçam mesmo se o realtime cair
+  // (comum no mobile) — sem F5 e sem re-render quando não há nada novo.
+  pollNewMessages: async () => {
+    if (isMockMode || !get().isLoaded) return
+    const msgs = get().messages
+    const newest = msgs.length ? msgs[msgs.length - 1].createdAt : null
+    let query = supabase
+      .from('chat_messages')
+      .select(MESSAGE_SELECT)
+      .eq('channel_id', CHANNEL_ID)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+      .limit(80)
+    if (newest) query = query.gt('created_at', newest)
+    const { data, error } = await query
+    if (error || !data || data.length === 0) return
+    const rows = data as unknown as MessageRow[]
+    await fetchProfiles(rows.map(row => row.user_id))
+    set(s => {
+      let merged = s.messages
+      for (const row of rows) merged = mergeMessage(merged, mapRow(row, get()._myUserId))
+      return { messages: merged }
+    })
   },
 
   destroy: () => {
