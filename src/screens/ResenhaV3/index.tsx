@@ -737,6 +737,7 @@ function MessageRow({
 }) {
   const mine = message.isYou ?? message.userId === currentUserId
   const canDelete = mine || isAdmin
+  const isMedia = message.type === 'image' || message.type === 'gif' || message.type === 'video' || message.type === 'video_note'
   const menuButtonRef = useRef<HTMLButtonElement | null>(null)
   const menuPanelRef = useRef<HTMLDivElement | null>(null)
   const [menuAnchor, setMenuAnchor] = useState<DOMRect | null>(null)
@@ -805,7 +806,7 @@ function MessageRow({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
-      className={cn('flex w-full gap-2 px-1', grouped ? 'mt-1' : 'mt-4', mine ? 'justify-end' : 'justify-start')}
+      className={cn('flex w-full gap-2 px-1', grouped ? 'mt-1' : 'mt-3', mine ? 'justify-end' : 'justify-start')}
     >
       {!mine && (
         <div className="w-9 shrink-0 self-start">
@@ -817,13 +818,12 @@ function MessageRow({
         </div>
       )}
 
-      <div className={cn('group relative max-w-[86%] sm:max-w-[72%] xl:max-w-[620px]', mine && 'items-end')}>
+      <div className={cn('group relative max-w-[82%] sm:max-w-[72%] xl:max-w-[620px]', mine && 'items-end')}>
         <div
           className={cn(
-            'relative min-w-0 overflow-visible border px-3.5 py-2.5 shadow-sm',
+            'relative min-w-0 overflow-visible border shadow-sm',
             mine ? 'rounded-[20px] rounded-br-[6px] border-green/40 bg-green/15' : 'rounded-[20px] rounded-bl-[6px] border-hairline bg-card',
-            (message.type === 'image' || message.type === 'gif' || message.type === 'video' || message.type === 'video_note') ? 'p-2' : 'pb-2',
-            mine ? 'pr-4' : 'pl-4',
+            isMedia ? 'p-2' : 'pl-3.5 pr-9 pt-2.5 pb-2',
           )}
         >
           {!mine && !grouped && (
@@ -842,7 +842,7 @@ function MessageRow({
 
           <MessageBody message={message} mine={mine} profiles={profiles} currentUserId={currentUserId} onVote={onVote} onImage={onImage} />
 
-          <div className="mt-1 flex items-center justify-end gap-1 font-mono text-[9px] text-ink-4">
+          <div className={cn('mt-1 flex items-center justify-end gap-1 font-mono text-[9px] text-ink-4', !isMedia && '-mr-6')}>
             {isPinned && <span>FIXADA</span>}
             <span>{message.time}</span>
           </div>
@@ -853,9 +853,8 @@ function MessageRow({
           type="button"
           onClick={onToggleMenu}
           className={cn(
-            'absolute z-30 grid h-7 w-7 place-items-center rounded-full border border-line-strong bg-card font-mono text-[11px] leading-none shadow-btn transition hover:border-yellow hover:bg-yellow hover:text-[#0D0D0D]',
-            mine ? '-left-9 top-2' : '-right-9 top-2',
-            menuOpen && 'bg-yellow',
+            'absolute right-1.5 top-1.5 z-30 grid h-6 w-6 place-items-center rounded-full border border-hairline bg-card/85 font-mono text-[10px] leading-none text-ink-3 shadow-sm backdrop-blur-sm transition hover:border-yellow hover:bg-yellow hover:text-[#0D0D0D]',
+            menuOpen && 'border-yellow bg-yellow text-[#0D0D0D]',
           )}
           aria-label="Opcoes da mensagem"
         >
