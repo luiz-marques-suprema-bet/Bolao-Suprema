@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Flag } from '@/components/shared/Flag'
 import { Avatar } from '@/components/shared/Avatar'
@@ -20,6 +20,7 @@ import { formatMatchDate, formatMatchTime } from '@/lib/matchTime'
 import { getEffectiveMarketStatus, isBetOpen } from '@/lib/markets'
 import { isPlaceholderMatch } from '@/lib/matchGuards'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
+import { useTabResync } from '@/hooks/useTabResync'
 import { fetchWC26News, getCachedWC26News, isConfigured as newsConfigured } from '@/lib/footballnews'
 import type { FootballNewsItem } from '@/lib/footballnews'
 import type { RankingEntry, Match, Boletim, MatchStage } from '@/types'
@@ -845,29 +846,28 @@ function useHomeData() {
   const { overrides, isLoaded } = useMatchStore()
   const [ranking, setRanking] = useState<RankingEntry[]>([])
 
-  useEffect(() => {
-    let active = true
-    const loadRanking = () => {
-      fetchRanking(me?.id).then(result => {
-        if (active) setRanking(result)
-      }).catch(() => {
-        if (active) setRanking([])
-      })
-    }
+  const loadRanking = useCallback(() => {
+    fetchRanking(me?.id)
+      .then(result => setRanking(result))
+      .catch(() => setRanking([]))
+  }, [me?.id])
 
-    let timer: number | undefined
+  useEffect(() => {
     loadRanking()
+    let timer: number | undefined
     const unsubscribe = subscribeRankingUpdates(() => {
       window.clearTimeout(timer)
       timer = window.setTimeout(loadRanking, 250)
     })
 
     return () => {
-      active = false
       window.clearTimeout(timer)
       unsubscribe()
     }
-  }, [me?.id])
+  }, [loadRanking])
+
+  // Aba voltou ao foco → recarrega o ranking (pega apuracoes perdidas em 2o plano).
+  useTabResync(loadRanking)
 
   const upcoming = isLoaded
     ? WC2026_MATCHES.map((m): Match => { const ov = overrides[m.id]; return ov ? { ...m, ...ov } : m })
@@ -942,7 +942,7 @@ function ResenhaCard() {
 }
 
 function HomeBoletimSection({ compact = false, className }: { compact?: boolean; className?: string }) {
-  const { bulletins, isLoaded, init, destroy, addBoletim, updateBoletim, togglePin, deleteBoletim } = useBoletimStore()
+  const { bulletins, isLoaded, init, resync, destroy, addBoletim, updateBoletim, togglePin, deleteBoletim } = useBoletimStore()
   const { user } = useAuthStore()
   const canEdit = (user?.isAdmin || user?.isMarketing) ?? false
   const [creating, setCreating] = useState(false)
@@ -953,6 +953,8 @@ function HomeBoletimSection({ compact = false, className }: { compact?: boolean;
     init()
     return () => { destroy() }
   }, [init, destroy])
+
+  useTabResync(resync)
 
   const sorted = [...bulletins].sort((a, b) => {
     if (a.isPinned && !b.isPinned) return -1

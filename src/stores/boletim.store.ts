@@ -42,6 +42,7 @@ interface BoletimState {
   _channel:   any | null
 
   init:          () => Promise<void>
+  resync:        () => Promise<void>
   destroy:       () => void
   addBoletim:    (b: Omit<Boletim, 'id' | 'createdAt'>) => Promise<void>
   updateBoletim: (id: string, b: Omit<Boletim, 'id' | 'createdAt' | 'authorId' | 'authorName'>) => Promise<void>
@@ -94,6 +95,19 @@ export const useBoletimStore = create<BoletimState>()((set, get) => ({
       .subscribe()
 
     set({ _channel: channel })
+  },
+
+  // Refaz a carga dos boletins sem derrubar o canal. Usado quando a aba volta ao
+  // foco, pra recuperar publicacoes/edicoes perdidas em 2o plano.
+  resync: async () => {
+    if (isMockMode || !get().isLoaded) return
+    const { data } = await supabase
+      .from('bulletins')
+      .select('*')
+      .order('is_pinned', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (data) set({ bulletins: (data as BoletimRow[]).map(mapRow) })
   },
 
   destroy: () => {

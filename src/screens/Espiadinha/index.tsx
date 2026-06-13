@@ -5,6 +5,7 @@ import { Avatar } from '@/components/shared/Avatar'
 import { useAuthStore } from '@/stores/auth.store'
 import { useMatchStore } from '@/stores/match.store'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
+import { useTabResync } from '@/hooks/useTabResync'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { WC2026_MATCHES } from '@/data/wc2026'
 import { isMatchClosed } from '@/lib/markets'
@@ -134,6 +135,7 @@ function useEspiadinhaData(): { view: EspiaView; loading: boolean } {
   }, [codesKey])
 
   useEffect(() => loadPredictions(), [loadPredictions])
+  useTabResync(loadPredictions)
 
   // Tempo real: novos palpites/apurações disparam recarga (debounce). Os placares
   // e mudanças de status chegam pelo match.store (useMatchesWithStatus).

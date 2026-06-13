@@ -378,6 +378,32 @@ function withoutKeys(row: Record<string, unknown>, keys: string[]) {
   return next
 }
 
+// Carga completa das mensagens + votos + reacoes + fixado. Reusado pelo init e
+// pelo resync (quando a aba volta ao foco e pode ter perdido mensagens).
+async function loadChatSnapshot(
+  myUserId?: string,
+): Promise<{ messages: ChatMessage[]; pinnedId: string | null } | { error: string }> {
+  const { rows, error } = await fetchMessageRows()
+  if (error) return { error: error.message }
+
+  const messageRows = rows ?? []
+  await fetchProfiles(messageRows.map(row => row.user_id))
+  let messages = messageRows.map(row => mapRow(row, myUserId))
+
+  const [{ data: voteRows }, reactionsResult, { data: pinData }] = await Promise.all([
+    supabase.from('poll_votes').select('message_id, user_id, option_id'),
+    supabase.from('chat_message_reactions').select('message_id, user_id, emoji, created_at'),
+    supabase.from('channel_pins').select('message_id').eq('channel_id', CHANNEL_ID).maybeSingle(),
+  ])
+
+  messages = applyVotes(messages, (voteRows ?? []) as VoteRow[])
+  if (!reactionsResult.error) {
+    messages = applyReactions(messages, (reactionsResult.data ?? []) as ReactionRow[])
+  }
+
+  return { messages, pinnedId: (pinData as PinRow | null)?.message_id ?? null }
+}
+
 interface ChatState {
   messages: ChatMessage[]
   profiles: ChatProfile[]
@@ -391,6 +417,7 @@ interface ChatState {
   _typingTimer: ReturnType<typeof setTimeout> | null
 
   init: (myUserId: string) => Promise<void>
+  resync: () => Promise<void>
   destroy: () => void
   addMessage: (msg: ChatMessage) => void
   clearError: () => void
@@ -428,34 +455,19 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
     const directoryPromise = fetchDirectory()
 
-    const { rows, error } = await fetchMessageRows()
+    const snapshot = await loadChatSnapshot(myUserId)
+    const profiles = await directoryPromise
 
-    if (error) {
-      console.error('[Chat] init:', error.message)
-      set({ isLoaded: true, lastError: `Erro ao carregar Resenha: ${error.message}` })
+    if ('error' in snapshot) {
+      console.error('[Chat] init:', snapshot.error)
+      set({ isLoaded: true, lastError: `Erro ao carregar Resenha: ${snapshot.error}`, profiles })
       return
     }
 
-    const messageRows = rows ?? []
-    await fetchProfiles(messageRows.map(row => row.user_id))
-    let messages = messageRows.map(row => mapRow(row, myUserId))
-
-    const [{ data: voteRows }, reactionsResult, { data: pinData }, profiles] = await Promise.all([
-      supabase.from('poll_votes').select('message_id, user_id, option_id'),
-      supabase.from('chat_message_reactions').select('message_id, user_id, emoji, created_at'),
-      supabase.from('channel_pins').select('message_id').eq('channel_id', CHANNEL_ID).maybeSingle(),
-      directoryPromise,
-    ])
-
-    messages = applyVotes(messages, (voteRows ?? []) as VoteRow[])
-    if (!reactionsResult.error) {
-      messages = applyReactions(messages, (reactionsResult.data ?? []) as ReactionRow[])
-    }
-
     set({
-      messages,
+      messages: snapshot.messages,
       profiles,
-      pinnedId: (pinData as PinRow | null)?.message_id ?? null,
+      pinnedId: snapshot.pinnedId,
       isLoaded: true,
     })
 
@@ -546,6 +558,17 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       })
 
     set({ _channel: channel })
+  },
+
+  // Refaz a carga das mensagens sem derrubar o canal/presenca. Usado quando a aba
+  // volta ao foco, pra recuperar o que chegou enquanto estava em 2o plano.
+  resync: async () => {
+    if (isMockMode || !get().isLoaded) return
+    const myUserId = get()._myUserId
+    if (!myUserId) return
+    const snapshot = await loadChatSnapshot(myUserId)
+    if ('error' in snapshot) return
+    set({ messages: snapshot.messages, pinnedId: snapshot.pinnedId })
   },
 
   destroy: () => {

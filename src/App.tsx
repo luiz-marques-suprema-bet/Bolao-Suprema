@@ -7,6 +7,7 @@ import { useChatStore } from '@/stores/chat.store'
 import { useMatchStore } from '@/stores/match.store'
 import { canParticipate } from '@/lib/participantStatus'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
+import { useTabResync } from '@/hooks/useTabResync'
 import { MobileNav } from '@/components/navigation/MobileNav'
 import { DesktopNav } from '@/components/navigation/DesktopNav'
 import { Marquee } from '@/components/shared/Marquee'
@@ -126,6 +127,8 @@ function AppLayout() {
   const destroyChat = useChatStore(s => s.destroy)
   const initMatches = useMatchStore(s => s.init)
   const destroyMatches = useMatchStore(s => s.destroy)
+  const resyncChat = useChatStore(s => s.resync)
+  const resyncMatches = useMatchStore(s => s.resync)
 
   useEffect(() => {
     if (user?.id) {
@@ -137,6 +140,10 @@ function AppLayout() {
       }
     }
   }, [user?.id, initChat, destroyChat, initMatches, destroyMatches])
+
+  // Aba voltou ao foco → reconecta o realtime e recarrega chat + jogos, pegando
+  // o que foi perdido enquanto estava em 2o plano (sem precisar de F5).
+  useTabResync(() => { void resyncChat(); void resyncMatches() })
 
   return (
     <div className="min-h-dvh flex flex-col">

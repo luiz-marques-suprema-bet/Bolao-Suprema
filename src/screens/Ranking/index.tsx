@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Avatar } from '@/components/shared/Avatar'
 import { FloatingTooltip } from '@/components/shared/FloatingTooltip'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
+import { useTabResync } from '@/hooks/useTabResync'
 import { useAuthStore } from '@/stores/auth.store'
 import { fmtPts, cn } from '@/lib/utils'
 import { fetchRanking, subscribeRankingUpdates } from '@/lib/ranking'
@@ -55,6 +56,7 @@ function useRanking() {
   }, [me?.id])
 
   useEffect(() => loadRanking(), [loadRanking])
+  useTabResync(loadRanking)
 
   useEffect(() => {
     let timer: number | undefined
@@ -102,6 +104,7 @@ function useBreakdown(userId?: string) {
   }, [userId])
 
   useEffect(() => loadBreakdown(), [loadBreakdown])
+  useTabResync(loadBreakdown)
 
   useEffect(() => {
     if (!userId || isMockMode) return undefined

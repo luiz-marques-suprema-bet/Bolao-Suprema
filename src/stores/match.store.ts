@@ -22,6 +22,9 @@ interface MatchRow {
   match_time: string | null
 }
 
+const MATCH_SELECT =
+  'match_code, status, market_status, home_score, away_score, live_minute, winner, locked_at, locked_by, lock_reason, unlocked_at, settled_at, kickoff_utc, match_date, match_time'
+
 function mapMatchRow(row: MatchRow): MatchStatusOverride {
   return {
     matchCode:    row.match_code,
@@ -52,6 +55,7 @@ interface MatchStoreState {
   _initPromise: Promise<void> | null
 
   init: () => Promise<void>
+  resync: () => Promise<void>
   destroy: () => void
   getOverride: (matchCode: string) => MatchStatusOverride | undefined
 
@@ -75,7 +79,7 @@ export const useMatchStore = create<MatchStoreState>()((set, get) => ({
 
       const { data } = await supabase
         .from('matches')
-        .select('match_code, status, market_status, home_score, away_score, live_minute, winner, locked_at, locked_by, lock_reason, unlocked_at, settled_at, kickoff_utc, match_date, match_time')
+        .select(MATCH_SELECT)
         .not('match_code', 'is', null)
 
       if (data) {
@@ -107,6 +111,23 @@ export const useMatchStore = create<MatchStoreState>()((set, get) => ({
 
     set({ _initPromise: promise })
     return promise
+  },
+
+  // Refaz a carga dos status sem derrubar o canal realtime. Usado quando a aba
+  // volta ao foco, pra recuperar UPDATEs perdidos enquanto estava em 2o plano.
+  resync: async () => {
+    if (isMockMode || !get().isLoaded) return
+    const { data } = await supabase
+      .from('matches')
+      .select(MATCH_SELECT)
+      .not('match_code', 'is', null)
+    if (!data) return
+    const overrides: Record<string, MatchStatusOverride> = {}
+    for (const row of data as MatchRow[]) {
+      if (!row.match_code) continue
+      overrides[row.match_code] = mapMatchRow(row)
+    }
+    set({ overrides })
   },
 
   destroy: () => {

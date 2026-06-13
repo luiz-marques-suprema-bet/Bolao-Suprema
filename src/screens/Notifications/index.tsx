@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { fetchNotifications, markNotificationRead } from '@/services/product'
 import { markGlobalNoticesSeen, useNavAlerts } from '@/hooks/useNavAlerts'
+import { useTabResync } from '@/hooks/useTabResync'
 import type { Notification } from '@/types'
 
 interface GlobalNotice {
@@ -47,6 +48,7 @@ export function NotificationsScreen() {
   }, [user?.id])
 
   useEffect(() => { load() }, [load])
+  useTabResync(load)
 
   // Realtime: avisos da organização e notificações chegam sem refresh.
   useEffect(() => {
