@@ -318,7 +318,7 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
                           stageLabel: match.stage === 'group' ? `Grupo ${match.group}` : (match.stageLabel ?? 'Mata-mata'),
                           dateLabel: formatMatchDate(match),
                           ...myCtx,
-                        }} />
+                        }} icon />
                       )}
                     </div>
                   )

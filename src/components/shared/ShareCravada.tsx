@@ -181,8 +181,8 @@ export function CravadaShareModal({
   )
 }
 
-// Botão compacto que abre o modal — para listas (Meus Palpites, Espiadinha).
-export function ShareCravadaButton({ data, className }: { data: CravadaCardData; className?: string }) {
+// Botão que abre o modal. `icon` = versão compacta (só ↗) p/ listas apertadas.
+export function ShareCravadaButton({ data, className, icon = false }: { data: CravadaCardData; className?: string; icon?: boolean }) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -190,12 +190,15 @@ export function ShareCravadaButton({ data, className }: { data: CravadaCardData;
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen(true) }}
         className={cn(
-          'inline-flex items-center gap-1 rounded-full border border-yellow bg-yellow/15 px-2 py-1 font-mono text-[8px] font-bold tracking-eyebrow text-ink hover:bg-yellow active:scale-95 transition',
+          'flex-shrink-0 border border-yellow bg-yellow/20 font-bold text-ink hover:bg-yellow active:scale-95 transition',
+          icon
+            ? 'grid h-8 w-8 place-items-center rounded-full font-sans text-[15px] leading-none'
+            : 'inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 font-mono text-[9px] tracking-eyebrow',
           className,
         )}
         aria-label="Compartilhar cravada"
       >
-        ↗ COMPARTILHAR
+        {icon ? '↗' : '↗ COMPARTILHAR'}
       </button>
       <CravadaShareModal data={data} open={open} onClose={() => setOpen(false)} />
     </>

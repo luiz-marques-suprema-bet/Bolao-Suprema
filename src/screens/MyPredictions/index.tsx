@@ -288,24 +288,24 @@ function MatchRow({ match, pred, userCtx, onClick }: { match: Match; pred?: Pred
 
       {/* Linha 2 — meu palpite, pontos e compartilhar */}
       {!placeholder && (
-        <div className="mt-2 flex items-center gap-2 pl-[52px]">
-          <span className="font-mono text-[8px] tracking-eyebrow text-ink-4 flex-shrink-0">MEU PALPITE</span>
+        <div className="mt-1.5 flex items-center gap-2 pl-12">
+          <span className="font-mono text-[8px] tracking-eyebrow text-ink-4 flex-shrink-0">PALPITE</span>
           {pred ? (
-            <span className="font-display text-base text-ink tabular-nums">{pred.homeScore}–{pred.awayScore}</span>
+            <span className="font-display text-base leading-none text-ink tabular-nums flex-shrink-0 whitespace-nowrap">{pred.homeScore}–{pred.awayScore}</span>
           ) : (
-            <span className="font-mono text-[9px] font-bold text-yellow">{isDone || isLive ? 'não palpitou' : 'PALPITAR →'}</span>
+            <span className="font-mono text-[9px] font-bold text-yellow flex-shrink-0 whitespace-nowrap">{isDone || isLive ? 'não palpitou' : 'PALPITAR →'}</span>
           )}
           {isDone && pred && (
             <span className={cn(
-              'font-mono text-[9px] font-bold rounded-md px-1.5 py-0.5',
+              'font-mono text-[9px] font-bold rounded-md px-1.5 py-0.5 flex-shrink-0 whitespace-nowrap',
               (pts ?? 0) >= 10 ? 'bg-green text-white' : (pts ?? 0) > 0 ? 'border border-hairline text-ink-2 bg-surface-2' : 'text-ink-4',
             )}>
-              {(pts ?? 0) > 0 ? `+${pts} pts` : '0 pt'}
+              {(pts ?? 0) > 0 ? `+${pts}` : '0'}
             </span>
           )}
-          {!isDone && !isLive && pred && <span className="font-mono text-[10px] text-green font-bold">✓ salvo</span>}
+          {!isDone && !isLive && pred && <span className="font-mono text-[10px] text-green font-bold flex-shrink-0">✓ salvo</span>}
           <div className="flex-1" />
-          {cravada && pred && <ShareCravadaButton data={cravadaCard(match, pred, userCtx)} />}
+          {cravada && pred && <ShareCravadaButton data={cravadaCard(match, pred, userCtx)} icon />}
         </div>
       )}
     </div>
