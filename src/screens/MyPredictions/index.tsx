@@ -26,12 +26,13 @@ function isCravada(m: Match, pred?: Prediction): boolean {
 
 function cravadaCard(m: Match, pred: Prediction, ctx: UserCardCtx): CravadaCardData {
   return {
-    home: { code: m.home.code, flag: m.home.flag },
-    away: { code: m.away.code, flag: m.away.flag },
+    home: { code: m.home.code, flag: m.home.flag, color: m.home.color },
+    away: { code: m.away.code, flag: m.away.flag, color: m.away.color },
     homeScore: m.homeScore ?? 0,
     awayScore: m.awayScore ?? 0,
     points: pointsOf(m, pred) ?? (m.stage === 'group' ? 10 : 12),
     stageLabel: m.stage === 'group' ? `Grupo ${m.group}` : (m.stageLabel ?? 'Mata-mata'),
+    dateLabel: formatMatchDate(m),
     ...ctx,
   }
 }

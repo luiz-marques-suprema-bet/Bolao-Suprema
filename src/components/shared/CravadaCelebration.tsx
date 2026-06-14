@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { usePredictionStore } from '@/stores/prediction.store'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { WC2026_MATCHES } from '@/data/wc2026'
+import { formatMatchDate } from '@/lib/matchTime'
 import { fetchRanking } from '@/lib/ranking'
 import { standingsFromRanking } from '@/lib/espiadinha'
 import { CravadaShareModal } from '@/components/shared/ShareCravada'
@@ -64,12 +65,13 @@ export function CravadaCelebration() {
   const st = standingsFromRanking(ranking).find(s => s.user.id === me.id)
 
   const data: CravadaCardData = {
-    home: { code: match.home.code, flag: match.home.flag },
-    away: { code: match.away.code, flag: match.away.flag },
+    home: { code: match.home.code, flag: match.home.flag, color: match.home.color },
+    away: { code: match.away.code, flag: match.away.flag, color: match.away.color },
     homeScore: match.homeScore ?? 0,
     awayScore: match.awayScore ?? 0,
     points: pred.pointsEarned ?? (match.stage === 'group' ? 10 : 12),
     stageLabel: match.stage === 'group' ? `Grupo ${match.group}` : (match.stageLabel ?? 'Mata-mata'),
+    dateLabel: formatMatchDate(match),
     userName: `${me.firstName} ${me.lastName ?? ''}`.trim() || me.firstName || 'Você',
     userInitials: me.initials ?? '?',
     userColor: me.color ?? '#777',

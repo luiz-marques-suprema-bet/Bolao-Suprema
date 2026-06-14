@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { generateCravadaCard, shareCravadaCard, type CravadaCardData } from '@/lib/shareCard'
+import { useAuthStore } from '@/stores/auth.store'
+import { useChatStore } from '@/stores/chat.store'
+import { uploadChatMedia } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import type { ChatMessage } from '@/types'
 
 function buildCaption(d: CravadaCardData): string {
   return `Cravei o placar de ${d.home.code} ${d.homeScore}x${d.awayScore} ${d.away.code} no Bolão Suprema! 🎯`
@@ -34,7 +39,11 @@ export function CravadaShareModal({
   const [blob, setBlob] = useState<Blob | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [sending, setSending] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const user = useAuthStore(s => s.user)
+  const addMessage = useChatStore(s => s.addMessage)
 
   useEffect(() => {
     if (!open) return
@@ -63,6 +72,40 @@ export function CravadaShareModal({
     else if (r === 'error') setMsg('Não consegui compartilhar — tente o botão Baixar.')
     else onClose()
   }, [blob, data, onClose])
+
+  // Manda o card direto no chat da Resenha e já leva o usuário pra lá.
+  const onResenha = useCallback(async () => {
+    if (!blob || !user?.id) return
+    setSending(true)
+    try {
+      const imgUrl = await uploadChatMedia(user.id, blob, 'image')
+      const message: ChatMessage = {
+        id: crypto.randomUUID(),
+        userId: user.id,
+        channelId: 'geral',
+        who: `${user.firstName} ${user.lastName ?? ''}`.trim() || user.firstName || 'Você',
+        dept: user.dept ?? '',
+        initials: user.initials ?? '?',
+        color: user.color ?? '#777',
+        avatarUrl: user.avatarUrl,
+        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        text: buildCaption(data),
+        type: 'image',
+        imageUrl: imgUrl,
+        mediaUrl: imgUrl,
+        mediaKind: 'image',
+        createdAt: new Date().toISOString(),
+        isYou: true,
+      }
+      addMessage(message)
+      onClose()
+      navigate('/resenha')
+    } catch {
+      setMsg('Não consegui enviar pra Resenha agora.')
+    } finally {
+      setSending(false)
+    }
+  }, [blob, user, addMessage, data, navigate, onClose])
 
   if (!open) return null
 
@@ -105,23 +148,32 @@ export function CravadaShareModal({
 
           {msg && url && <p className="font-mono text-[10px] text-ink-3 mt-2 text-center leading-relaxed">{msg}</p>}
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 space-y-2">
             <button
               onClick={onShare}
               disabled={loading || busy || !blob}
-              className="btn-yellow justify-center text-[11px] disabled:opacity-50"
+              className="btn-yellow w-full justify-center text-[11px] disabled:opacity-50"
             >
               {busy ? 'ABRINDO…' : 'COMPARTILHAR'}
             </button>
-            <button
-              onClick={() => blob && downloadBlob(blob)}
-              disabled={loading || !blob}
-              className={cn('border-2 border-line-strong bg-card py-3 font-mono text-[10px] font-bold tracking-eyebrow text-ink hover:bg-surface-hover disabled:opacity-50')}
-            >
-              BAIXAR
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={onResenha}
+                disabled={loading || sending || !blob || !user}
+                className="border-2 border-green bg-green/10 py-3 font-mono text-[10px] font-bold tracking-eyebrow text-green-deep hover:bg-green/20 disabled:opacity-50"
+              >
+                {sending ? 'ENVIANDO…' : 'NA RESENHA'}
+              </button>
+              <button
+                onClick={() => blob && downloadBlob(blob)}
+                disabled={loading || !blob}
+                className="border-2 border-line-strong bg-card py-3 font-mono text-[10px] font-bold tracking-eyebrow text-ink hover:bg-surface-hover disabled:opacity-50"
+              >
+                BAIXAR
+              </button>
+            </div>
           </div>
-          <p className="font-mono text-[9px] text-ink-4 mt-2 text-center">No celular abre o Instagram/WhatsApp direto. No PC, baixa a imagem.</p>
+          <p className="font-mono text-[9px] text-ink-4 mt-2 text-center leading-relaxed">"Compartilhar" abre Instagram/WhatsApp · "Na Resenha" posta no chat do bolão.</p>
         </motion.div>
       </motion.div>
     </AnimatePresence>,

@@ -310,12 +310,13 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
                       <HitChip kind={g.hit.kind} label={g.hit.label} />
                       {isMe && g.hit.kind === 'exact' && myCtx && (
                         <ShareCravadaButton data={{
-                          home: { code: match.home.code, flag: match.home.flag },
-                          away: { code: match.away.code, flag: match.away.flag },
+                          home: { code: match.home.code, flag: match.home.flag, color: match.home.color },
+                          away: { code: match.away.code, flag: match.away.flag, color: match.away.color },
                           homeScore: g.homeScore,
                           awayScore: g.awayScore,
                           points: g.hit.points ?? (match.stage === 'group' ? 10 : 12),
                           stageLabel: match.stage === 'group' ? `Grupo ${match.group}` : (match.stageLabel ?? 'Mata-mata'),
+                          dateLabel: formatMatchDate(match),
                           ...myCtx,
                         }} />
                       )}
