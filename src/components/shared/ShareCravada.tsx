@@ -114,7 +114,7 @@ export function CravadaShareModal({
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 z-[80] grid place-items-center bg-black/75 px-4 py-6 overflow-y-auto"
-        onClick={onClose}
+        onClick={(e) => { e.stopPropagation(); onClose() }}
       >
         <motion.div
           initial={{ scale: 0.95, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 12 }}
