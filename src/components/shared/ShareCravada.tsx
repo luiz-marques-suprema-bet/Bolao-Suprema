@@ -5,7 +5,7 @@ import { generateCravadaCard, shareCravadaCard, type CravadaCardData } from '@/l
 import { cn } from '@/lib/utils'
 
 function buildCaption(d: CravadaCardData): string {
-  return `Cravei o placar de ${d.home.code} ${d.homeScore}x${d.awayScore} ${d.away.code} no Bolão Suprema! 🎯 bolao.suprema.group`
+  return `Cravei o placar de ${d.home.code} ${d.homeScore}x${d.awayScore} ${d.away.code} no Bolão Suprema! 🎯`
 }
 
 function downloadBlob(blob: Blob) {

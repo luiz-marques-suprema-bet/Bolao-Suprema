@@ -95,23 +95,27 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
   const ctx = canvas.getContext('2d')!
 
   const INK = '#0D0D0D'
+  const INK3 = '#6B6B66'
+  const INK4 = '#A9A89F'
   const YELLOW = '#FFCB05'
   const GREEN = '#00A651'
+  const GREEN_DEEP = '#007A3E'
   const PAPER = '#F5F1E8'
+  const WHITE = '#FFFCF5'
 
-  // Fundo ink + listras diagonais sutis (padrão da marca) no topo direito.
-  ctx.fillStyle = INK
+  // Fundo CLARO (modo branco) + listras diagonais bem sutis (textura editorial).
+  ctx.fillStyle = PAPER
   ctx.fillRect(0, 0, W, H)
   ctx.save()
-  ctx.globalAlpha = 0.05
-  ctx.strokeStyle = YELLOW
+  ctx.globalAlpha = 0.04
+  ctx.strokeStyle = INK
   ctx.lineWidth = 10
-  for (let i = -H; i < W; i += 40) {
+  for (let i = -H; i < W; i += 44) {
     ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + H, H); ctx.stroke()
   }
   ctx.restore()
 
-  // Barra amarela no topo e na base (moldura editorial).
+  // Barras amarelas (topo/base) — moldura editorial.
   ctx.fillStyle = YELLOW
   ctx.fillRect(0, 0, W, 16)
   ctx.fillRect(0, H - 16, W, 16)
@@ -128,38 +132,43 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
 
   // ── Logo + eyebrow ──────────────────────────────────────────────
   if (logo) {
-    const lh = 96
+    const lh = 100
     const lw = (logo.width / logo.height) * lh
-    ctx.drawImage(logo, cx - lw / 2, 110, lw, lh)
+    ctx.drawImage(logo, cx - lw / 2, 108, lw, lh)
   } else {
-    ctx.fillStyle = PAPER
+    ctx.fillStyle = INK
     ctx.font = '400 84px "Anton"'
     ctx.textAlign = 'center'
-    ctx.fillText('BOLÃO SUPREMA', cx, 190)
+    ctx.fillText('BOLÃO SUPREMA', cx, 192)
   }
-  ctx.fillStyle = 'rgba(245,241,232,0.55)'
+  ctx.fillStyle = INK3
   ctx.font = '700 26px "JetBrains Mono"'
   ctx.textAlign = 'center'
-  ctx.fillText('C O P A   D O   M U N D O   2 0 2 6', cx, 268)
+  ctx.fillText('C O P A   D O   M U N D O   2 0 2 6', cx, 272)
 
   // ── Hero "CRAVOU!" ──────────────────────────────────────────────
-  ctx.fillStyle = YELLOW
+  ctx.fillStyle = GREEN_DEEP
   ctx.textAlign = 'center'
   fitText(ctx, 'CRAVOU!', W - 120, 280, 160)
   ctx.fillText('CRAVOU!', cx, 600)
-  ctx.fillStyle = PAPER
+  ctx.fillStyle = INK3
   ctx.font = '700 30px "JetBrains Mono"'
   ctx.fillText('PLACAR EXATO · NA MOSCA', cx, 660)
 
-  // ── Card do confronto ───────────────────────────────────────────
+  // ── Card do confronto (branco com sombra leve) ──────────────────
   const cardX = 70, cardY = 740, cardW = W - 140, cardH = 460
-  ctx.fillStyle = '#161616'
+  ctx.save()
+  ctx.shadowColor = 'rgba(13,13,13,0.12)'
+  ctx.shadowBlur = 36
+  ctx.shadowOffsetY = 14
+  ctx.fillStyle = WHITE
   roundRect(ctx, cardX, cardY, cardW, cardH, 32); ctx.fill()
-  ctx.strokeStyle = 'rgba(245,241,232,0.12)'; ctx.lineWidth = 2
+  ctx.restore()
+  ctx.strokeStyle = 'rgba(13,13,13,0.12)'; ctx.lineWidth = 2
   roundRect(ctx, cardX, cardY, cardW, cardH, 32); ctx.stroke()
 
   // stage label
-  ctx.fillStyle = 'rgba(245,241,232,0.5)'
+  ctx.fillStyle = INK3
   ctx.font = '700 26px "JetBrains Mono"'
   ctx.textAlign = 'center'
   ctx.fillText(data.stageLabel.toUpperCase(), cx, cardY + 70)
@@ -172,14 +181,14 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
   if (homeFlag) drawCircleImage(ctx, homeFlag, homeFlagX, flagY, flagD)
   if (awayFlag) drawCircleImage(ctx, awayFlag, awayFlagX, flagY, flagD)
 
-  ctx.fillStyle = PAPER
+  ctx.fillStyle = INK
   ctx.font = '400 64px "Anton"'
   ctx.textAlign = 'center'
   ctx.fillText(data.home.code, homeFlagX, flagY + flagD / 2 + 80)
   ctx.fillText(data.away.code, awayFlagX, flagY + flagD / 2 + 80)
 
   // placar grande no centro
-  ctx.fillStyle = YELLOW
+  ctx.fillStyle = INK
   ctx.font = '400 180px "Anton"'
   ctx.fillText(`${data.homeScore} × ${data.awayScore}`, cx, flagY + 60)
 
@@ -205,7 +214,7 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
     ctx.textAlign = 'center'
     ctx.fillText((data.userInitials || '?').slice(0, 2).toUpperCase(), cx, userY + 20)
   }
-  ctx.fillStyle = PAPER
+  ctx.fillStyle = INK
   ctx.textAlign = 'center'
   fitText(ctx, data.userName.toUpperCase(), W - 160, 72, 34)
   ctx.fillText(data.userName.toUpperCase(), cx, userY + avD / 2 + 90)
@@ -215,16 +224,16 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
   if (data.className) bits.push(data.className)
   if (data.rank) bits.push(`${data.rank}º no ranking`)
   if (bits.length) {
-    ctx.fillStyle = YELLOW
+    ctx.fillStyle = GREEN_DEEP
     ctx.font = '700 30px "JetBrains Mono"'
     ctx.fillText(bits.join('  ·  ').toUpperCase(), cx, userY + avD / 2 + 150)
   }
 
-  // ── Rodapé ──────────────────────────────────────────────────────
-  ctx.fillStyle = 'rgba(245,241,232,0.55)'
-  ctx.font = '700 30px "JetBrains Mono"'
+  // ── Rodapé (sem link — só a marca, pra mostrar e não dar acesso) ─
+  ctx.fillStyle = INK4
+  ctx.font = '700 28px "JetBrains Mono"'
   ctx.textAlign = 'center'
-  ctx.fillText('bolao.suprema.group', cx, H - 90)
+  ctx.fillText('B O L Ã O   S U P R E M A', cx, H - 90)
 
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('Falha ao gerar imagem'))), 'image/png')
