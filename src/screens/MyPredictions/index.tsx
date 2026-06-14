@@ -227,9 +227,9 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 function General({ label, value }: { label: string; value: string | null }) {
   return (
-    <div className="border border-hairline p-3 text-center">
+    <div className="border border-hairline p-3 text-center min-w-0">
       <div className="font-mono text-[8px] tracking-eyebrow text-ink-4">{label.toUpperCase()}</div>
-      <div className={cn('font-display text-xl mt-0.5', value ? 'text-ink' : 'text-ink-4')}>{value || '—'}</div>
+      <div className={cn('font-display text-lg mt-0.5 truncate', value ? 'text-ink' : 'text-ink-4')}>{value || '—'}</div>
     </div>
   )
 }
@@ -248,61 +248,65 @@ function GroupChip({ id, label, active, onClick }: { id: string; label: string; 
   )
 }
 
-// Resultado/pontos de um palpite, como chip à direita.
-function ResultChip({ match, pred }: { match: Match; pred?: Prediction }) {
-  const placeholder = isPlaceholderMatch(match)
-  const isLive = match.status === 'live'
-  const isDone = match.status === 'finished'
-  const pts = pointsOf(match, pred)
-
-  if (placeholder) return <span className="font-mono text-[9px] text-ink-4">a definir</span>
-
-  // Em andamento OU encerrado: NUNCA mostramos placar ao vivo aqui — só o palpite
-  // e (se encerrado) os pontos. O placar ao vivo fica só na Home.
-  if (!pred) {
-    return isDone || isLive
-      ? <span className="font-mono text-[9px] text-ink-4">sem palpite</span>
-      : <span className="font-mono text-[9px] font-bold text-yellow">PALPITAR →</span>
-  }
-
-  return (
-    <div className="flex items-center gap-2 flex-shrink-0">
-      <span className="font-display text-lg text-ink tabular-nums">{pred.homeScore}–{pred.awayScore}</span>
-      {isDone ? (
-        <span className={cn(
-          'font-mono text-[9px] font-bold rounded-md px-1.5 py-0.5 min-w-[40px] text-center',
-          (pts ?? 0) >= 10 ? 'bg-green text-white' : (pts ?? 0) > 0 ? 'border border-hairline text-ink-2 bg-surface-2' : 'text-ink-4',
-        )}>
-          {(pts ?? 0) > 0 ? `+${pts}` : '0'}
-        </span>
-      ) : isLive ? (
-        <span className="font-mono text-[8px] font-bold text-red tracking-eyebrow">AO VIVO</span>
-      ) : (
-        <span className="font-mono text-[10px] text-green">✓</span>
-      )}
-    </div>
-  )
-}
-
 function MatchRow({ match, pred, userCtx, onClick }: { match: Match; pred?: Prediction; userCtx: UserCardCtx; onClick: () => void }) {
   const isDone = match.status === 'finished'
+  const isLive = match.status === 'live'
+  const placeholder = isPlaceholderMatch(match)
   const cravada = isCravada(match, pred)
+  const pts = pointsOf(match, pred)
+
   return (
-    <div onClick={onClick} role="button" tabIndex={0} className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-surface-hover transition-colors cursor-pointer">
-      <div className="font-mono text-[8px] text-ink-4 w-9 flex-shrink-0 leading-tight">
-        {match.stage === 'group' ? <>GRUPO<br />{match.group}</> : match.stageLabel}
+    <div
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      className="w-full px-4 py-3 hover:bg-surface-hover transition-colors cursor-pointer"
+    >
+      {/* Linha 1 — o confronto + resultado real (só quando encerra) */}
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-[8px] text-ink-4 w-11 flex-shrink-0 leading-tight">
+          {match.stage === 'group' ? `GRUPO ${match.group}` : match.stageLabel}
+        </span>
+        <Flag team={match.home} size={20} />
+        <span className="font-mono text-[12px] font-bold">{match.home.code}</span>
+        <span className="font-mono text-[10px] text-ink-4">×</span>
+        <span className="font-mono text-[12px] font-bold">{match.away.code}</span>
+        <Flag team={match.away} size={20} />
+        <div className="flex-1 min-w-0 text-right">
+          {isDone ? (
+            <span className="font-display text-xl text-ink tabular-nums">{match.homeScore ?? 0}–{match.awayScore ?? 0}</span>
+          ) : isLive ? (
+            <span className="font-mono text-[8px] font-bold text-red tracking-eyebrow">AO VIVO</span>
+          ) : placeholder ? (
+            <span className="font-mono text-[9px] text-ink-4">a definir</span>
+          ) : (
+            <span className="font-mono text-[9px] text-ink-4">{formatMatchDate(match)} · {formatMatchTime(match)}</span>
+          )}
+        </div>
       </div>
-      <Flag team={match.home} size={20} />
-      <span className="font-mono text-[11px] font-bold w-9">{match.home.code}</span>
-      <span className="font-display text-sm text-ink-3 flex-shrink-0 w-8 text-center">
-        {isDone ? `${match.homeScore ?? 0}–${match.awayScore ?? 0}` : 'x'}
-      </span>
-      <span className="font-mono text-[11px] font-bold w-9 text-right">{match.away.code}</span>
-      <Flag team={match.away} size={20} />
-      <div className="flex-1 min-w-0 flex items-center justify-end gap-2">
-        <ResultChip match={match} pred={pred} />
-        {cravada && pred && <ShareCravadaButton data={cravadaCard(match, pred, userCtx)} />}
-      </div>
+
+      {/* Linha 2 — meu palpite, pontos e compartilhar */}
+      {!placeholder && (
+        <div className="mt-2 flex items-center gap-2 pl-[52px]">
+          <span className="font-mono text-[8px] tracking-eyebrow text-ink-4 flex-shrink-0">MEU PALPITE</span>
+          {pred ? (
+            <span className="font-display text-base text-ink tabular-nums">{pred.homeScore}–{pred.awayScore}</span>
+          ) : (
+            <span className="font-mono text-[9px] font-bold text-yellow">{isDone || isLive ? 'não palpitou' : 'PALPITAR →'}</span>
+          )}
+          {isDone && pred && (
+            <span className={cn(
+              'font-mono text-[9px] font-bold rounded-md px-1.5 py-0.5',
+              (pts ?? 0) >= 10 ? 'bg-green text-white' : (pts ?? 0) > 0 ? 'border border-hairline text-ink-2 bg-surface-2' : 'text-ink-4',
+            )}>
+              {(pts ?? 0) > 0 ? `+${pts} pts` : '0 pt'}
+            </span>
+          )}
+          {!isDone && !isLive && pred && <span className="font-mono text-[10px] text-green font-bold">✓ salvo</span>}
+          <div className="flex-1" />
+          {cravada && pred && <ShareCravadaButton data={cravadaCard(match, pred, userCtx)} />}
+        </div>
+      )}
     </div>
   )
 }
