@@ -1,13 +1,17 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Avatar } from '@/components/shared/Avatar'
+import { Flag } from '@/components/shared/Flag'
 import { FloatingTooltip } from '@/components/shared/FloatingTooltip'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { useTabResync } from '@/hooks/useTabResync'
+import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { useAuthStore } from '@/stores/auth.store'
 import { fmtPts, cn } from '@/lib/utils'
 import { fetchRanking, subscribeRankingUpdates } from '@/lib/ranking'
 import { supabase, isMockMode } from '@/lib/supabase'
+import { WC2026_MATCHES } from '@/data/wc2026'
 import { fetchRankingBreakdown, fetchScoringRules } from '@/services/product'
 import type { RankingBreakdown, RankingEntry, Mov, ScoringRule } from '@/types'
 
@@ -139,11 +143,11 @@ export function RankingScreen() {
 
 // ─── Row component ─────────────────────────────────────────────────────────────
 
-function RankingRow({ r, large = false }: { r: RankingEntry; large?: boolean }) {
+function RankingRow({ r, large = false, onPeek }: { r: RankingEntry; large?: boolean; onPeek?: (r: RankingEntry) => void }) {
   const navigate = useNavigate()
   return (
     <div
-      onClick={() => navigate(`/u/${r.userId}`)}
+      onClick={() => (onPeek ? onPeek(r) : navigate(`/u/${r.userId}`))}
       className={cn(
         'flex items-center gap-3 border-b border-hairline cursor-pointer transition-colors',
         r.isYou ? 'bg-yellow text-[#0D0D0D] hover:bg-yellow/90' : 'hover:bg-surface-hover',
@@ -176,6 +180,95 @@ function RankingRow({ r, large = false }: { r: RankingEntry; large?: boolean }) 
       </div>
       <span className={cn('font-display', large ? 'text-2xl' : 'text-xl')}>{fmtPts(r.pts)}</span>
     </div>
+  )
+}
+
+// ─── Espiada rápida: palpites finalizados de um palpiteiro ─────────────────────
+
+function PlayerPeekModal({ entry, onClose }: { entry: RankingEntry; onClose: () => void }) {
+  const navigate = useNavigate()
+  const matches = useMatchesWithStatus(WC2026_MATCHES)
+  const [preds, setPreds] = useState<Record<string, { h: number; a: number; pts: number | null }> | null>(null)
+
+  useEffect(() => {
+    if (isMockMode) { setPreds({}); return }
+    let active = true
+    void supabase
+      .from('predictions')
+      .select('match_code, home_score, away_score, points_earned')
+      .eq('user_id', entry.userId)
+      .then(({ data }) => {
+        if (!active) return
+        const map: Record<string, { h: number; a: number; pts: number | null }> = {}
+        for (const r of (data ?? []) as { match_code: string | null; home_score: number; away_score: number; points_earned: number | null }[]) {
+          if (r.match_code) map[r.match_code] = { h: r.home_score, a: r.away_score, pts: r.points_earned ?? null }
+        }
+        setPreds(map)
+      })
+    return () => { active = false }
+  }, [entry.userId])
+
+  const finished = useMemo(
+    () => (preds
+      ? matches
+          .filter(m => m.status === 'finished' && preds[m.id])
+          .sort((a, b) => new Date(b.kickoffUtc).getTime() - new Date(a.kickoffUtc).getTime())
+      : []),
+    [matches, preds],
+  )
+
+  return createPortal(
+    <div className="fixed inset-0 z-[80] grid place-items-center bg-black/70 px-4 py-6 overflow-y-auto" onClick={(e) => { e.stopPropagation(); onClose() }}>
+      <div className="relative w-full max-w-sm ui-card overflow-hidden" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} aria-label="Fechar"
+          className="absolute top-3 right-3 z-10 grid h-7 w-7 place-items-center border border-hairline bg-card font-mono text-[11px] text-ink-3 hover:border-ink hover:text-ink">✕</button>
+
+        <div className="bg-ink text-paper px-4 py-3 flex items-center gap-3">
+          <Avatar initials={entry.initials} color={entry.color} src={entry.avatarUrl} size={42} />
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-2xl leading-none truncate">{entry.name}</div>
+            <div className="font-mono text-[10px] text-paper/60 mt-1">
+              {entry.rank}º · {fmtPts(entry.pts)} pts · {entry.correct} acertos · {entry.exact} cravadas
+            </div>
+          </div>
+        </div>
+
+        <div className="max-h-[52vh] overflow-y-auto divide-y divide-hairline">
+          {preds === null ? (
+            <div className="px-4 py-10 text-center font-mono text-[11px] tracking-eyebrow text-ink-3 animate-pulse">CARREGANDO PALPITES…</div>
+          ) : finished.length === 0 ? (
+            <div className="px-4 py-10 text-center font-mono text-[11px] text-ink-3">Nenhum palpite em jogo encerrado ainda.</div>
+          ) : finished.map(m => {
+            const p = preds[m.id]
+            const pts = p?.pts ?? 0
+            return (
+              <div key={m.id} className="flex items-center gap-2 px-4 py-2.5">
+                <Flag team={m.home} size={18} />
+                <span className="font-mono text-[11px] font-bold">{m.home.code}</span>
+                <span className="font-mono text-[9px] text-ink-4">×</span>
+                <span className="font-mono text-[11px] font-bold">{m.away.code}</span>
+                <Flag team={m.away} size={18} />
+                <div className="flex-1" />
+                <span className="font-mono text-[8px] text-ink-4 whitespace-nowrap hidden sm:inline">{m.homeScore}–{m.awayScore} real</span>
+                <span className="font-display text-base text-ink tabular-nums whitespace-nowrap flex-shrink-0">{p?.h}–{p?.a}</span>
+                <span className={cn('font-mono text-[9px] font-bold rounded-md px-1.5 py-0.5 flex-shrink-0',
+                  pts >= 10 ? 'bg-green text-white' : pts > 0 ? 'border border-hairline text-ink-2 bg-surface-2' : 'text-ink-4')}>
+                  {pts > 0 ? `+${pts}` : '0'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        <button
+          onClick={() => { onClose(); navigate(`/u/${entry.userId}`) }}
+          className="w-full border-t border-hairline py-3 font-mono text-[11px] font-bold tracking-eyebrow text-ink hover:bg-surface-hover"
+        >
+          ABRIR PERFIL COMPLETO →
+        </button>
+      </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -318,6 +411,7 @@ function RankingMobile() {
     () => query ? fullRanking.filter(r => norm(r.name).includes(norm(query))) : fullRanking,
     [fullRanking, query],
   )
+  const [peek, setPeek] = useState<RankingEntry | null>(null)
 
   const top3 = fullRanking.slice(0, 3)
 
@@ -416,13 +510,15 @@ function RankingMobile() {
         )
       ) : visible.length > 0 ? (
         <div className="divide-y divide-hairline">
-          {visible.map(r => <RankingRow key={r.userId} r={r} />)}
+          {visible.map(r => <RankingRow key={r.userId} r={r} onPeek={setPeek} />)}
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
           <p className="font-mono text-[11px] text-ink-3">Nenhum palpiteiro encontrado para "{query}".</p>
         </div>
       )}
+
+      {peek && <PlayerPeekModal entry={peek} onClose={() => setPeek(null)} />}
     </div>
   )
 }
@@ -430,10 +526,10 @@ function RankingMobile() {
 // ─── Desktop ──────────────────────────────────────────────────────────────────
 
 function RankingDesktop() {
-  const navigate = useNavigate()
   const meUser = useAuthStore(s => s.user)
   const { ranking, loading, error } = useRanking()
   const [query, setQuery] = useState('')
+  const [peek, setPeek] = useState<RankingEntry | null>(null)
   const rules = useScoring()
   const top3 = ranking.slice(0, 3)
   const visible = useMemo(
@@ -514,7 +610,7 @@ function RankingDesktop() {
                 <span className="text-right">PTS</span>
               </div>
               {ranking.length > 0 ? (visible.length > 0 ? visible.map(r => (
-                <div key={r.userId} onClick={() => navigate(`/u/${r.userId}`)} className={cn(
+                <div key={r.userId} onClick={() => setPeek(r)} className={cn(
                   'grid grid-cols-[40px_1fr_100px_48px_48px_48px_80px] gap-2 items-center px-5 py-2.5 border-b border-hairline cursor-pointer transition-colors',
                   r.isYou ? 'bg-yellow text-[#0D0D0D] hover:bg-yellow/90' : 'hover:bg-surface-hover'
                 )}>
@@ -584,6 +680,7 @@ function RankingDesktop() {
           </div>
         </div>
       </div>
+      {peek && <PlayerPeekModal entry={peek} onClose={() => setPeek(null)} />}
     </div>
   )
 }

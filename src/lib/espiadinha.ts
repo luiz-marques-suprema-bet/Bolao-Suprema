@@ -143,6 +143,9 @@ export interface RankingLike {
   pts: number
   exact?: number
   correct?: number
+  /** Colocação REAL do banco (current_ranking). Usar isto em vez do índice da
+   *  lista — a lista pode vir filtrada (perfis ocultos), o que bagunça o índice. */
+  rank?: number
 }
 
 // Classes a partir do ranking oficial já ordenado: a classe vem do percentil da
@@ -166,7 +169,7 @@ export function standingsFromRanking(entries: RankingLike[]): EspiaStanding[] {
         avatarUrl: e.avatarUrl,
         dept: e.dept ?? '',
       },
-      rank: i + 1,
+      rank: e.rank ?? (i + 1),
       points: e.pts,
       settledCount: 0,
       accuracy: 0,

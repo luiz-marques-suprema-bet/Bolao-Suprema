@@ -12,6 +12,7 @@ import { MobileNav } from '@/components/navigation/MobileNav'
 import { DesktopNav } from '@/components/navigation/DesktopNav'
 import { Marquee } from '@/components/shared/Marquee'
 import { CravadaCelebration } from '@/components/shared/CravadaCelebration'
+import { UpdateAvailableBanner } from '@/components/shared/UpdateAvailableBanner'
 // Entry screens — eager (carregam de cara).
 import { OnboardingScreen } from '@/screens/Onboarding'
 import { LoginScreen } from '@/screens/Login'
@@ -250,6 +251,7 @@ export function App() {
   return (
     <ThemeProvider>
       <RouterProvider router={router} />
+      <UpdateAvailableBanner />
     </ThemeProvider>
   )
 }
