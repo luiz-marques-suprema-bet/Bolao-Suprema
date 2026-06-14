@@ -76,6 +76,17 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath()
 }
 
+// Mancha de cor orgânica e suave (clima de Copa) — gradiente radial → transparente.
+function softBlob(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, rgb: string, alpha = 0.16) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r)
+  g.addColorStop(0, `rgba(${rgb},${alpha})`)
+  g.addColorStop(1, `rgba(${rgb},0)`)
+  ctx.save()
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, W, H)
+  ctx.restore()
+}
+
 function drawCircleImage(ctx: CanvasRenderingContext2D, img: HTMLImageElement, cx: number, cy: number, d: number) {
   ctx.save()
   ctx.beginPath()
@@ -100,14 +111,19 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
   const YELLOW = '#FFCB05'
   const GREEN = '#00A651'
   const GREEN_DEEP = '#007A3E'
+  const BLUE = '#1D3557'
   const PAPER = '#F5F1E8'
   const WHITE = '#FFFCF5'
 
-  // Fundo CLARO (modo branco) + listras diagonais bem sutis (textura editorial).
+  // Fundo CLARO (modo branco) com clima de Copa: manchas orgânicas verdes/azul +
+  // listras diagonais (textura editorial).
   ctx.fillStyle = PAPER
   ctx.fillRect(0, 0, W, H)
+  softBlob(ctx, W * 0.95, H * 0.12, 660, '0,166,81', 0.18)   // verde, topo direito
+  softBlob(ctx, W * 0.05, H * 0.86, 720, '0,166,81', 0.16)   // verde, base esquerda
+  softBlob(ctx, W * 0.88, H * 0.95, 420, '29,53,87', 0.10)   // azul, canto inferior
   ctx.save()
-  ctx.globalAlpha = 0.04
+  ctx.globalAlpha = 0.05
   ctx.strokeStyle = INK
   ctx.lineWidth = 10
   for (let i = -H; i < W; i += 44) {
@@ -146,25 +162,24 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
   ctx.textAlign = 'center'
   ctx.fillText('C O P A   D O   M U N D O   2 0 2 6', cx, 272)
 
-  // ── Hero "CRAVOU!" ──────────────────────────────────────────────
-  ctx.fillStyle = GREEN_DEEP
+  // ── Hero "CRAVOU!" — tipografia gigante em camada (verde + sombra azul) ──
   ctx.textAlign = 'center'
-  fitText(ctx, 'CRAVOU!', W - 120, 280, 160)
+  fitText(ctx, 'CRAVOU!', W - 80, 300, 170) // define ctx.font; reusado nas 2 camadas
+  ctx.fillStyle = BLUE
+  ctx.fillText('CRAVOU!', cx + 9, 609)
+  ctx.fillStyle = GREEN_DEEP
   ctx.fillText('CRAVOU!', cx, 600)
   ctx.fillStyle = INK3
   ctx.font = '700 30px "JetBrains Mono"'
-  ctx.fillText('PLACAR EXATO · NA MOSCA', cx, 660)
+  ctx.fillText('PLACAR EXATO · NA MOSCA', cx, 668)
 
-  // ── Card do confronto (branco com sombra leve) ──────────────────
+  // ── Card do confronto (branco com sombra-bloco amarela, estilo sticker) ──
   const cardX = 70, cardY = 740, cardW = W - 140, cardH = 460
-  ctx.save()
-  ctx.shadowColor = 'rgba(13,13,13,0.12)'
-  ctx.shadowBlur = 36
-  ctx.shadowOffsetY = 14
+  ctx.fillStyle = YELLOW
+  roundRect(ctx, cardX + 16, cardY + 16, cardW, cardH, 32); ctx.fill()
   ctx.fillStyle = WHITE
   roundRect(ctx, cardX, cardY, cardW, cardH, 32); ctx.fill()
-  ctx.restore()
-  ctx.strokeStyle = 'rgba(13,13,13,0.12)'; ctx.lineWidth = 2
+  ctx.strokeStyle = INK; ctx.lineWidth = 3
   roundRect(ctx, cardX, cardY, cardW, cardH, 32); ctx.stroke()
 
   // stage label
@@ -214,6 +229,9 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
     ctx.textAlign = 'center'
     ctx.fillText((data.userInitials || '?').slice(0, 2).toUpperCase(), cx, userY + 20)
   }
+  ctx.strokeStyle = YELLOW
+  ctx.lineWidth = 8
+  ctx.beginPath(); ctx.arc(cx, userY, avD / 2 + 5, 0, Math.PI * 2); ctx.stroke()
   ctx.fillStyle = INK
   ctx.textAlign = 'center'
   fitText(ctx, data.userName.toUpperCase(), W - 160, 72, 34)
