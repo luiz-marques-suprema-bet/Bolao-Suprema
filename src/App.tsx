@@ -11,6 +11,7 @@ import { useTabResync } from '@/hooks/useTabResync'
 import { MobileNav } from '@/components/navigation/MobileNav'
 import { DesktopNav } from '@/components/navigation/DesktopNav'
 import { Marquee } from '@/components/shared/Marquee'
+import { CravadaCelebration } from '@/components/shared/CravadaCelebration'
 // Entry screens — eager (carregam de cara).
 import { OnboardingScreen } from '@/screens/Onboarding'
 import { LoginScreen } from '@/screens/Login'
@@ -162,6 +163,8 @@ function AppLayout() {
       )}
 
       {!isDesktop && <MobileNav />}
+
+      <CravadaCelebration />
     </div>
   )
 }

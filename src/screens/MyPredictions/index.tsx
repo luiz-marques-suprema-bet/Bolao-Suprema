@@ -12,8 +12,29 @@ import { isPlaceholderMatch } from '@/lib/matchGuards'
 import { calculatePoints } from '@/lib/scoring'
 import { fetchRanking, subscribeRankingUpdates } from '@/lib/ranking'
 import { standingsFromRanking, type EspiaTier } from '@/lib/espiadinha'
+import { ShareCravadaButton } from '@/components/shared/ShareCravada'
+import type { CravadaCardData } from '@/lib/shareCard'
 import { cn, fmtPts } from '@/lib/utils'
 import type { Match, Prediction, RankingEntry } from '@/types'
+
+type UserCardCtx = Pick<CravadaCardData, 'userName' | 'userInitials' | 'userColor' | 'userAvatarUrl' | 'rank' | 'className'>
+
+function isCravada(m: Match, pred?: Prediction): boolean {
+  return m.status === 'finished' && !!pred && m.homeScore != null && m.awayScore != null
+    && pred.homeScore === m.homeScore && pred.awayScore === m.awayScore
+}
+
+function cravadaCard(m: Match, pred: Prediction, ctx: UserCardCtx): CravadaCardData {
+  return {
+    home: { code: m.home.code, flag: m.home.flag },
+    away: { code: m.away.code, flag: m.away.flag },
+    homeScore: m.homeScore ?? 0,
+    awayScore: m.awayScore ?? 0,
+    points: pointsOf(m, pred) ?? (m.stage === 'group' ? 10 : 12),
+    stageLabel: m.stage === 'group' ? `Grupo ${m.group}` : (m.stageLabel ?? 'Mata-mata'),
+    ...ctx,
+  }
+}
 
 // Pontos de um jogo: usa o valor do banco (autoritativo: grupos + mata-mata);
 // se ainda não veio, calcula pelo placar real (regra atual).
@@ -62,6 +83,14 @@ export function MyPredictionsScreen() {
     () => standingsFromRanking(ranking).find(s => s.user.id === me?.id)?.tier,
     [ranking, me?.id],
   )
+  const userCtx = useMemo<UserCardCtx>(() => ({
+    userName: me ? (`${me.firstName} ${me.lastName ?? ''}`.trim() || me.firstName || 'Você') : 'Você',
+    userInitials: me?.initials ?? '?',
+    userColor: me?.color ?? '#777',
+    userAvatarUrl: me?.avatarUrl,
+    rank: myEntry?.rank,
+    className: myTier?.label,
+  }), [me, myEntry?.rank, myTier?.label])
 
   // Jogo atual: o que está AO VIVO; senão o próximo a começar.
   const currentGame = useMemo(() => {
@@ -173,6 +202,7 @@ export function MyPredictionsScreen() {
                   key={match.id}
                   match={match}
                   pred={predictions[match.id]}
+                  userCtx={userCtx}
                   onClick={() => navigate(`/prediction/${match.id}`)}
                 />
               ))
@@ -254,10 +284,11 @@ function ResultChip({ match, pred }: { match: Match; pred?: Prediction }) {
   )
 }
 
-function MatchRow({ match, pred, onClick }: { match: Match; pred?: Prediction; onClick: () => void }) {
+function MatchRow({ match, pred, userCtx, onClick }: { match: Match; pred?: Prediction; userCtx: UserCardCtx; onClick: () => void }) {
   const isDone = match.status === 'finished'
+  const cravada = isCravada(match, pred)
   return (
-    <button onClick={onClick} className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-surface-hover transition-colors">
+    <div onClick={onClick} role="button" tabIndex={0} className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-surface-hover transition-colors cursor-pointer">
       <div className="font-mono text-[8px] text-ink-4 w-9 flex-shrink-0 leading-tight">
         {match.stage === 'group' ? <>GRUPO<br />{match.group}</> : match.stageLabel}
       </div>
@@ -268,10 +299,11 @@ function MatchRow({ match, pred, onClick }: { match: Match; pred?: Prediction; o
       </span>
       <span className="font-mono text-[11px] font-bold w-9 text-right">{match.away.code}</span>
       <Flag team={match.away} size={20} />
-      <div className="flex-1 min-w-0 text-right">
+      <div className="flex-1 min-w-0 flex items-center justify-end gap-2">
         <ResultChip match={match} pred={pred} />
+        {cravada && pred && <ShareCravadaButton data={cravadaCard(match, pred, userCtx)} />}
       </div>
-    </button>
+    </div>
   )
 }
 

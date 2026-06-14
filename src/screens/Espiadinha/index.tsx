@@ -22,7 +22,11 @@ import {
   type EspiaProfile,
   type EspiaPredRow,
 } from '@/lib/espiadinha'
+import { ShareCravadaButton } from '@/components/shared/ShareCravada'
+import type { CravadaCardData } from '@/lib/shareCard'
 import type { Match, RankingEntry } from '@/types'
+
+type ShareCtx = Pick<CravadaCardData, 'userName' | 'userInitials' | 'userColor' | 'userAvatarUrl' | 'rank' | 'className'>
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -200,12 +204,13 @@ function StatusBadge({ settled }: { settled: boolean }) {
     : <span className="font-mono text-[9px] font-bold tracking-eyebrow text-red">EM ANDAMENTO</span>
 }
 
-function MatchCard({ match, settled, profiles, meId, query }: {
+function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
   match: Match
   settled: boolean
   profiles: EspiaProfile[]
   meId?: string
   query: string
+  myCtx?: ShareCtx
 }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -303,6 +308,17 @@ function MatchCard({ match, settled, profiles, meId, query }: {
                       </div>
                       <span className="font-display text-lg text-ink-2 tabular-nums">{g.homeScore}×{g.awayScore}</span>
                       <HitChip kind={g.hit.kind} label={g.hit.label} />
+                      {isMe && g.hit.kind === 'exact' && myCtx && (
+                        <ShareCravadaButton data={{
+                          home: { code: match.home.code, flag: match.home.flag },
+                          away: { code: match.away.code, flag: match.away.flag },
+                          homeScore: g.homeScore,
+                          awayScore: g.awayScore,
+                          points: g.hit.points ?? (match.stage === 'group' ? 10 : 12),
+                          stageLabel: match.stage === 'group' ? `Grupo ${match.group}` : (match.stageLabel ?? 'Mata-mata'),
+                          ...myCtx,
+                        }} />
+                      )}
                     </div>
                   )
                 })}
@@ -424,6 +440,19 @@ export function EspiadinhaScreen() {
     return allStandings.filter(s => norm(s.user.name).includes(norm(query)))
   }, [allStandings, query])
 
+  const myCtx = useMemo<ShareCtx | undefined>(() => {
+    if (!me) return undefined
+    const st = allStandings.find(s => s.user.id === me.id)
+    return {
+      userName: `${me.firstName} ${me.lastName ?? ''}`.trim() || me.firstName || 'Você',
+      userInitials: me.initials ?? '?',
+      userColor: me.color ?? '#777',
+      userAvatarUrl: me.avatarUrl,
+      rank: st?.rank,
+      className: st?.tier.label,
+    }
+  }, [me, allStandings])
+
   const hasAny = matches.length > 0
 
   return (
@@ -497,7 +526,7 @@ export function EspiadinhaScreen() {
               <div className="order-2 lg:order-1 space-y-4 min-w-0">
                 {filteredMatches.length > 0 ? (
                   filteredMatches.map(rm => (
-                    <MatchCard key={rm.match.id} match={rm.match} settled={rm.settled} profiles={profiles} meId={me?.id} query={query} />
+                    <MatchCard key={rm.match.id} match={rm.match} settled={rm.settled} profiles={profiles} meId={me?.id} query={query} myCtx={myCtx} />
                   ))
                 ) : (
                   <div className="ui-card p-8 text-center">
