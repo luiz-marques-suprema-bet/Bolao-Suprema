@@ -90,6 +90,14 @@ function darken(hex: string, amt: number): string {
   const [r, g, b] = hexToRgb(hex)
   return `rgb(${clamp(r * (1 - amt))},${clamp(g * (1 - amt))},${clamp(b * (1 - amt))})`
 }
+function luminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex)
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+}
+// Garante uma cor legível sobre fundo CLARO (escurece cores muito claras).
+function readableOnLight(hex: string): string {
+  return luminance(hex) > 0.6 ? darken(hex, 0.5) : hex
+}
 
 // Anéis concêntricos a partir de um canto (motivo da identidade da Copa).
 function rings(ctx: CanvasRenderingContext2D, cx: number, cy: number, maxR: number, count: number, colors: string[]) {
@@ -100,15 +108,6 @@ function rings(ctx: CanvasRenderingContext2D, cx: number, cy: number, maxR: numb
     ctx.arc(cx, cy, r, 0, Math.PI * 2)
     ctx.fill()
   }
-}
-
-function grain(ctx: CanvasRenderingContext2D, count: number) {
-  ctx.save()
-  for (let i = 0; i < count; i++) {
-    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.05})`
-    ctx.fillRect(Math.random() * W, Math.random() * H, 2, 2)
-  }
-  ctx.restore()
 }
 
 function drawCircleImage(ctx: CanvasRenderingContext2D, img: HTMLImageElement, cx: number, cy: number, d: number) {
@@ -138,27 +137,38 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
   const ctx = canvas.getContext('2d')!
 
   const YELLOW = '#FFCB05'
+  const GREEN = '#00A651'
+  const INK = '#0D0D0D'
+  const INK3 = '#6B6B66'
+  const INK4 = '#A9A89F'
+  const PAPER = '#F5F1E8'
+  const WHITE = '#FFFCF5'
+
   const homeWon = data.homeScore > data.awayScore
   const awayWon = data.awayScore > data.homeScore
-  const winColor = homeWon ? (data.home.color || '#00A651') : awayWon ? (data.away.color || '#00A651') : '#C9A856'
-  // Paleta concêntrica derivada do vencedor.
-  const pal = [winColor, lighten(winColor, 0.30), darken(winColor, 0.32), lighten(winColor, 0.55), darken(winColor, 0.55)]
+  const winColor = homeWon ? (data.home.color || GREEN) : awayWon ? (data.away.color || GREEN) : '#C9A856'
+  const accent = readableOnLight(winColor)
+  const pal = [winColor, lighten(winColor, 0.40), darken(winColor, 0.12), lighten(winColor, 0.64), lighten(winColor, 0.16)]
 
-  // ── Fundo escuro + anéis concêntricos coloridos nos cantos ──────
-  const bg = ctx.createLinearGradient(0, 0, 0, H)
-  bg.addColorStop(0, '#0A0E16'); bg.addColorStop(1, '#0B1118')
-  ctx.fillStyle = bg
+  // ── Fundo CLARO + anéis concêntricos (cor do vencedor) nos cantos ──
+  ctx.fillStyle = PAPER
   ctx.fillRect(0, 0, W, H)
-  rings(ctx, -80, H + 80, 1060, 6, pal)        // canto inferior esquerdo
-  rings(ctx, W + 90, -90, 760, 5, pal)         // canto superior direito
-  rings(ctx, W + 40, H + 40, 420, 5, pal)      // canto inferior direito (menor)
-
-  // Scrim escuro p/ leitura do texto + grão.
-  ctx.fillStyle = 'rgba(7,10,18,0.46)'
+  rings(ctx, -70, H + 70, 660, 6, pal)     // inferior esquerdo
+  rings(ctx, W + 70, H + 70, 560, 5, pal)  // inferior direito
+  rings(ctx, W + 90, -90, 380, 5, pal)     // superior direito
+  rings(ctx, -90, -90, 320, 4, pal)        // superior esquerdo
+  // scrim claro: deixa os anéis em pastel e garante a leitura do texto
+  ctx.fillStyle = 'rgba(245,241,232,0.5)'
   ctx.fillRect(0, 0, W, H)
-  grain(ctx, 2200)
+  // grão sutil
+  ctx.save()
+  for (let i = 0; i < 2000; i++) { ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.028})`; ctx.fillRect(Math.random() * W, Math.random() * H, 2, 2) }
+  ctx.restore()
 
+  // Zona segura do story (a UI do Instagram cobre topo e base).
+  const SAFE_TOP = 286
   const cx = W / 2
+
   const [logo, homeFlag, awayFlag, avatar] = await Promise.all([
     loadImage(asset('assets/logo-bolao.png')),
     loadImage(proxied(data.home.flag ?? '', 200)),
@@ -166,113 +176,117 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
     data.userAvatarUrl ? loadImage(proxied(data.userAvatarUrl, 220)) : Promise.resolve(null),
   ])
 
-  // ── Topo: logo (esq) + eyebrow (dir) ────────────────────────────
+  // ── Logo (centro) + eyebrow ─────────────────────────────────────
   if (logo) {
-    const lh = 92
+    const lh = 80
     const lw = (logo.width / logo.height) * lh
-    ctx.drawImage(logo, 64, 70, lw, lh)
+    ctx.drawImage(logo, cx - lw / 2, SAFE_TOP, lw, lh)
+  } else {
+    ctx.fillStyle = INK
+    ctx.font = '400 70px "Anton"'
+    ctx.textAlign = 'center'
+    ctx.fillText('BOLÃO SUPREMA', cx, SAFE_TOP + 66)
   }
-  ctx.fillStyle = 'rgba(255,255,255,0.7)'
+  ctx.fillStyle = INK3
   ctx.font = '700 24px "JetBrains Mono"'
-  ctx.textAlign = 'right'
-  ctx.fillText('COPA DO MUNDO 2026', W - 64, 128)
-
-  // ── Hero "CRAVOU!" ──────────────────────────────────────────────
   ctx.textAlign = 'center'
-  fitText(ctx, 'CRAVOU!', W - 110, 300, 150)
-  ctx.fillStyle = 'rgba(0,0,0,0.35)'
-  ctx.fillText('CRAVOU!', cx + 8, 468)
-  ctx.fillStyle = YELLOW
-  ctx.fillText('CRAVOU!', cx, 460)
-  ctx.fillStyle = 'rgba(255,255,255,0.72)'
-  ctx.font = '700 28px "JetBrains Mono"'
-  ctx.fillText('PLACAR EXATO · NA MOSCA', cx, 524)
+  ctx.fillText('C O P A   D O   M U N D O   2 0 2 6', cx, SAFE_TOP + 130)
 
-  // ── Pill de data + fase ─────────────────────────────────────────
-  const pillText = `${(data.dateLabel || '').toUpperCase()}${data.dateLabel ? '  ·  ' : ''}${data.stageLabel.toUpperCase()}`
+  // ── Hero "CRAVOU!" (cor do vencedor, legível) ───────────────────
+  ctx.textAlign = 'center'
+  fitText(ctx, 'CRAVOU!', W - 120, 200, 110)
+  ctx.fillStyle = 'rgba(13,13,13,0.14)'
+  ctx.fillText('CRAVOU!', cx + 6, SAFE_TOP + 278)
+  ctx.fillStyle = accent
+  ctx.fillText('CRAVOU!', cx, SAFE_TOP + 272)
+  ctx.fillStyle = INK3
   ctx.font = '700 26px "JetBrains Mono"'
-  const pillW = Math.min(W - 160, ctx.measureText(pillText).width + 64)
-  const pillX = cx - pillW / 2, pillY = 580
-  ctx.fillStyle = '#FFFFFF'
-  roundRect(ctx, pillX, pillY, pillW, 60, 30); ctx.fill()
-  ctx.fillStyle = '#0B1118'
+  ctx.fillText('PLACAR EXATO · NA MOSCA', cx, SAFE_TOP + 326)
+
+  // ── Pill data · fase (escura, contrasta no claro) ───────────────
+  const pillText = `${(data.dateLabel || '').toUpperCase()}${data.dateLabel ? '  ·  ' : ''}${data.stageLabel.toUpperCase()}`
+  ctx.font = '700 24px "JetBrains Mono"'
+  const pillW = Math.min(W - 160, ctx.measureText(pillText).width + 60)
+  const pillY = SAFE_TOP + 360
+  ctx.fillStyle = INK
+  roundRect(ctx, cx - pillW / 2, pillY, pillW, 54, 27); ctx.fill()
+  ctx.fillStyle = PAPER
   ctx.textAlign = 'center'
-  ctx.fillText(pillText, cx, pillY + 40)
+  ctx.fillText(pillText, cx, pillY + 36)
 
-  // ── Placar / confronto (estilo placar FIFA, 2 linhas) ───────────
-  const rowH = 168
-  const board0 = 720
-  const chipW = 104, chipH = 74
-  const leftX = 96
-  const goalX = W - 110
+  // ── Card do placar (sticker claro, sombra-bloco na cor do time) ──
+  const cardX = 70, cardW = W - 140, cardH = 340
+  const cardY = pillY + 88
+  ctx.fillStyle = winColor
+  roundRect(ctx, cardX + 14, cardY + 14, cardW, cardH, 28); ctx.fill()
+  ctx.fillStyle = WHITE
+  roundRect(ctx, cardX, cardY, cardW, cardH, 28); ctx.fill()
+  ctx.strokeStyle = INK; ctx.lineWidth = 4
+  roundRect(ctx, cardX, cardY, cardW, cardH, 28); ctx.stroke()
 
-  const drawTeamRow = (y: number, code: string, flag: HTMLImageElement | null, goals: number, won: boolean) => {
+  const chipW = 100, chipH = 70
+  const leftX = cardX + 40
+  const goalX = cardX + cardW - 44
+  const drawRow = (y: number, code: string, flag: HTMLImageElement | null, goals: number, won: boolean) => {
     flagChip(ctx, flag, leftX, y - chipH / 2, chipW, chipH)
     ctx.textAlign = 'left'
-    ctx.fillStyle = '#FFFFFF'
-    ctx.font = '400 104px "Anton"'
-    ctx.fillText(code, leftX + chipW + 34, y + 36)
-    // gols (cor do time vencedor; perdedor em branco suave)
+    ctx.fillStyle = INK
+    ctx.font = '400 84px "Anton"'
+    ctx.fillText(code, leftX + chipW + 26, y + 30)
     ctx.textAlign = 'right'
-    ctx.fillStyle = won ? winColor : 'rgba(255,255,255,0.85)'
-    ctx.font = '400 132px "Anton"'
-    ctx.fillText(String(goals), goalX, y + 44)
-    if (won) {
-      // marcador do vencedor
-      ctx.fillStyle = winColor
-      ctx.beginPath(); ctx.arc(leftX - 22, y, 9, 0, Math.PI * 2); ctx.fill()
-    }
+    ctx.fillStyle = won ? accent : 'rgba(13,13,13,0.38)'
+    ctx.font = '400 108px "Anton"'
+    ctx.fillText(String(goals), goalX, y + 38)
   }
-  drawTeamRow(board0, data.home.code, homeFlag, data.homeScore, homeWon)
-  // divisor
-  ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 2
-  ctx.beginPath(); ctx.moveTo(leftX, board0 + rowH / 2); ctx.lineTo(goalX, board0 + rowH / 2); ctx.stroke()
-  drawTeamRow(board0 + rowH, data.away.code, awayFlag, data.awayScore, awayWon)
+  drawRow(cardY + 106, data.home.code, homeFlag, data.homeScore, homeWon)
+  ctx.strokeStyle = 'rgba(13,13,13,0.12)'; ctx.lineWidth = 2
+  ctx.beginPath(); ctx.moveTo(leftX, cardY + cardH / 2); ctx.lineTo(goalX, cardY + cardH / 2); ctx.stroke()
+  drawRow(cardY + 234, data.away.code, awayFlag, data.awayScore, awayWon)
 
   // ── Selo de pontos ──────────────────────────────────────────────
-  const ptPillW = 360, ptPillH = 112, ptY = board0 + rowH + 150
-  ctx.fillStyle = YELLOW
-  roundRect(ctx, cx - ptPillW / 2, ptY, ptPillW, ptPillH, 56); ctx.fill()
-  ctx.fillStyle = '#0B1118'
-  ctx.font = '400 78px "Anton"'
+  const ptW = 360, ptH = 98, ptY = cardY + cardH + 42
+  ctx.fillStyle = GREEN
+  roundRect(ctx, cx - ptW / 2, ptY, ptW, ptH, 49); ctx.fill()
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = '400 72px "Anton"'
   ctx.textAlign = 'center'
-  ctx.fillText(`+${data.points} PTS`, cx, ptY + 82)
+  ctx.fillText(`+${data.points} PTS`, cx, ptY + 72)
 
   // ── Palpiteiro ──────────────────────────────────────────────────
-  const userY = ptY + ptPillH + 150
-  const avD = 128
+  const userY = ptY + ptH + 124
+  const avD = 110
   if (avatar) {
     drawCircleImage(ctx, avatar, cx, userY, avD)
   } else {
     ctx.fillStyle = data.userColor || '#777'
     ctx.beginPath(); ctx.arc(cx, userY, avD / 2, 0, Math.PI * 2); ctx.fill()
     ctx.fillStyle = '#FFFFFF'
-    ctx.font = '400 54px "Anton"'
+    ctx.font = '400 48px "Anton"'
     ctx.textAlign = 'center'
-    ctx.fillText((data.userInitials || '?').slice(0, 2).toUpperCase(), cx, userY + 20)
+    ctx.fillText((data.userInitials || '?').slice(0, 2).toUpperCase(), cx, userY + 18)
   }
-  ctx.strokeStyle = YELLOW; ctx.lineWidth = 8
+  ctx.strokeStyle = winColor; ctx.lineWidth = 8
   ctx.beginPath(); ctx.arc(cx, userY, avD / 2 + 5, 0, Math.PI * 2); ctx.stroke()
 
-  ctx.fillStyle = '#FFFFFF'
+  ctx.fillStyle = INK
   ctx.textAlign = 'center'
-  fitText(ctx, data.userName.toUpperCase(), W - 140, 72, 34)
-  ctx.fillText(data.userName.toUpperCase(), cx, userY + avD / 2 + 88)
+  fitText(ctx, data.userName.toUpperCase(), W - 160, 66, 32)
+  ctx.fillText(data.userName.toUpperCase(), cx, userY + avD / 2 + 76)
 
   const bits: string[] = []
   if (data.className) bits.push(data.className)
   if (data.rank) bits.push(`${data.rank}º no ranking`)
   if (bits.length) {
-    ctx.fillStyle = YELLOW
-    ctx.font = '700 28px "JetBrains Mono"'
-    ctx.fillText(bits.join('  ·  ').toUpperCase(), cx, userY + avD / 2 + 146)
+    ctx.fillStyle = accent
+    ctx.font = '700 26px "JetBrains Mono"'
+    ctx.fillText(bits.join('  ·  ').toUpperCase(), cx, userY + avD / 2 + 124)
   }
 
-  // ── Rodapé (marca, sem link) ────────────────────────────────────
-  ctx.fillStyle = 'rgba(255,255,255,0.4)'
-  ctx.font = '700 26px "JetBrains Mono"'
+  // ── Marca (sem link) ────────────────────────────────────────────
+  ctx.fillStyle = INK4
+  ctx.font = '700 24px "JetBrains Mono"'
   ctx.textAlign = 'center'
-  ctx.fillText('B O L Ã O   S U P R E M A', cx, H - 80)
+  ctx.fillText('B O L Ã O   S U P R E M A', cx, userY + avD / 2 + 178)
 
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('Falha ao gerar imagem'))), 'image/png')
