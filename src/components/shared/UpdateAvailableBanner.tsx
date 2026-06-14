@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // Widget "site atualizado". Sem backend: a cada build os assets do index.html
 // mudam de hash. Guardamos a "assinatura" do index.html que estava no ar quando
 // o app carregou e ficamos checando (polling leve + ao voltar pra aba). Se mudar,
-// houve deploy novo → mostra um botão pra recarregar (location.reload).
+// houve deploy novo → o app se atualiza sozinho em momentos seguros (e mostra um
+// botão pra atualizar na hora, como atalho).
 export function UpdateAvailableBanner() {
   const [stale, setStale] = useState(false)
+  const staleRef = useRef(false)
+  const reloadedRef = useRef(false)
 
   useEffect(() => {
     let current: string | null = null
@@ -24,18 +27,49 @@ export function UpdateAvailableBanner() {
       }
     }
 
+    // Recarrega no máximo uma vez. Os gatilhos abaixo só disparam em momentos
+    // seguros — nunca no meio de um palpite que ainda não foi salvo.
+    const reloadNow = () => {
+      if (reloadedRef.current) return
+      reloadedRef.current = true
+      window.location.reload()
+    }
+
+    const markStale = () => {
+      if (staleRef.current) return
+      staleRef.current = true
+      setStale(true)
+      // Aba em segundo plano → atualiza já; quando a pessoa voltar já está nova.
+      if (document.visibilityState === 'hidden') reloadNow()
+    }
+
     const check = async () => {
       const sig = await signature()
       if (cancelled || !sig) return
       if (current === null) current = sig
-      else if (sig !== current) setStale(true)
+      else if (sig !== current) markStale()
     }
+
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      // Voltou pra aba: se já tem versão nova, atualiza; senão, checa agora.
+      if (staleRef.current) reloadNow()
+      else check()
+    }
+    // Trocar de tela (HashRouter = mudança de hash) é um intervalo natural e
+    // seguro pra recarregar sem atrapalhar nada que esteja em andamento.
+    const onNavigate = () => { if (staleRef.current) reloadNow() }
 
     check()
     const id = window.setInterval(check, 90_000)
-    const onVisible = () => { if (document.visibilityState === 'visible') check() }
     document.addEventListener('visibilitychange', onVisible)
-    return () => { cancelled = true; clearInterval(id); document.removeEventListener('visibilitychange', onVisible) }
+    window.addEventListener('hashchange', onNavigate)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('hashchange', onNavigate)
+    }
   }, [])
 
   if (!stale) return null
