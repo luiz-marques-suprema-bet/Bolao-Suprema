@@ -188,20 +188,20 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
   }
   // ── Hero "CRAVOU!" (cor do vencedor, legível) ───────────────────
   ctx.textAlign = 'center'
-  fitText(ctx, 'CRAVOU!', W - 120, 204, 110)
+  fitText(ctx, 'CRAVOU!', W - 120, 196, 108)
   ctx.fillStyle = 'rgba(13,13,13,0.14)'
-  ctx.fillText('CRAVOU!', cx + 6, SAFE_TOP + 232)
+  ctx.fillText('CRAVOU!', cx + 6, SAFE_TOP + 280)
   ctx.fillStyle = accent
-  ctx.fillText('CRAVOU!', cx, SAFE_TOP + 226)
+  ctx.fillText('CRAVOU!', cx, SAFE_TOP + 274)
   ctx.fillStyle = INK3
   ctx.font = '700 26px "JetBrains Mono"'
-  ctx.fillText('PLACAR EXATO · NA MOSCA', cx, SAFE_TOP + 284)
+  ctx.fillText('PLACAR EXATO · NA MOSCA', cx, SAFE_TOP + 328)
 
   // ── Pill data · fase (escura, contrasta no claro) ───────────────
   const pillText = `${(data.dateLabel || '').toUpperCase()}${data.dateLabel ? '  ·  ' : ''}${data.stageLabel.toUpperCase()}`
   ctx.font = '700 24px "JetBrains Mono"'
   const pillW = Math.min(W - 160, ctx.measureText(pillText).width + 60)
-  const pillY = SAFE_TOP + 324
+  const pillY = SAFE_TOP + 364
   ctx.fillStyle = INK
   roundRect(ctx, cx - pillW / 2, pillY, pillW, 54, 27); ctx.fill()
   ctx.fillStyle = PAPER
