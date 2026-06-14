@@ -1226,6 +1226,43 @@ function HomeMobile() {
 
       <div className="px-4 space-y-4 pt-4">
 
+        {/* Upcoming matches — logo após o hero pra achar rápido sem rolar */}
+        <div className="ui-panel">
+          <div className="px-4 py-3 border-b border-hairline flex items-baseline justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-lg">PRÓXIMOS</span>
+              <span className="font-mono text-[10px] text-ink-3">jogos abertos</span>
+            </div>
+          </div>
+          <div className="divide-y divide-hairline">
+            {upcoming.slice(0, 6).map(match => {
+              const hasPick = !!predictions[match.id]
+              return (
+                <button key={match.id} onClick={() => setQuickPickMatch(match)}
+                  className={cn('w-full flex items-center gap-3 px-4 py-3 text-left transition-colors active:scale-[0.99]',
+                    hasPick ? 'bg-green/10 hover:bg-green/15' : 'hover:bg-surface-hover')}>
+                  <div className="font-mono text-[8px] text-ink-3 w-12 flex-shrink-0">GRUPO<br/>{match.group}</div>
+                  <Flag team={match.home} size={22} />
+                  <span className="font-mono text-[11px] font-bold flex-1 truncate">{match.home.code}</span>
+                  <div className="text-center flex-shrink-0">
+                    <div className="font-mono text-[8px] text-ink-4">{formatMatchDate(match)}</div>
+                    <div className="font-display text-base leading-tight">{formatMatchTime(match)}</div>
+                  </div>
+                  <span className="font-mono text-[11px] font-bold flex-1 text-right truncate">{match.away.code}</span>
+                  <Flag team={match.away} size={22} />
+                  {hasPick
+                    ? <span className="font-mono text-[10px] text-green flex-shrink-0">✓</span>
+                    : <span className="font-mono text-[8px] font-bold tracking-eyebrow bg-yellow text-ink px-1.5 py-0.5 flex-shrink-0 leading-none">PENDENTE</span>}
+                </button>
+              )
+            })}
+          </div>
+          <button onClick={() => navigate('/prediction')}
+            className="w-full px-4 py-3 font-mono text-[10px] text-ink-3 hover:text-ink border-t border-hairline text-center tracking-eyebrow">
+            VER TODOS OS {totalMatches} JOGOS →
+          </button>
+        </div>
+
         {/* Progresso + CTA */}
         <div className="ui-card overflow-hidden">
           <div className="px-4 pt-4 pb-3 border-b border-hairline">
@@ -1262,43 +1299,6 @@ function HomeMobile() {
         )}
 
         <HomeBoletimNewsSection compact />
-
-        {/* Upcoming matches */}
-        <div className="ui-panel">
-          <div className="px-4 py-3 border-b border-hairline flex items-baseline justify-between">
-            <div className="flex items-baseline gap-2">
-              <span className="font-display text-lg">PRÓXIMOS</span>
-              <span className="font-mono text-[10px] text-ink-3">jogos abertos</span>
-            </div>
-          </div>
-          <div className="divide-y divide-hairline">
-            {upcoming.slice(0, 6).map(match => {
-              const hasPick = !!predictions[match.id]
-              return (
-                <button key={match.id} onClick={() => setQuickPickMatch(match)}
-                  className={cn('w-full flex items-center gap-3 px-4 py-3 text-left transition-colors active:scale-[0.99]',
-                    hasPick ? 'bg-green/10 hover:bg-green/15' : 'hover:bg-surface-hover')}>
-                  <div className="font-mono text-[8px] text-ink-3 w-12 flex-shrink-0">GRUPO<br/>{match.group}</div>
-                  <Flag team={match.home} size={22} />
-                  <span className="font-mono text-[11px] font-bold flex-1 truncate">{match.home.code}</span>
-                  <div className="text-center flex-shrink-0">
-                    <div className="font-mono text-[8px] text-ink-4">{formatMatchDate(match)}</div>
-                    <div className="font-display text-base leading-tight">{formatMatchTime(match)}</div>
-                  </div>
-                  <span className="font-mono text-[11px] font-bold flex-1 text-right truncate">{match.away.code}</span>
-                  <Flag team={match.away} size={22} />
-                  {hasPick
-                    ? <span className="font-mono text-[10px] text-green flex-shrink-0">✓</span>
-                    : <span className="font-mono text-[8px] font-bold tracking-eyebrow bg-yellow text-ink px-1.5 py-0.5 flex-shrink-0 leading-none">PENDENTE</span>}
-                </button>
-              )
-            })}
-          </div>
-          <button onClick={() => navigate('/prediction')}
-            className="w-full px-4 py-3 font-mono text-[10px] text-ink-3 hover:text-ink border-t border-hairline text-center tracking-eyebrow">
-            VER TODOS OS {totalMatches} JOGOS →
-          </button>
-        </div>
 
         {/* Ranking preview */}
         {top3.length > 0 && (

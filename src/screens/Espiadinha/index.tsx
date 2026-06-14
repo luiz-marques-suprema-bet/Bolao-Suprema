@@ -14,16 +14,15 @@ import { isPlaceholderMatch } from '@/lib/matchGuards'
 import { formatMatchDate, formatMatchTime } from '@/lib/matchTime'
 import { cn } from '@/lib/utils'
 import {
-  buildEspiadinha,
+  buildGuesses,
+  standingsFromRanking,
   ESPIA_TIERS,
-  type EspiaView,
-  type EspiaMatch,
   type EspiaStanding,
   type EspiaTier,
   type EspiaProfile,
   type EspiaPredRow,
 } from '@/lib/espiadinha'
-import type { RankingEntry } from '@/types'
+import type { Match, RankingEntry } from '@/types'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -61,17 +60,24 @@ type PredRow = {
   points_earned: number | null
 }
 
-// ─── data hook (real, em tempo real) ────────────────────────────────────────────
+// ─── data hook ────────────────────────────────────────────────────────────────
+// Carrega SÓ o esqueleto: jogos revelados + ranking (colocação). Os palpites de
+// cada jogo são buscados sob demanda quando o jogo é aberto (ver MatchCard) — é o
+// que evita buscar milhares de linhas de uma vez (e o teto de 1000 do PostgREST).
 
-function useEspiadinhaData(): { view: EspiaView; loading: boolean } {
+type RevealedMatch = { match: Match; settled: boolean }
+
+function useEspiadinhaData(): {
+  matches: RevealedMatch[]
+  standings: EspiaStanding[]
+  profiles: EspiaProfile[]
+  loading: boolean
+} {
   const me = useAuthStore(s => s.user)
   const matches = useMatchesWithStatus(WC2026_MATCHES)
   const matchStoreLoaded = useMatchStore(s => s.isLoaded)
-  const [predictions, setPredictions] = useState<EspiaPredRow[]>([])
   const [profiles, setProfiles] = useState<EspiaProfile[]>([])
   const [ranking, setRanking] = useState<RankingEntry[]>([])
-  const [predLoading, setPredLoading] = useState(true)
-  const [loadedOnce, setLoadedOnce] = useState(false)
 
   // Ranking OFICIAL — mesma fonte do Ranking geral, pra a colocação bater igual.
   const loadRanking = useCallback(() => {
@@ -89,17 +95,7 @@ function useEspiadinhaData(): { view: EspiaView; loading: boolean } {
     return () => { clearTimeout(timer); unsub() }
   }, [loadRanking])
 
-  // Só consideramos jogos revelados depois que o status do banco carregou —
-  // evita revelar (e depois "desrevelar") partidas com dados estáticos parciais.
-  const revealedCodes = useMemo(
-    () => matchStoreLoaded
-      ? matches.filter(m => !isPlaceholderMatch(m) && isMatchClosed(m)).map(m => m.id)
-      : [],
-    [matches, matchStoreLoaded],
-  )
-  const codesKey = useMemo(() => revealedCodes.slice().sort().join(','), [revealedCodes])
-
-  // Perfis dos participantes (uma vez).
+  // Perfis dos participantes (uma vez) — usados ao montar os palpites de um jogo.
   useEffect(() => {
     if (isMockMode) return
     let active = true
@@ -126,82 +122,48 @@ function useEspiadinhaData(): { view: EspiaView; loading: boolean } {
     return () => { active = false }
   }, [])
 
-  // Palpites — SOMENTE dos jogos já revelados (anti-cola no próprio fetch).
-  const loadPredictions = useCallback(() => {
-    let active = true
-    void (async () => {
-      if (isMockMode || revealedCodes.length === 0) {
-        setPredictions([])
-        setPredLoading(false)
-        return
-      }
-      setPredLoading(true)
-      // Paginação: o Supabase/PostgREST corta em 1000 linhas por requisição.
-      // Com vários jogos revelados os palpites passam de 1000 e jogos inteiros
-      // sumiam (ex.: USA×PAR aparecia com 0). Buscamos em páginas até acabar.
-      const PAGE = 1000
-      const acc: EspiaPredRow[] = []
-      for (let from = 0; active; from += PAGE) {
-        const { data, error } = await supabase
-          .from('predictions')
-          .select('user_id, match_code, home_score, away_score, points_earned')
-          .in('match_code', revealedCodes)
-          .order('id', { ascending: true })
-          .range(from, from + PAGE - 1)
-        if (error || !data) break
-        const rows = data as unknown as PredRow[]
-        for (const r of rows) {
-          acc.push({
-            userId: r.user_id,
-            matchId: r.match_code,
-            homeScore: r.home_score,
-            awayScore: r.away_score,
-            points: r.points_earned ?? null,
-          })
-        }
-        if (rows.length < PAGE) break
-      }
-      if (!active) return
-      setPredictions(acc)
-      setPredLoading(false)
-    })()
-    return () => { active = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [codesKey])
-
-  useEffect(() => loadPredictions(), [loadPredictions])
-  useTabResync(loadPredictions)
-
-  // Tempo real: novos palpites/apurações disparam recarga (debounce). Os placares
-  // e mudanças de status chegam pelo match.store (useMatchesWithStatus).
-  useEffect(() => {
-    if (isMockMode) return
-    let timer: ReturnType<typeof setTimeout> | undefined
-    const channel = supabase
-      .channel(`espiadinha-${Date.now()}-${Math.random().toString(16).slice(2)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'predictions' }, () => {
-        clearTimeout(timer)
-        timer = setTimeout(() => loadPredictions(), 300)
-      })
-      .subscribe()
-    return () => {
-      clearTimeout(timer)
-      void supabase.removeChannel(channel)
-    }
-  }, [loadPredictions])
-
-  // Marca "já carregou ao menos uma vez" — daí o spinner inicial não volta a
-  // cada atualização em tempo real (a tela atualiza no lugar, sem piscar).
-  useEffect(() => {
-    if (matchStoreLoaded && !predLoading) setLoadedOnce(true)
-  }, [matchStoreLoaded, predLoading])
-
-  const view = useMemo(
-    () => buildEspiadinha(matches, predictions, profiles, ranking),
-    [matches, predictions, profiles, ranking],
+  // Jogos revelados (anti-cola): só os já iniciados/encerrados, mais recentes 1º.
+  const revealed = useMemo<RevealedMatch[]>(
+    () => matchStoreLoaded
+      ? matches
+          .filter(m => !isPlaceholderMatch(m) && isMatchClosed(m))
+          .sort((a, b) => new Date(b.kickoffUtc).getTime() - new Date(a.kickoffUtc).getTime())
+          .map(m => ({ match: m, settled: m.status === 'finished' || !!m.settledAt }))
+      : [],
+    [matches, matchStoreLoaded],
   )
 
-  return { view, loading: (!matchStoreLoaded || predLoading) && !loadedOnce }
+  const standings = useMemo(() => standingsFromRanking(ranking), [ranking])
+
+  return { matches: revealed, standings, profiles, loading: !matchStoreLoaded }
+}
+
+// Busca paginada dos palpites de UM jogo (sob demanda). Um jogo tem ~200 palpites,
+// bem abaixo do teto, mas paginamos por segurança caso cresça.
+async function fetchMatchPredictions(matchCode: string): Promise<EspiaPredRow[]> {
+  const PAGE = 1000
+  const acc: EspiaPredRow[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('predictions')
+      .select('user_id, match_code, home_score, away_score, points_earned')
+      .eq('match_code', matchCode)
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (error || !data) break
+    const rows = data as unknown as PredRow[]
+    for (const r of rows) {
+      acc.push({
+        userId: r.user_id,
+        matchId: r.match_code,
+        homeScore: r.home_score,
+        awayScore: r.away_score,
+        points: r.points_earned ?? null,
+      })
+    }
+    if (rows.length < PAGE) break
+  }
+  return acc
 }
 
 // ─── peças visuais ──────────────────────────────────────────────────────────────
@@ -232,95 +194,137 @@ function HitChip({ kind, label }: { kind: string; label: string }) {
   )
 }
 
-function StatusBadge({ em }: { em: EspiaMatch }) {
-  return em.settled
+function StatusBadge({ settled }: { settled: boolean }) {
+  return settled
     ? <span className="font-mono text-[9px] font-bold tracking-eyebrow text-ink-3">ENCERRADO</span>
-    : <span className="font-mono text-[9px] font-bold tracking-eyebrow text-ink-3">EM ANDAMENTO</span>
+    : <span className="font-mono text-[9px] font-bold tracking-eyebrow text-red">EM ANDAMENTO</span>
 }
 
-function MatchCard({ em, meId, query }: { em: EspiaMatch; meId?: string; query: string }) {
+function MatchCard({ match, settled, profiles, meId, query }: {
+  match: Match
+  settled: boolean
+  profiles: EspiaProfile[]
+  meId?: string
+  query: string
+}) {
   const navigate = useNavigate()
-  const { match } = em
-  // Placar só aparece quando o jogo ENCERROU (resultado real do fim do jogo).
-  // Enquanto está em andamento mostramos só "MEX × RSA" — sem placar ao vivo.
-  const guesses = query
-    ? em.guesses.filter(g => norm(g.user.name).includes(norm(query)))
-    : em.guesses
-  if (query && guesses.length === 0) return null
+  const [open, setOpen] = useState(false)
+  const [rawPreds, setRawPreds] = useState<EspiaPredRow[] | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  // Carrega ao abrir; recarrega se o resultado mudar (apuração) → reflete pontos.
+  const resultKey = `${match.id}|${settled}|${match.homeScore ?? ''}|${match.awayScore ?? ''}`
+  useEffect(() => {
+    if (!open || isMockMode) return
+    let active = true
+    setLoading(true)
+    void (async () => {
+      const preds = await fetchMatchPredictions(match.id)
+      if (!active) return
+      setRawPreds(preds)
+      setLoading(false)
+    })()
+    return () => { active = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, resultKey])
+
+  const allGuesses = useMemo(
+    () => (rawPreds ? buildGuesses(match, rawPreds, profiles) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rawPreds, profiles, resultKey],
+  )
+  const guesses = query ? allGuesses.filter(g => norm(g.user.name).includes(norm(query))) : allGuesses
 
   return (
     <div className="ui-card overflow-hidden">
-      {/* cabeçalho */}
-      <div className="flex items-center justify-between gap-2 border-b border-hairline px-4 py-2.5 bg-surface-2">
-        <span className="font-mono text-[9px] tracking-eyebrow text-ink-3 truncate">{match.stageLabel}</span>
-        <StatusBadge em={em} />
-      </div>
-
-      {/* confronto (placar só quando encerrado) */}
-      <div className="flex items-center justify-center gap-3 px-4 py-4">
-        <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-          <span className="font-display text-2xl leading-none text-ink truncate">{match.home.code}</span>
-          <Flag team={match.home} size={26} />
+      {/* cabeçalho clicável — abre/fecha os palpites do jogo */}
+      <button type="button" onClick={() => setOpen(o => !o)} className="block w-full text-left transition-colors hover:bg-surface-hover">
+        <div className="flex items-center justify-between gap-2 border-b border-hairline px-4 py-2.5 bg-surface-2">
+          <span className="font-mono text-[9px] tracking-eyebrow text-ink-3 truncate">{match.stageLabel}</span>
+          <StatusBadge settled={settled} />
         </div>
-        <div className="flex flex-col items-center">
-          {em.settled ? (
-            <div className="font-display text-3xl leading-none text-ink tabular-nums">
-              {match.homeScore ?? 0}<span className="text-ink-4 px-1">×</span>{match.awayScore ?? 0}
+
+        {/* confronto (placar só quando encerrado) */}
+        <div className="flex items-center justify-center gap-3 px-4 py-4">
+          <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+            <span className="font-display text-2xl leading-none text-ink truncate">{match.home.code}</span>
+            <Flag team={match.home} size={26} />
+          </div>
+          <div className="flex flex-col items-center">
+            {settled ? (
+              <div className="font-display text-3xl leading-none text-ink tabular-nums">
+                {match.homeScore ?? 0}<span className="text-ink-4 px-1">×</span>{match.awayScore ?? 0}
+              </div>
+            ) : (
+              <span className="font-display text-2xl leading-none text-ink-4">×</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Flag team={match.away} size={26} />
+            <span className="font-display text-2xl leading-none text-ink truncate">{match.away.code}</span>
+          </div>
+        </div>
+        <div className="px-4 pb-2 text-center font-mono text-[9px] text-ink-4">
+          {formatMatchDate(match)} · {formatMatchTime(match)} · {match.venue}
+        </div>
+        <div className="flex items-center justify-center gap-1.5 border-t border-hairline px-4 py-2 font-mono text-[10px] font-bold tracking-eyebrow text-green-deep">
+          {open ? 'OCULTAR PALPITES' : 'VER PALPITES'}
+          <span className={cn('inline-block transition-transform', open && 'rotate-180')}>▾</span>
+        </div>
+      </button>
+
+      {/* palpites do jogo — carregados sob demanda */}
+      {open && (
+        <div className="border-t border-hairline">
+          {loading && !rawPreds ? (
+            <div className="px-4 py-6 text-center font-mono text-[10px] tracking-eyebrow text-ink-3 animate-pulse">
+              CARREGANDO PALPITES…
             </div>
           ) : (
-            <span className="font-display text-2xl leading-none text-ink-4">×</span>
+            <>
+              <div className="divide-y divide-hairline max-h-[60vh] overflow-y-auto">
+                {guesses.map(g => {
+                  const isMe = g.user.id === meId
+                  return (
+                    <div
+                      key={g.user.id}
+                      onClick={() => navigate(isMe ? '/profile' : `/u/${g.user.id}`)}
+                      className={cn(
+                        'flex items-center gap-2.5 px-4 py-2 transition-colors cursor-pointer hover:bg-surface-hover',
+                        isMe && 'bg-yellow/15',
+                      )}
+                    >
+                      <Avatar initials={g.user.initials} color={g.user.color} src={g.user.avatarUrl} size={26} />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-mono text-[11px] font-bold text-ink truncate">
+                          {g.user.name}{isMe && <span className="text-ink-3 font-normal"> · você</span>}
+                        </div>
+                        {g.user.dept && <div className="font-mono text-[9px] text-ink-4 truncate">{g.user.dept}</div>}
+                      </div>
+                      <span className="font-display text-lg text-ink-2 tabular-nums">{g.homeScore}×{g.awayScore}</span>
+                      <HitChip kind={g.hit.kind} label={g.hit.label} />
+                    </div>
+                  )
+                })}
+                {guesses.length === 0 && (
+                  <div className="px-4 py-5 text-center font-mono text-[10px] text-ink-4">
+                    {query ? 'Nenhum palpiteiro com esse nome neste jogo.' : 'Ninguém palpitou neste jogo.'}
+                  </div>
+                )}
+              </div>
+              <div className="border-t border-hairline px-4 py-2 font-mono text-[9px] text-ink-4">
+                {allGuesses.length} {allGuesses.length === 1 ? 'palpite' : 'palpites'}
+                {settled ? ' · apurado' : ' · pontos saem na apuração'}
+              </div>
+            </>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Flag team={match.away} size={26} />
-          <span className="font-display text-2xl leading-none text-ink truncate">{match.away.code}</span>
-        </div>
-      </div>
-      <div className="px-4 pb-2 text-center font-mono text-[9px] text-ink-4">
-        {formatMatchDate(match)} · {formatMatchTime(match)} · {match.venue}
-      </div>
-
-      {/* palpites */}
-      <div className="border-t border-hairline divide-y divide-hairline max-h-[420px] overflow-y-auto">
-        {guesses.map(g => {
-          const isMe = g.user.id === meId
-          return (
-            <div
-              key={g.user.id}
-              onClick={() => navigate(isMe ? '/profile' : `/u/${g.user.id}`)}
-              className={cn(
-                'flex items-center gap-2.5 px-4 py-2 transition-colors cursor-pointer hover:bg-surface-hover',
-                isMe && 'bg-yellow/15',
-              )}
-            >
-              <Avatar initials={g.user.initials} color={g.user.color} src={g.user.avatarUrl} size={26} />
-              <div className="min-w-0 flex-1">
-                <div className="font-mono text-[11px] font-bold text-ink truncate">
-                  {g.user.name}{isMe && <span className="text-ink-3 font-normal"> · você</span>}
-                </div>
-                {g.user.dept && <div className="font-mono text-[9px] text-ink-4 truncate">{g.user.dept}</div>}
-              </div>
-              <span className="font-display text-lg text-ink-2 tabular-nums">{g.homeScore}×{g.awayScore}</span>
-              <HitChip kind={g.hit.kind} label={g.hit.label} />
-            </div>
-          )
-        })}
-        {guesses.length === 0 && (
-          <div className="px-4 py-5 text-center font-mono text-[10px] text-ink-4">
-            Ninguém palpitou neste jogo.
-          </div>
-        )}
-      </div>
-
-      <div className="border-t border-hairline px-4 py-2 font-mono text-[9px] text-ink-4">
-        {em.guesses.length} {em.guesses.length === 1 ? 'palpite' : 'palpites'}
-        {em.settled ? ' · apurado' : ' · pontos saem na apuração'}
-      </div>
+      )}
     </div>
   )
 }
 
-function StandingRow({ s, rank, meId }: { s: EspiaStanding; rank: number; meId?: string }) {
+function StandingRow({ s, meId }: { s: EspiaStanding; meId?: string }) {
   const navigate = useNavigate()
   const isMe = s.user.id === meId
   return (
@@ -331,7 +335,7 @@ function StandingRow({ s, rank, meId }: { s: EspiaStanding; rank: number; meId?:
         isMe && 'bg-yellow/15',
       )}
     >
-      <span className="font-display text-lg w-6 text-center text-ink-3 flex-shrink-0">{rank}</span>
+      <span className="font-display text-lg w-7 text-center text-ink-3 flex-shrink-0">{s.rank}º</span>
       <Avatar initials={s.user.initials} color={s.user.color} src={s.user.avatarUrl} size={30} />
       <div className="min-w-0 flex-1">
         <div className="font-mono text-[11px] font-bold text-ink truncate">{s.user.firstName}</div>
@@ -390,8 +394,8 @@ function StandingsCard({ standings, meId }: { standings: EspiaStanding[]; meId?:
       </div>
       {standings.length > 0 ? (
         <div className="max-h-[60vh] overflow-y-auto">
-          {standings.map((s, i) => (
-            <StandingRow key={s.user.id} s={s} rank={i + 1} meId={meId} />
+          {standings.map(s => (
+            <StandingRow key={s.user.id} s={s} meId={meId} />
           ))}
         </div>
       ) : (
@@ -405,22 +409,22 @@ function StandingsCard({ standings, meId }: { standings: EspiaStanding[]; meId?:
 
 export function EspiadinhaScreen() {
   const me = useAuthStore(s => s.user)
-  const { view, loading } = useEspiadinhaData()
+  const { matches, standings: allStandings, profiles, loading } = useEspiadinhaData()
 
   const [phaseId, setPhaseId] = useState('all')
   const [query, setQuery] = useState('')
 
   const activeFilter = PHASE_FILTERS.find(f => f.id === phaseId) ?? PHASE_FILTERS[0]
-  const filteredMatches = useMemo(() => view.matches.filter(em =>
-    activeFilter.stages === null ? true : activeFilter.stages.includes(em.match.stage),
-  ), [view.matches, activeFilter])
+  const filteredMatches = useMemo(() => matches.filter(rm =>
+    activeFilter.stages === null ? true : activeFilter.stages.includes(rm.match.stage),
+  ), [matches, activeFilter])
 
   const standings = useMemo(() => {
-    if (!query) return view.standings
-    return view.standings.filter(s => norm(s.user.name).includes(norm(query)))
-  }, [view.standings, query])
+    if (!query) return allStandings
+    return allStandings.filter(s => norm(s.user.name).includes(norm(query)))
+  }, [allStandings, query])
 
-  const hasAny = view.matches.length > 0
+  const hasAny = matches.length > 0
 
   return (
     <div className="min-h-dvh bg-paper pb-24 lg:pb-10 overflow-x-hidden">
@@ -492,14 +496,14 @@ export function EspiadinhaScreen() {
               {/* espiada por jogo */}
               <div className="order-2 lg:order-1 space-y-4 min-w-0">
                 {filteredMatches.length > 0 ? (
-                  filteredMatches.map(em => <MatchCard key={em.match.id} em={em} meId={me?.id} query={query} />)
+                  filteredMatches.map(rm => (
+                    <MatchCard key={rm.match.id} match={rm.match} settled={rm.settled} profiles={profiles} meId={me?.id} query={query} />
+                  ))
                 ) : (
                   <div className="ui-card p-8 text-center">
                     <div className="font-display text-3xl text-ink-4 mb-2">—</div>
                     <p className="font-mono text-[11px] text-ink-3 max-w-[320px] mx-auto leading-relaxed">
-                      {query
-                        ? 'Nenhum palpiteiro encontrado nessa fase.'
-                        : 'Nenhum jogo revelado nessa fase ainda. Assim que um jogo começar, os palpites aparecem aqui.'}
+                      Nenhum jogo revelado nessa fase ainda. Assim que um jogo começar, os palpites aparecem aqui.
                     </p>
                   </div>
                 )}

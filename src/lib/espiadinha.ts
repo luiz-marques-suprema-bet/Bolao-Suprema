@@ -117,6 +117,7 @@ export interface EspiaMatch {
 
 export interface EspiaStanding {
   user: EspiaProfile
+  rank: number
   points: number
   settledCount: number
   accuracy: number
@@ -165,6 +166,7 @@ export function standingsFromRanking(entries: RankingLike[]): EspiaStanding[] {
         avatarUrl: e.avatarUrl,
         dept: e.dept ?? '',
       },
+      rank: i + 1,
       points: e.pts,
       settledCount: 0,
       accuracy: 0,
@@ -261,7 +263,7 @@ export function buildEspiadinha(
     const tier = (i > 0 && ranked[i].points === ranked[i - 1].points)
       ? accStandings[i - 1].tier
       : tierByRankFraction(total > 0 ? i / total : 0)
-    accStandings.push({ ...ranked[i], tier })
+    accStandings.push({ ...ranked[i], rank: i + 1, tier })
   }
 
   // Quando o ranking oficial é fornecido, a colocação da Espiadinha é a MESMA do
@@ -269,4 +271,31 @@ export function buildEspiadinha(
   const standings = ranking ? standingsFromRanking(ranking) : accStandings
 
   return { matches: espiaMatches, standings }
+}
+
+// Monta SÓ os palpites de UMA partida (lazy-load: carregado quando o jogo é
+// aberto na tela). Mantém a regra anti-cola fora daqui — o chamador só passa
+// palpites de jogos já revelados. Ordena por pontos e depois por nome.
+export function buildGuesses(
+  match: Match,
+  predictions: EspiaPredRow[],
+  profiles: EspiaProfile[],
+): EspiaGuess[] {
+  const profileById = new Map(profiles.map(p => [p.id, p]))
+  const settled = matchIsSettled(match)
+  const stage = match.stage
+  const result = { homeScore: match.homeScore ?? 0, awayScore: match.awayScore ?? 0 }
+
+  return predictions
+    .map(pred => {
+      const user = profileById.get(pred.userId)
+      if (!user) return null
+      const pts = settled
+        ? (pred.points ?? calculatePoints({ homeScore: pred.homeScore, awayScore: pred.awayScore }, result, stage))
+        : null
+      const hit = hitFor(pts, stage, settled)
+      return { user, homeScore: pred.homeScore, awayScore: pred.awayScore, hit } as EspiaGuess
+    })
+    .filter((g): g is EspiaGuess => g !== null)
+    .sort((a, b) => (b.hit.points ?? -1) - (a.hit.points ?? -1) || a.user.name.localeCompare(b.user.name))
 }
