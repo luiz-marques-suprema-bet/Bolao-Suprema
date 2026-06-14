@@ -97,6 +97,7 @@ interface CurrentRow {
   lock_reason?: string | null
   home_score?: number | null
   away_score?: number | null
+  kickoff_utc?: string | null
 }
 
 Deno.serve(async (req) => {
@@ -147,18 +148,10 @@ Deno.serve(async (req) => {
         continue
       }
 
-      const phase = phaseOf(ev.strStatus)
-      if (phase === 'scheduled' || phase === 'other') continue // nada a apurar
-
-      const h = parseScore(ev.intHomeScore)
-      const a = parseScore(ev.intAwayScore)
-      const providerHasScore = h != null && a != null
-      if (!providerHasScore) continue // sem placar real, nao toca
-
       // Acha a nossa partida pelo par de selecoes (unico no Mundial).
       const { data: rows, error: findErr } = await supabase
         .from('matches')
-        .select('match_code,status,market_status,lock_reason,home_score,away_score')
+        .select('match_code,status,market_status,lock_reason,home_score,away_score,kickoff_utc')
         .eq('home_code', homeCode)
         .eq('away_code', awayCode)
         .limit(1)
@@ -175,6 +168,34 @@ Deno.serve(async (req) => {
         current.lock_reason &&
         !String(current.lock_reason).startsWith('api_')
       if (isManualLock) continue
+
+      const phase = phaseOf(ev.strStatus)
+
+      // (A) Sincroniza o HORARIO de inicio com a fonte (jogos NAO encerrados).
+      // Garante que o horario exibido e o fechamento da aposta batam com quando
+      // o jogo realmente acontece — corrige escalas erradas antes de o jogo rolar.
+      // Encerrados ficam como estao (historico). strTimestamp da TheSportsDB e UTC.
+      if (phase !== 'finished' && ev.strTimestamp) {
+        const raw = /Z$|[+-]\d\d:?\d\d$/.test(ev.strTimestamp) ? ev.strTimestamp : `${ev.strTimestamp}Z`
+        const when = new Date(raw)
+        const curMs = current.kickoff_utc ? new Date(current.kickoff_utc).getTime() : 0
+        if (!Number.isNaN(when.getTime()) && Math.abs(when.getTime() - curMs) > 60_000) {
+          planned.push({ match_code: current.match_code, kickoff_fix: `${current.kickoff_utc ?? '-'} -> ${when.toISOString()}` })
+          if (live) {
+            const { error: kErr } = await supabase.from('matches').update({ kickoff_utc: when.toISOString() }).eq('match_code', current.match_code)
+            if (kErr) throw kErr
+            updated += 1
+          }
+        }
+      }
+
+      // (B) Status/placar — so com jogo ao vivo/encerrado e placar real.
+      if (phase === 'scheduled' || phase === 'other') continue // nada a apurar
+
+      const h = parseScore(ev.intHomeScore)
+      const a = parseScore(ev.intAwayScore)
+      const providerHasScore = h != null && a != null
+      if (!providerHasScore) continue // sem placar real, nao toca
 
       const winner = h > a ? homeCode : a > h ? awayCode : 'draw'
       const patch = phase === 'finished'
