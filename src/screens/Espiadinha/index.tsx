@@ -136,18 +136,33 @@ function useEspiadinhaData(): { view: EspiaView; loading: boolean } {
         return
       }
       setPredLoading(true)
-      const { data } = await supabase
-        .from('predictions')
-        .select('user_id, match_code, home_score, away_score, points_earned')
-        .in('match_code', revealedCodes)
+      // Paginação: o Supabase/PostgREST corta em 1000 linhas por requisição.
+      // Com vários jogos revelados os palpites passam de 1000 e jogos inteiros
+      // sumiam (ex.: USA×PAR aparecia com 0). Buscamos em páginas até acabar.
+      const PAGE = 1000
+      const acc: EspiaPredRow[] = []
+      for (let from = 0; active; from += PAGE) {
+        const { data, error } = await supabase
+          .from('predictions')
+          .select('user_id, match_code, home_score, away_score, points_earned')
+          .in('match_code', revealedCodes)
+          .order('id', { ascending: true })
+          .range(from, from + PAGE - 1)
+        if (error || !data) break
+        const rows = data as unknown as PredRow[]
+        for (const r of rows) {
+          acc.push({
+            userId: r.user_id,
+            matchId: r.match_code,
+            homeScore: r.home_score,
+            awayScore: r.away_score,
+            points: r.points_earned ?? null,
+          })
+        }
+        if (rows.length < PAGE) break
+      }
       if (!active) return
-      setPredictions(((data ?? []) as PredRow[]).map(r => ({
-        userId: r.user_id,
-        matchId: r.match_code,
-        homeScore: r.home_score,
-        awayScore: r.away_score,
-        points: r.points_earned ?? null,
-      })))
+      setPredictions(acc)
       setPredLoading(false)
     })()
     return () => { active = false }

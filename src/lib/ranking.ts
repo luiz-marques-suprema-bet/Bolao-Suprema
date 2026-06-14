@@ -94,15 +94,29 @@ async function fetchRankingFromPredictions(myUserId?: string): Promise<RankingEn
 
   if (!users?.length) return []
 
-  const { data: pts } = await supabase
-    .from('predictions')
-    .select('user_id, match_code, points_earned')
+  // Paginação: o Supabase corta em 1000 linhas/requisição; com o torneio em
+  // andamento os palpites passam de 1000, então buscamos em páginas até acabar.
+  type PtRow = { user_id: string | null; match_code: string; points_earned: number | null }
+  const pts: PtRow[] = []
+  {
+    const PAGE = 1000
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('predictions')
+        .select('user_id, match_code, points_earned')
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+      if (error || !data) break
+      pts.push(...(data as unknown as PtRow[]))
+      if (data.length < PAGE) break
+    }
+  }
 
   const pointsMap: Record<string, number> = {}
   const correctMap: Record<string, number> = {}
   const exactMap:   Record<string, number> = {}
 
-  for (const row of pts ?? []) {
+  for (const row of pts) {
     if (!row.user_id) continue
     const p = row.points_earned ?? 0
     pointsMap[row.user_id] = (pointsMap[row.user_id] ?? 0) + p
