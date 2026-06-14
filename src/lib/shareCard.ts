@@ -1,10 +1,9 @@
 import { asset } from '@/lib/utils'
 
 // ─── Card de "CRAVOU" pra compartilhar (Instagram/WhatsApp) ───────────────────
-// Desenha um PNG 1080×1920 (formato story) na IDV do Bolão: fundo ink, amarelo,
-// logo, o confronto cravado, os pontos, e o palpiteiro (nome/classe/colocação).
-// Tudo client-side, sem servidor. Imagens externas passam pelo proxy weserv pra
-// não "sujar" o canvas (CORS).
+// PNG 1080×1920 (story). Fundo ESCURO com clima de Copa: gradiente, glows de cor,
+// grão, bolas de futebol e tipografia gigante em camadas — na paleta do Bolão.
+// Client-side. Imagens externas passam pelo proxy weserv (CORS).
 
 export interface CravadaCardData {
   home: { code: string; flag?: string }
@@ -24,8 +23,6 @@ export interface CravadaCardData {
 const W = 1080
 const H = 1920
 
-// Rota imagens externas pelo weserv (CORS *) — evita canvas "tainted". Imagens
-// locais (mesma origem, sem http) passam direto.
 function proxied(url: string, w: number): string {
   if (!url) return ''
   if (!/^https?:\/\//i.test(url)) return url
@@ -52,10 +49,9 @@ async function ensureFonts(): Promise<void> {
       document.fonts.load('800 40px "Manrope"'),
     ])
     await document.fonts.ready
-  } catch { /* a fonte cai pro fallback do canvas se falhar */ }
+  } catch { /* cai pro fallback do canvas se falhar */ }
 }
 
-// Ajusta o tamanho da fonte pra um texto caber na largura máxima (Anton).
 function fitText(ctx: CanvasRenderingContext2D, text: string, maxW: number, startPx: number, minPx: number): number {
   let px = startPx
   ctx.font = `400 ${px}px "Anton"`
@@ -76,14 +72,53 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath()
 }
 
-// Mancha de cor orgânica e suave (clima de Copa) — gradiente radial → transparente.
-function softBlob(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, rgb: string, alpha = 0.16) {
+// Mancha de cor orgânica (glow) — gradiente radial → transparente.
+function softBlob(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, rgb: string, alpha: number) {
   const g = ctx.createRadialGradient(x, y, 0, x, y, r)
   g.addColorStop(0, `rgba(${rgb},${alpha})`)
   g.addColorStop(1, `rgba(${rgb},0)`)
+  ctx.save(); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore()
+}
+
+function pentagon(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, rot: number) {
+  ctx.beginPath()
+  for (let i = 0; i < 5; i++) {
+    const a = rot + i * (Math.PI * 2 / 5)
+    const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+  }
+  ctx.closePath()
+}
+
+// Bola de futebol estilizada (decorativa).
+function soccerBall(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, alpha: number) {
   ctx.save()
-  ctx.fillStyle = g
-  ctx.fillRect(0, 0, W, H)
+  ctx.globalAlpha = alpha
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip()
+  ctx.fillStyle = '#FFFFFF'
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2)
+  ctx.fillStyle = '#0D0D0D'
+  pentagon(ctx, cx, cy, r * 0.42, -Math.PI / 2); ctx.fill()
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + i * (Math.PI * 2 / 5)
+    pentagon(ctx, cx + Math.cos(a) * r * 0.78, cy + Math.sin(a) * r * 0.78, r * 0.26, a + Math.PI)
+    ctx.fill()
+  }
+  ctx.restore()
+  ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.strokeStyle = '#0D0D0D'; ctx.lineWidth = Math.max(2, r * 0.05)
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke()
+  ctx.restore()
+}
+
+// Grão de filme (textura sutil).
+function grain(ctx: CanvasRenderingContext2D, count: number) {
+  ctx.save()
+  for (let i = 0; i < count; i++) {
+    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.045})`
+    ctx.fillRect(Math.random() * W, Math.random() * H, 2, 2)
+  }
   ctx.restore()
 }
 
@@ -105,40 +140,46 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
   canvas.height = H
   const ctx = canvas.getContext('2d')!
 
-  const INK = '#0D0D0D'
-  const INK3 = '#6B6B66'
-  const INK4 = '#A9A89F'
   const YELLOW = '#FFCB05'
   const GREEN = '#00A651'
-  const GREEN_DEEP = '#007A3E'
-  const BLUE = '#1D3557'
-  const PAPER = '#F5F1E8'
-  const WHITE = '#FFFCF5'
+  const PAPER = '#F7F3E9'
 
-  // Fundo CLARO (modo branco) com clima de Copa: manchas orgânicas verdes/azul +
-  // listras diagonais (textura editorial).
-  ctx.fillStyle = PAPER
+  // ── Fundo escuro com profundidade ───────────────────────────────
+  const bg = ctx.createLinearGradient(0, 0, 0, H)
+  bg.addColorStop(0, '#0E1410')
+  bg.addColorStop(0.5, '#0C0F0C')
+  bg.addColorStop(1, '#0A130D')
+  ctx.fillStyle = bg
   ctx.fillRect(0, 0, W, H)
-  softBlob(ctx, W * 0.95, H * 0.12, 660, '0,166,81', 0.18)   // verde, topo direito
-  softBlob(ctx, W * 0.05, H * 0.86, 720, '0,166,81', 0.16)   // verde, base esquerda
-  softBlob(ctx, W * 0.88, H * 0.95, 420, '29,53,87', 0.10)   // azul, canto inferior
-  ctx.save()
-  ctx.globalAlpha = 0.05
-  ctx.strokeStyle = INK
-  ctx.lineWidth = 10
-  for (let i = -H; i < W; i += 44) {
-    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + H, H); ctx.stroke()
-  }
-  ctx.restore()
 
-  // Barras amarelas (topo/base) — moldura editorial.
+  // glows de cor — vibram no escuro
+  softBlob(ctx, W * 0.92, H * 0.10, 760, '0,166,81', 0.45)   // verde topo-direita
+  softBlob(ctx, W * 0.05, H * 0.80, 820, '0,166,81', 0.34)   // verde base-esquerda
+  softBlob(ctx, W * 0.16, H * 0.08, 520, '255,203,5', 0.20)  // amarelo topo-esquerda
+  softBlob(ctx, W * 0.92, H * 0.94, 520, '29,53,87', 0.34)   // azul canto-inferior
+
+  // bolas de futebol decorativas (cantos)
+  soccerBall(ctx, W * 0.90, H * 0.28, 66, 0.07)
+  soccerBall(ctx, W * 0.10, H * 0.46, 52, 0.06)
+  soccerBall(ctx, W * 0.84, H * 0.70, 44, 0.05)
+  soccerBall(ctx, W * 0.16, H * 0.80, 58, 0.06)
+
+  // listras diagonais + grão (textura)
+  ctx.save()
+  ctx.globalAlpha = 0.045
+  ctx.strokeStyle = PAPER
+  ctx.lineWidth = 8
+  for (let i = -H; i < W; i += 48) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + H, H); ctx.stroke() }
+  ctx.restore()
+  grain(ctx, 2400)
+
+  // barras amarelas (moldura)
   ctx.fillStyle = YELLOW
-  ctx.fillRect(0, 0, W, 16)
-  ctx.fillRect(0, H - 16, W, 16)
+  ctx.fillRect(0, 0, W, 14)
+  ctx.fillRect(0, H - 14, W, 14)
 
   const cx = W / 2
 
-  // Carrega imagens em paralelo.
   const [logo, homeFlag, awayFlag, avatar] = await Promise.all([
     loadImage(asset('assets/logo-bolao.png')),
     loadImage(proxied(data.home.flag ?? '', 240)),
@@ -148,77 +189,76 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
 
   // ── Logo + eyebrow ──────────────────────────────────────────────
   if (logo) {
-    const lh = 100
+    const lh = 104
     const lw = (logo.width / logo.height) * lh
-    ctx.drawImage(logo, cx - lw / 2, 108, lw, lh)
+    ctx.drawImage(logo, cx - lw / 2, 104, lw, lh)
   } else {
-    ctx.fillStyle = INK
+    ctx.fillStyle = PAPER
     ctx.font = '400 84px "Anton"'
     ctx.textAlign = 'center'
-    ctx.fillText('BOLÃO SUPREMA', cx, 192)
+    ctx.fillText('BOLÃO SUPREMA', cx, 196)
   }
-  ctx.fillStyle = INK3
+  ctx.fillStyle = 'rgba(247,243,233,0.55)'
   ctx.font = '700 26px "JetBrains Mono"'
   ctx.textAlign = 'center'
-  ctx.fillText('C O P A   D O   M U N D O   2 0 2 6', cx, 272)
+  ctx.fillText('C O P A   D O   M U N D O   2 0 2 6', cx, 276)
 
-  // ── Hero "CRAVOU!" — tipografia gigante em camada (verde + sombra azul) ──
+  // ── Hero "CRAVOU!" — gigante, em camada (sombra verde + amarelo) ──
   ctx.textAlign = 'center'
-  fitText(ctx, 'CRAVOU!', W - 80, 300, 170) // define ctx.font; reusado nas 2 camadas
-  ctx.fillStyle = BLUE
-  ctx.fillText('CRAVOU!', cx + 9, 609)
-  ctx.fillStyle = GREEN_DEEP
-  ctx.fillText('CRAVOU!', cx, 600)
-  ctx.fillStyle = INK3
-  ctx.font = '700 30px "JetBrains Mono"'
-  ctx.fillText('PLACAR EXATO · NA MOSCA', cx, 668)
-
-  // ── Card do confronto (branco com sombra-bloco amarela, estilo sticker) ──
-  const cardX = 70, cardY = 740, cardW = W - 140, cardH = 460
+  fitText(ctx, 'CRAVOU!', W - 64, 320, 180) // define ctx.font; reusado nas 2 camadas
+  ctx.fillStyle = GREEN
+  ctx.fillText('CRAVOU!', cx + 13, 614)
   ctx.fillStyle = YELLOW
-  roundRect(ctx, cardX + 16, cardY + 16, cardW, cardH, 32); ctx.fill()
-  ctx.fillStyle = WHITE
-  roundRect(ctx, cardX, cardY, cardW, cardH, 32); ctx.fill()
-  ctx.strokeStyle = INK; ctx.lineWidth = 3
-  roundRect(ctx, cardX, cardY, cardW, cardH, 32); ctx.stroke()
+  ctx.fillText('CRAVOU!', cx, 600)
+  ctx.fillStyle = 'rgba(247,243,233,0.7)'
+  ctx.font = '700 30px "JetBrains Mono"'
+  ctx.fillText('PLACAR EXATO · NA MOSCA', cx, 672)
 
-  // stage label
-  ctx.fillStyle = INK3
+  // ── Card do confronto (sticker claro com sombra-bloco amarela) ──
+  const cardX = 70, cardY = 752, cardW = W - 140, cardH = 462
+  ctx.fillStyle = YELLOW
+  roundRect(ctx, cardX + 18, cardY + 18, cardW, cardH, 30); ctx.fill()
+  ctx.fillStyle = PAPER
+  roundRect(ctx, cardX, cardY, cardW, cardH, 30); ctx.fill()
+  ctx.strokeStyle = '#0D0D0D'; ctx.lineWidth = 4
+  roundRect(ctx, cardX, cardY, cardW, cardH, 30); ctx.stroke()
+
+  ctx.fillStyle = '#6B6B66'
   ctx.font = '700 26px "JetBrains Mono"'
   ctx.textAlign = 'center'
   ctx.fillText(data.stageLabel.toUpperCase(), cx, cardY + 70)
 
-  // bandeiras + placar
   const flagD = 150
-  const flagY = cardY + 235
+  const flagY = cardY + 236
   const homeFlagX = cardX + 150
   const awayFlagX = cardX + cardW - 150
   if (homeFlag) drawCircleImage(ctx, homeFlag, homeFlagX, flagY, flagD)
   if (awayFlag) drawCircleImage(ctx, awayFlag, awayFlagX, flagY, flagD)
 
-  ctx.fillStyle = INK
+  ctx.fillStyle = '#0D0D0D'
   ctx.font = '400 64px "Anton"'
   ctx.textAlign = 'center'
   ctx.fillText(data.home.code, homeFlagX, flagY + flagD / 2 + 80)
   ctx.fillText(data.away.code, awayFlagX, flagY + flagD / 2 + 80)
 
-  // placar grande no centro
-  ctx.fillStyle = INK
-  ctx.font = '400 180px "Anton"'
-  ctx.fillText(`${data.homeScore} × ${data.awayScore}`, cx, flagY + 60)
+  ctx.fillStyle = '#0D0D0D'
+  ctx.font = '400 184px "Anton"'
+  ctx.fillText(`${data.homeScore} × ${data.awayScore}`, cx, flagY + 62)
 
   // ── Selo de pontos ──────────────────────────────────────────────
-  const pillW = 360, pillH = 110, pillY = cardY + cardH + 60
+  const pillW = 380, pillH = 116, pillY = cardY + cardH + 64
   ctx.fillStyle = GREEN
-  roundRect(ctx, cx - pillW / 2, pillY, pillW, pillH, 55); ctx.fill()
+  roundRect(ctx, cx - pillW / 2, pillY, pillW, pillH, 58); ctx.fill()
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 3
+  roundRect(ctx, cx - pillW / 2, pillY, pillW, pillH, 58); ctx.stroke()
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = '400 78px "Anton"'
+  ctx.font = '400 80px "Anton"'
   ctx.textAlign = 'center'
-  ctx.fillText(`+${data.points} PTS`, cx, pillY + 82)
+  ctx.fillText(`+${data.points} PTS`, cx, pillY + 86)
 
   // ── Palpiteiro ──────────────────────────────────────────────────
   const userY = pillY + pillH + 150
-  const avD = 130
+  const avD = 132
   if (avatar) {
     drawCircleImage(ctx, avatar, cx, userY, avD)
   } else {
@@ -232,26 +272,26 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
   ctx.strokeStyle = YELLOW
   ctx.lineWidth = 8
   ctx.beginPath(); ctx.arc(cx, userY, avD / 2 + 5, 0, Math.PI * 2); ctx.stroke()
-  ctx.fillStyle = INK
-  ctx.textAlign = 'center'
-  fitText(ctx, data.userName.toUpperCase(), W - 160, 72, 34)
-  ctx.fillText(data.userName.toUpperCase(), cx, userY + avD / 2 + 90)
 
-  // classe + colocação
+  ctx.fillStyle = PAPER
+  ctx.textAlign = 'center'
+  fitText(ctx, data.userName.toUpperCase(), W - 140, 74, 34)
+  ctx.fillText(data.userName.toUpperCase(), cx, userY + avD / 2 + 92)
+
   const bits: string[] = []
   if (data.className) bits.push(data.className)
   if (data.rank) bits.push(`${data.rank}º no ranking`)
   if (bits.length) {
-    ctx.fillStyle = GREEN_DEEP
+    ctx.fillStyle = YELLOW
     ctx.font = '700 30px "JetBrains Mono"'
-    ctx.fillText(bits.join('  ·  ').toUpperCase(), cx, userY + avD / 2 + 150)
+    ctx.fillText(bits.join('  ·  ').toUpperCase(), cx, userY + avD / 2 + 152)
   }
 
-  // ── Rodapé (sem link — só a marca, pra mostrar e não dar acesso) ─
-  ctx.fillStyle = INK4
+  // ── Rodapé (marca, sem link) ────────────────────────────────────
+  ctx.fillStyle = 'rgba(247,243,233,0.38)'
   ctx.font = '700 28px "JetBrains Mono"'
   ctx.textAlign = 'center'
-  ctx.fillText('B O L Ã O   S U P R E M A', cx, H - 90)
+  ctx.fillText('B O L Ã O   S U P R E M A', cx, H - 86)
 
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('Falha ao gerar imagem'))), 'image/png')
@@ -271,10 +311,8 @@ export async function shareCravadaCard(blob: Blob, caption: string): Promise<Sha
       return 'shared'
     }
   } catch (err) {
-    // usuário cancelou o share → não é erro de verdade
     if (err instanceof DOMException && err.name === 'AbortError') return 'shared'
   }
-  // Fallback: baixa a imagem.
   try {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
