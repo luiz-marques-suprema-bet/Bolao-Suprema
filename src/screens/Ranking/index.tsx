@@ -518,7 +518,7 @@ function RankingDesktop() {
                   'grid grid-cols-[40px_1fr_100px_48px_48px_48px_80px] gap-2 items-center px-5 py-2.5 border-b border-hairline cursor-pointer transition-colors',
                   r.isYou ? 'bg-yellow text-[#0D0D0D] hover:bg-yellow/90' : 'hover:bg-surface-hover'
                 )}>
-                  <span className="font-display text-2xl">{r.rank}</span>
+                  <span className="font-display text-2xl">{r.rank}º</span>
                   <div className="flex items-center gap-2 min-w-0">
                     <Avatar initials={r.initials} color={r.color} src={r.avatarUrl} size={28} />
                     <div className="min-w-0">

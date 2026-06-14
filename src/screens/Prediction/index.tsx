@@ -67,7 +67,7 @@ function computeStandings(
     let hg: number | null = null
     let ag: number | null = null
 
-    if (m.status === 'finished' || m.status === 'live') {
+    if (m.status === 'finished') {
       hg = m.homeScore
       ag = m.awayScore
     } else if (pred) {
@@ -359,7 +359,9 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
         {/* Center */}
         <div className="flex flex-col items-center gap-0.5 flex-shrink-0 min-w-[80px]">
           {isLive && (
-            <span className="font-display text-xl">{match.homeScore}–{match.awayScore}</span>
+            hasPick
+              ? <span className="font-display text-xl text-green">{existing.homeScore}–{existing.awayScore}</span>
+              : <span className="font-mono text-[9px] text-ink-3">sem palpite</span>
           )}
           {isDone && (
             <span className="font-display text-xl text-ink-3">{match.homeScore}–{match.awayScore}</span>
@@ -616,10 +618,12 @@ function CompactMatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: (
         <div className="flex flex-col items-center gap-0.5">
           {isLive && (
             <>
-              <span className="font-display text-lg leading-none">{match.homeScore}–{match.awayScore}</span>
+              {hasPick
+                ? <span className="font-display text-lg leading-none text-green">{existing.homeScore}–{existing.awayScore}</span>
+                : <span className="font-mono text-[8px] text-ink-4 text-center leading-tight">sem<br/>palpite</span>}
               <span className="inline-flex items-center gap-1 font-mono text-[7px] font-bold text-red">
                 <span className="w-1 h-1 rounded-full bg-red animate-pulse-live" />
-                {match.liveMinute ? `${match.liveMinute}'` : 'AO VIVO'}
+                AO VIVO
               </span>
             </>
           )}
