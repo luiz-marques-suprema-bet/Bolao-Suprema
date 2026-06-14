@@ -140,7 +140,6 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
   const GREEN = '#00A651'
   const INK = '#0D0D0D'
   const INK3 = '#6B6B66'
-  const INK4 = '#A9A89F'
   const PAPER = '#F5F1E8'
   const WHITE = '#FFFCF5'
 
@@ -187,27 +186,22 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
     ctx.textAlign = 'center'
     ctx.fillText('BOLÃO SUPREMA', cx, SAFE_TOP + 66)
   }
-  ctx.fillStyle = INK3
-  ctx.font = '700 24px "JetBrains Mono"'
-  ctx.textAlign = 'center'
-  ctx.fillText('C O P A   D O   M U N D O   2 0 2 6', cx, SAFE_TOP + 130)
-
   // ── Hero "CRAVOU!" (cor do vencedor, legível) ───────────────────
   ctx.textAlign = 'center'
-  fitText(ctx, 'CRAVOU!', W - 120, 200, 110)
+  fitText(ctx, 'CRAVOU!', W - 120, 204, 110)
   ctx.fillStyle = 'rgba(13,13,13,0.14)'
-  ctx.fillText('CRAVOU!', cx + 6, SAFE_TOP + 278)
+  ctx.fillText('CRAVOU!', cx + 6, SAFE_TOP + 232)
   ctx.fillStyle = accent
-  ctx.fillText('CRAVOU!', cx, SAFE_TOP + 272)
+  ctx.fillText('CRAVOU!', cx, SAFE_TOP + 226)
   ctx.fillStyle = INK3
   ctx.font = '700 26px "JetBrains Mono"'
-  ctx.fillText('PLACAR EXATO · NA MOSCA', cx, SAFE_TOP + 326)
+  ctx.fillText('PLACAR EXATO · NA MOSCA', cx, SAFE_TOP + 284)
 
   // ── Pill data · fase (escura, contrasta no claro) ───────────────
   const pillText = `${(data.dateLabel || '').toUpperCase()}${data.dateLabel ? '  ·  ' : ''}${data.stageLabel.toUpperCase()}`
   ctx.font = '700 24px "JetBrains Mono"'
   const pillW = Math.min(W - 160, ctx.measureText(pillText).width + 60)
-  const pillY = SAFE_TOP + 360
+  const pillY = SAFE_TOP + 324
   ctx.fillStyle = INK
   roundRect(ctx, cx - pillW / 2, pillY, pillW, 54, 27); ctx.fill()
   ctx.fillStyle = PAPER
@@ -283,10 +277,10 @@ export async function generateCravadaCard(data: CravadaCardData): Promise<Blob> 
   }
 
   // ── Marca (sem link) ────────────────────────────────────────────
-  ctx.fillStyle = INK4
-  ctx.font = '700 24px "JetBrains Mono"'
+  ctx.fillStyle = '#2A2A2A'
+  ctx.font = '700 26px "JetBrains Mono"'
   ctx.textAlign = 'center'
-  ctx.fillText('B O L Ã O   S U P R E M A', cx, userY + avD / 2 + 178)
+  ctx.fillText('B O L Ã O   S U P R E M A', cx, userY + avD / 2 + 182)
 
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('Falha ao gerar imagem'))), 'image/png')
