@@ -52,6 +52,64 @@ const WC26_KEYWORDS = [
   'grupo',
 ]
 
+const SPORTS_CONTEXT_KEYWORDS = [
+  'agenda',
+  'artilheiro',
+  'brasil',
+  'calendario',
+  'classificacao',
+  'convocacao',
+  'convocados',
+  'copa',
+  'estadio',
+  'fifa',
+  'futebol',
+  'grupo',
+  'ingresso',
+  'jogadores',
+  'jogos',
+  'mundial',
+  'partida',
+  'selecao',
+  'selecoes',
+  'tabela',
+  'tecnico',
+  'world cup',
+]
+
+const POLITICS_BLOCKLIST = [
+  'bolsonaro',
+  'camara dos deputados',
+  'casa branca',
+  'congresso',
+  'defesa dos eua',
+  'departamento de defesa',
+  'diplomacia',
+  'diplomatica',
+  'eleicao',
+  'eleicoes',
+  'embaixada',
+  'eua diz que acoes',
+  'ex-subsecretaria',
+  'governo americano',
+  'impeachment',
+  'itamaraty',
+  'lula',
+  'ministerio da defesa',
+  'politica',
+  'politico',
+  'politicos',
+  'relacoes exteriores',
+  'sancao',
+  'sancoes',
+  'secretaria de defesa',
+  'subsecretaria',
+  'supremo tribunal',
+  'tarifa',
+  'tarifas',
+  'trump',
+]
+
 const GOOGLE_NEWS_QUERIES: Record<'pt' | 'en', string[]> = {
   pt: [
     '"Copa do Mundo 2026" OR "Copa 2026" OR "FIFA 2026"',
@@ -77,9 +135,27 @@ function decodeXml(input: string): string {
     .trim()
 }
 
+function normalizeText(input: string): string {
+  return input
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+function isPoliticsRelated(item: FootballNewsItem): boolean {
+  const haystack = normalizeText(`${item.title} ${item.source} ${item.url}`)
+  return POLITICS_BLOCKLIST.some((term) => haystack.includes(term))
+}
+
 function isWC26Related(item: FootballNewsItem): boolean {
-  const haystack = `${item.title} ${item.source} ${item.tags.join(' ')}`.toLowerCase()
-  return WC26_KEYWORDS.some((kw) => haystack.includes(kw))
+  if (isPoliticsRelated(item)) return false
+
+  const content = normalizeText(`${item.title} ${item.url}`)
+  const queryContext = normalizeText(item.tags.join(' '))
+  const hasExplicitWC26 = WC26_KEYWORDS.some((kw) => content.includes(normalizeText(kw)))
+  const hasSportsContext = SPORTS_CONTEXT_KEYWORDS.some((kw) => content.includes(kw))
+
+  return hasExplicitWC26 || (queryContext.includes('copa') && hasSportsContext)
 }
 
 function sourceFromUrl(url?: string): string {

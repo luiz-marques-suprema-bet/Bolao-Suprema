@@ -4,7 +4,7 @@
 // Toda a chamada acontece no Edge Function `news-proxy` (secret server-side
 // WORLD_NEWS_API_KEY) quando configurada. Sem chave paga, o proxy usa fallback
 // server-side via Google News RSS. O cliente apenas invoca o proxy via
-// supabase-js — nenhum segredo de noticias e exposto no navegador.
+// supabase-js; nenhum segredo de noticias e exposto no navegador.
 //
 // O cliente mantem a ultima leva em cache local para a secao aparecer de cara
 // enquanto o proxy busca uma leva nova em background.
@@ -20,15 +20,21 @@ export interface FootballNewsItem {
   publishedAt: string
 }
 
-// Filtro de exibição: esconde manchetes negativas/políticas do "radar da copa".
-// É só UX (o proxy continua trazendo tudo; aqui descartamos antes de mostrar).
-// Para ajustar, basta adicionar/remover termos abaixo (sem acento, minúsculo).
+// Filtro de exibicao: esconde manchetes negativas/politicas do "radar da copa".
+// O proxy tambem filtra, mas este filtro limpa cache antigo do navegador antes
+// de renderizar. Para ajustar, use termos sem acento e em minusculo.
 const BLOCKED_NEWS_PATTERNS = [
   'vergonha', 'politic', 'protest', 'boicote', 'corrupc', 'escandalo', 'polemic',
   'tragedia', 'morte', 'morto', 'guerra', 'racism', 'homofob', 'xenofob',
   'genocidio', 'manifestac', 'manifestant', 'crise', 'denunc', 'investigac',
   'prisao', 'preso', 'detido', 'violencia', 'ditadura', 'deportac', 'imigrac',
   'greve', 'terror', 'atentado', 'abuso', 'escravidao', 'massacre', 'fraude',
+  'bolsonaro', 'camara dos deputados', 'casa branca', 'congresso',
+  'defesa dos eua', 'departamento de defesa', 'diplomacia', 'diplomatica',
+  'eleicao', 'eleicoes', 'embaixada', 'eua diz que acoes', 'ex-subsecretaria',
+  'governo americano', 'impeachment', 'itamaraty', 'lula', 'ministerio da defesa',
+  'relacoes exteriores', 'sancao', 'sancoes', 'secretaria de defesa',
+  'subsecretaria', 'supremo tribunal', 'tarifa', 'tarifas', 'trump',
 ]
 
 const BLOCKED_NEWS_RE = new RegExp('\\b(' + BLOCKED_NEWS_PATTERNS.join('|') + ')', 'i')
@@ -38,7 +44,7 @@ function normalizeNewsText(text: string): string {
 }
 
 function isBlockedNews(item: FootballNewsItem): boolean {
-  const haystack = normalizeNewsText(`${item.title} ${(item.tags ?? []).join(' ')}`)
+  const haystack = normalizeNewsText(`${item.title} ${item.source} ${item.url} ${(item.tags ?? []).join(' ')}`)
   return BLOCKED_NEWS_RE.test(haystack)
 }
 
@@ -57,10 +63,11 @@ function readStoredNews(): FootballNewsItem[] {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw) as { news?: FootballNewsItem[]; fetchedAt?: number }
-    const news = Array.isArray(parsed.news) ? parsed.news : []
+    const news = filterNews(Array.isArray(parsed.news) ? parsed.news : [])
     if (news.length > 0) {
       _cache = news
       _fetchedAt = parsed.fetchedAt ?? 0
+      writeStoredNews(news)
     }
     return news
   } catch {
