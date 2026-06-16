@@ -74,8 +74,8 @@ export function RegulamentoScreen() {
             <h2 className="font-display text-4xl md:text-6xl leading-none mt-1">
               <span className="text-yellow">4K</span> EM VOUCHERS
             </h2>
-            <p className="font-mono text-[12px] text-paper/55 mt-3 max-w-xl leading-relaxed">
-              Garantidos e premiando <span className="text-paper font-bold">até o 20º colocado</span>. Aqui
+            <p className="font-mono text-[12px] text-white/70 mt-3 max-w-xl leading-relaxed">
+              Garantidos e premiando <span className="text-white font-bold">até o 20º colocado</span>. Aqui
               ninguém joga só pela glória: tem voucher, moletom, day off, Beef Tour e até o Vale Suíço esperando.
             </p>
           </div>
