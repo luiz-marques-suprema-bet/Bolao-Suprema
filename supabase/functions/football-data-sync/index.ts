@@ -20,7 +20,15 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
 const TSDB_KEY = Deno.env.get('THESPORTSDB_KEY') ?? '123'
 const WC_LEAGUE_ID = '4429'
+const TSDB_SEASON = '2026'
 const TSDB_BASE = `https://www.thesportsdb.com/api/v1/json/${TSDB_KEY}`
+
+// Rodadas da fase de grupos no TheSportsDB: 1, 2 e 3 (24 jogos cada = 72).
+// eventsround traz TODOS os jogos da rodada (ao vivo + encerrado + agendado),
+// entao um jogo encerrado nunca "some" antes de ser apurado. Os mata-matas
+// ainda nao sao publicados pela fonte (selecoes TBD); quando forem, somamos os
+// codigos aqui. Ate la, past/nextleague (abaixo) servem de rede de seguranca.
+const GROUP_STAGE_ROUNDS = [1, 2, 3]
 
 interface TsdbEvent {
   idEvent: string
@@ -89,6 +97,17 @@ async function fetchEvents(path: string): Promise<TsdbEvent[]> {
   return (data.events ?? []).filter(e => e.idLeague === WC_LEAGUE_ID)
 }
 
+// Versao tolerante: uma falha pontual em um endpoint nao deve abortar a rodada
+// inteira (senao um past/next instavel impede apurar jogos das rodadas).
+async function fetchEventsSafe(path: string): Promise<TsdbEvent[]> {
+  try {
+    return await fetchEvents(path)
+  } catch (e) {
+    console.error('[tsdb-sync] fetch falhou, seguindo:', path, e)
+    return []
+  }
+}
+
 
 interface CurrentRow {
   match_code: string
@@ -116,23 +135,29 @@ Deno.serve(async (req) => {
     const reconcile = url.searchParams.get('reconcile') === '1' // varre todos os jogos (rounds 1-3)
     const dateOverride = url.searchParams.get('date')
 
-    // Coleta eventos. Fonte confiavel = endpoints POR LIGA (id=4429):
-    //   eventspastleague  → ultimos resultados (FINISHED) p/ apurar;
-    //   eventsnextleague  → proximos + EM ANDAMENTO (ao vivo).
-    // O eventsday e' furado p/ varios jogos do Mundial (nao retorna o jogo
-    // mesmo na data certa), por isso NAO usamos mais ele no fluxo automatico.
-    // ?reconcile=1: rounds 1,2,3 (todos os jogos de grupos) p/ validar mapeamento.
+    // Coleta eventos.
+    //   Fluxo automatico = eventsround das rodadas de grupos (1,2,3): traz TODOS
+    //   os 24 jogos de cada rodada, inclusive ao vivo/encerrado, entao um jogo
+    //   encerrado NUNCA some antes de ser apurado. (O past/nextleague no tier
+    //   free voltou a devolver so 1 jogo e fazia jogos travarem em "live".)
+    //   past/nextleague ficam como REDE DE SEGURANCA p/ o que estiver fora das
+    //   rodadas mapeadas (ex.: mata-mata antes de a fonte publicar os codigos).
+    //   ?reconcile=1: idem (rounds 1,2,3) — mantido p/ validar mapeamento.
+    //   ?date=YYYY-MM-DD: eventsday pontual (debug).
     let events: TsdbEvent[] = []
-    if (reconcile) {
-      for (const r of [1, 2, 3]) events.push(...await fetchEvents(`eventsround.php?id=${WC_LEAGUE_ID}&r=${r}&s=2026`))
-    } else if (dateOverride) {
+    if (dateOverride) {
       events = await fetchEvents(`eventsday.php?d=${dateOverride}&s=Soccer`)
     } else {
-      const past = await fetchEvents(`eventspastleague.php?id=${WC_LEAGUE_ID}`)
-      const next = await fetchEvents(`eventsnextleague.php?id=${WC_LEAGUE_ID}`)
-      // Dedupe por idEvent; resultado (past/FT) tem prioridade sobre o ao vivo.
       const byId = new Map<string, TsdbEvent>()
-      for (const e of [...next, ...past]) byId.set(e.idEvent, e)
+      // Rede de seguranca primeiro (prioridade menor).
+      if (!reconcile) {
+        for (const e of await fetchEventsSafe(`eventsnextleague.php?id=${WC_LEAGUE_ID}`)) byId.set(e.idEvent, e)
+        for (const e of await fetchEventsSafe(`eventspastleague.php?id=${WC_LEAGUE_ID}`)) byId.set(e.idEvent, e)
+      }
+      // Rodadas (prioridade maior): o dado completo sobrescreve a rede de seguranca.
+      for (const r of GROUP_STAGE_ROUNDS) {
+        for (const e of await fetchEventsSafe(`eventsround.php?id=${WC_LEAGUE_ID}&r=${r}&s=${TSDB_SEASON}`)) byId.set(e.idEvent, e)
+      }
       events = [...byId.values()]
     }
 
