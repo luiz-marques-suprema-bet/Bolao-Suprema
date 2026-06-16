@@ -5,9 +5,9 @@ import { cn } from '@/lib/utils'
 
 // Prêmios oficiais do bolão — premiação até o 20º colocado.
 const PRIZES_TOP = [
-  { place: '1º', medal: '🥇', prize: 'Pacote para o Vale Suíço + Moletom' },
-  { place: '2º', medal: '🥈', prize: 'Voucher R$ 600 + Par de ingressos pro Beef Tour + Day Off + Moletom' },
-  { place: '3º', medal: '🥉', prize: 'Voucher R$ 550 + Day Off + Kit Artilheiro' },
+  { place: '1º', tag: 'MAIOR PRÊMIO', accent: 'bg-yellow', prize: 'Pacote para o Vale Suíço + Moletom' },
+  { place: '2º', tag: '',             accent: 'bg-ink/40', prize: 'Voucher R$ 600 + Par de ingressos pro Beef Tour + Day Off + Moletom' },
+  { place: '3º', tag: '',             accent: 'bg-ink/25', prize: 'Voucher R$ 550 + Day Off + Kit Artilheiro' },
 ]
 
 const PRIZES_REST = [
@@ -69,53 +69,48 @@ export function RegulamentoScreen() {
 
         {/* Prêmios — destaque logo no começo */}
         <section>
-          <div className="ui-inverse p-6 md:p-8 relative overflow-hidden">
-            <div className="pointer-events-none absolute -right-5 -top-7 select-none text-[150px] leading-none opacity-[0.07]">🏆</div>
-            <p className="font-mono text-[10px] tracking-eyebrow text-yellow relative">PRÊMIOS DO BOLÃO</p>
-            <h2 className="font-display text-5xl md:text-7xl leading-none mt-1 relative">
+          <div className="ui-inverse p-6 md:p-7 border-l-4 border-l-yellow">
+            <p className="font-mono text-[10px] tracking-eyebrow text-yellow">PRÊMIOS DO BOLÃO</p>
+            <h2 className="font-display text-4xl md:text-6xl leading-none mt-1">
               <span className="text-yellow">4K</span> EM VOUCHERS
             </h2>
-            <p className="font-mono text-[12px] text-paper/60 mt-3 max-w-xl leading-relaxed relative">
-              Garantidos e recheado de prêmios pra quem pontua —{' '}
-              <span className="text-paper font-bold">premiando até o 20º colocado</span>. Aqui ninguém
-              joga só pela glória: tem voucher, moletom, day off, Beef Tour e até o Vale Suíço esperando.
+            <p className="font-mono text-[12px] text-paper/55 mt-3 max-w-xl leading-relaxed">
+              Garantidos e premiando <span className="text-paper font-bold">até o 20º colocado</span>. Aqui
+              ninguém joga só pela glória: tem voucher, moletom, day off, Beef Tour e até o Vale Suíço esperando.
             </p>
           </div>
 
           {/* Pódio — top 3 */}
           <div className="grid gap-3 mt-3 sm:grid-cols-3">
-            {PRIZES_TOP.map((p, i) => (
+            {PRIZES_TOP.map(p => (
               <div
                 key={p.place}
-                className={cn(
-                  'flex flex-col border-2 p-4',
-                  i === 0
-                    ? 'bg-yellow text-[#0D0D0D] border-line-strong sm:-mt-1'
-                    : 'bg-card border-line-strong',
-                )}
+                className={cn('flex bg-card border-2', p.place === '1º' ? 'border-ink' : 'border-line-strong')}
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-4xl leading-none">{p.place}</span>
-                  <span className="text-2xl leading-none">{p.medal}</span>
+                <div className={cn('w-1.5 flex-shrink-0', p.accent)} />
+                <div className="flex-1 p-4">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-display text-3xl leading-none text-ink">{p.place}</span>
+                    {p.tag && <span className="font-mono text-[8px] tracking-eyebrow text-ink-4">{p.tag}</span>}
+                  </div>
+                  <p className="font-mono text-[12px] font-bold leading-snug text-ink-2 mt-3">{p.prize}</p>
                 </div>
-                <p className={cn('font-mono text-[12px] font-bold leading-snug mt-3', i !== 0 && 'text-ink-2')}>
-                  {p.prize}
-                </p>
               </div>
             ))}
           </div>
 
           {/* 4º ao 20º */}
-          <div className="ui-panel mt-3 divide-y divide-hairline">
+          <p className="font-mono text-[9px] tracking-eyebrow text-ink-4 mt-5 mb-2 px-1">DO 4º AO 20º</p>
+          <div className="ui-panel divide-y divide-hairline">
             {PRIZES_REST.map(p => (
-              <div key={p.place} className="flex items-center gap-4 px-5 py-3">
-                <span className="font-display text-2xl text-ink-3 w-20 flex-shrink-0 leading-none">{p.place}</span>
+              <div key={p.place} className="flex items-center gap-4 px-5 py-2.5">
+                <span className="font-display text-xl text-ink-3 w-16 flex-shrink-0 leading-none">{p.place}</span>
                 <span className="font-mono text-[12px] text-ink-2 leading-snug">{p.prize}</span>
               </div>
             ))}
           </div>
 
-          <p className="font-mono text-[10px] text-ink-4 mt-2 px-1 leading-relaxed">
+          <p className="font-mono text-[10px] text-ink-4 mt-3 px-1 leading-relaxed">
             Prêmios são cortesias da Suprema Gaming · entrega e detalhes confirmados pela organização ao fim do torneio.
           </p>
         </section>
