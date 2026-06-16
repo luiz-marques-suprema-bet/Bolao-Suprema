@@ -17,7 +17,7 @@ const NAV_ITEMS = [
   { id: 'mine',      label: 'MEUS PALPITES', path: '/meus-palpites',  tip: 'Histórico de todos os seus palpites com pontuação detalhada' },
   { id: 'ranking',   label: 'RANKING',  path: '/ranking',        tip: 'Classificação geral — veja quem está na frente e a quantos pts você está' },
   { id: 'espiadinha',label: 'ESPIADINHA', path: '/espiadinha',   tip: 'Espie os palpites dos outros — só de jogos que já começaram. Sem cola!' },
-  { id: 'rules',     label: 'REGRAS',   path: '/regulamento',    tip: 'Regulamento completo e tabela de pontos do bolão' },
+  { id: 'rules',     label: 'REGRAS E PRÊMIOS',   path: '/regulamento',    tip: 'Regulamento, tabela de pontos e todos os prêmios do bolão' },
   { id: 'alerts',    label: 'AVISOS',   path: '/notificacoes',   tip: 'Comunicados e notificações importantes do admin' },
   { id: 'resenha',   label: 'RESENHA',  path: '/resenha',        tip: 'Chat ao vivo com todos os participantes — resenha garantida' },
 ]
