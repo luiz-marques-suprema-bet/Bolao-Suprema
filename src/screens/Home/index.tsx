@@ -1149,7 +1149,7 @@ function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void 
             <div className="text-center flex-shrink-0">
               <div className="font-mono text-[8px] text-ink-4">{formatMatchDate(match)}</div>
               <div className="font-display text-lg leading-none">{formatMatchTime(match)}</div>
-              <div className="font-mono text-[7px] text-ink-4 mt-0.5">GRUPO {match.group}</div>
+              <div className="font-mono text-[7px] text-ink-4 mt-0.5">{match.stage === 'group' ? `GRUPO ${match.group}` : (match.stageLabel ?? 'MATA-MATA')}</div>
             </div>
             <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
               <span className="font-mono text-[12px] font-bold">{match.away.code}</span>
@@ -1241,7 +1241,7 @@ function HomeMobile() {
                 <button key={match.id} onClick={() => setQuickPickMatch(match)}
                   className={cn('w-full flex items-center gap-3 px-4 py-3 text-left transition-colors active:scale-[0.99]',
                     hasPick ? 'bg-green/10 hover:bg-green/15' : 'hover:bg-surface-hover')}>
-                  <div className="font-mono text-[8px] text-ink-3 w-12 flex-shrink-0">GRUPO<br/>{match.group}</div>
+                  <div className="font-mono text-[8px] text-ink-3 w-12 flex-shrink-0">{match.stage === 'group' ? <>GRUPO<br/>{match.group}</> : (match.stageLabel ?? 'MATA-MATA')}</div>
                   <Flag team={match.home} size={22} />
                   <span className="font-mono text-[11px] font-bold flex-1 truncate">{match.home.code}</span>
                   <div className="text-center flex-shrink-0">
@@ -1498,7 +1498,7 @@ function HomeDesktop() {
                     className={cn('w-full flex items-center gap-4 px-4 py-3 transition-colors text-left group active:scale-[0.99]',
                       hasPick ? 'bg-green/10 hover:bg-green/15' : 'hover:bg-surface-hover')}>
                     <div className="flex-shrink-0 w-12 text-center">
-                      <div className="font-mono text-[8px] text-ink-4 tracking-eyebrow">GRUPO {match.group}</div>
+                      <div className="font-mono text-[8px] text-ink-4 tracking-eyebrow">{match.stage === 'group' ? `GRUPO ${match.group}` : (match.stageLabel ?? 'MATA-MATA')}</div>
                     </div>
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <Flag team={match.home} size={26} />
