@@ -44,6 +44,7 @@ export function UserProfileScreen() {
   const me = useAuthStore(s => s.user)
   const [profile, setProfile] = useState<AppUser | null>(null)
   const [stats, setStats] = useState<{ pts: number; correct: number } | null>(null)
+  const [picks, setPicks] = useState<{ champion?: string; vice?: string; scorer?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [viewer, setViewer] = useState<string | null>(null)
 
@@ -66,6 +67,11 @@ export function UserProfileScreen() {
           setProfile(null)
         } else {
           setProfile(mapped)
+          setPicks(data ? {
+            champion: data.champion_pick ?? undefined,
+            vice: data.vice_pick ?? undefined,
+            scorer: data.scorer_pick ?? undefined,
+          } : null)
         }
         setLoading(false)
       })
@@ -197,6 +203,23 @@ export function UserProfileScreen() {
           )}
         </div>
 
+        {/* Apostas especiais — transparência (já travadas) */}
+        <div className="border-t border-hairline pt-4 mb-6">
+          <p className="font-mono text-[9px] tracking-eyebrow text-ink-4 mb-3">APOSTAS ESPECIAIS</p>
+          {(picks?.champion || picks?.vice || picks?.scorer) ? (
+            <div className="grid grid-cols-3 gap-3">
+              <SpecialPick label="CAMPEÃO" team={picks?.champion ? TEAMS[picks.champion] : undefined} />
+              <SpecialPick label="VICE" team={picks?.vice ? TEAMS[picks.vice] : undefined} />
+              <SpecialPick label="ARTILHEIRO" text={picks?.scorer} />
+            </div>
+          ) : (
+            <div className="ui-card p-4 text-center">
+              <p className="font-serif-it text-green-deep text-lg leading-none">Vacilou e não fez</p>
+              <p className="font-mono text-[10px] text-ink-4 mt-1.5">Não cravou campeão, vice nem artilheiro.</p>
+            </div>
+          )}
+        </div>
+
         {/* Since */}
         <p className="font-mono text-[10px] text-ink-4 tracking-eyebrow border-t border-hairline pt-4">
           NO BOLÃO DESDE {profile.since} · SUPREMA GAMING
@@ -206,6 +229,24 @@ export function UserProfileScreen() {
       <AnimatePresence>
         {viewer && <ImageViewer url={viewer} onClose={() => setViewer(null)} />}
       </AnimatePresence>
+    </div>
+  )
+}
+
+function SpecialPick({ label, team, text }: { label: string; team?: (typeof TEAMS)[string]; text?: string }) {
+  return (
+    <div className="ui-card p-3 flex flex-col items-center gap-1.5 text-center">
+      <div className="font-mono text-[9px] text-ink-4 tracking-eyebrow">{label}</div>
+      {team ? (
+        <>
+          <Flag team={team} size={26} />
+          <div className="font-mono text-[10px] font-bold leading-tight">{team.name}</div>
+        </>
+      ) : text ? (
+        <div className="font-mono text-[10px] font-bold leading-tight mt-1.5">{text}</div>
+      ) : (
+        <div className="font-mono text-[12px] text-ink-4 mt-1.5">—</div>
+      )}
     </div>
   )
 }

@@ -170,6 +170,7 @@ export function ResenhaScreen() {
   const [messageMenuId, setMessageMenuId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
+  const initialScrollDone = useRef(false)
   const actionButtonRef = useRef<HTMLButtonElement | null>(null)
   const actionPanelRef = useRef<HTMLDivElement | null>(null)
   const videoAutoStopRef = useRef(false)
@@ -250,8 +251,25 @@ export function ResenhaScreen() {
       .slice(0, 6)
   }, [draft, profiles])
 
+  // Ao ABRIR a Resenha, vai direto pra última mensagem — de forma robusta:
+  // avatares/imagens carregam depois e empurram o layout, então o scroll antigo
+  // (uma vez só) deixava o usuário no meio. Aqui repetimos em rAF + timeout pra
+  // pegar esse reflow. Depois de aberto, segue rolando a cada mensagem nova.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: 'end' })
+    if (!messages.length) return
+    const toBottom = () => {
+      const el = scrollRef.current
+      if (el) el.scrollTop = el.scrollHeight
+      else endRef.current?.scrollIntoView({ block: 'end' })
+    }
+    if (!initialScrollDone.current) {
+      initialScrollDone.current = true
+      toBottom()
+      const r = requestAnimationFrame(toBottom)
+      const t = window.setTimeout(toBottom, 200)
+      return () => { cancelAnimationFrame(r); window.clearTimeout(t) }
+    }
+    toBottom()
   }, [messages.length])
 
   // Backstop do realtime: enquanto a Resenha está aberta e visível, busca
