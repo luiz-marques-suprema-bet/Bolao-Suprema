@@ -9,6 +9,19 @@ import { useForceLightMode } from '@/hooks/useForceLightMode'
 import { isAllowedCorporateEmail, isPasswordLoginEmail } from '@/lib/emailDomains'
 import { asset } from '@/lib/utils'
 
+// Quando o backend está fora do ar (projeto restrito por cota/egress, 402 ou
+// falha de rede), não mostramos o erro técnico cru — só uma mensagem tranquila.
+// Erros legítimos (código inválido, e-mail não permitido, rate limit) passam direto.
+function friendlyError(raw: string): string {
+  const s = (raw || '').toLowerCase()
+  const isDown =
+    /restricted|egress|cached_egress|spend ?cap|fair use|\b402\b|\b503\b|service unavailable|temporariamente/.test(s) ||
+    /failed to fetch|networkerror|network request failed|load failed/.test(s)
+  return isDown
+    ? 'O Bolão está fora do ar temporariamente — já estamos resolvendo. Fique tranquilo: todos os palpites e pontos já registrados continuam salvos normalmente. É só tentar de novo mais tarde.'
+    : raw
+}
+
 // ─── OTP logic (shared) ───────────────────────────────────────────────────────
 
 type Step = 'email' | 'code'
@@ -74,7 +87,7 @@ function useOtpFlow() {
     const res = await sendOtp(email.trim())
     setLoading(false)
     if (res.error) {
-      setError(res.error)
+      setError(friendlyError(res.error))
     } else {
       setStep('code')
       setResendCooldown(startOtpCooldown(email))
@@ -88,7 +101,7 @@ function useOtpFlow() {
     const res = await verifyOtp(email.trim(), code)
     setLoading(false)
     if (res.error) {
-      setError(res.error)
+      setError(friendlyError(res.error))
       setCode('')
     } else {
       navigate('/home', { replace: true })
@@ -106,7 +119,7 @@ function useOtpFlow() {
     setError('')
     const res = await sendOtp(email.trim())
     setLoading(false)
-    if (res.error) setError(res.error)
+    if (res.error) setError(friendlyError(res.error))
     else setResendCooldown(startOtpCooldown(email))
   }
 
@@ -123,7 +136,7 @@ function useOtpFlow() {
     const res = await signInWithPassword(email.trim(), password)
     setLoading(false)
     if (res.error) {
-      setError(res.error)
+      setError(friendlyError(res.error))
     } else {
       navigate('/home', { replace: true })
     }
