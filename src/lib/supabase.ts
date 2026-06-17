@@ -89,6 +89,11 @@ export async function uploadChatMedia(
   file: File | Blob,
   kind: 'image' | 'audio' | 'video' | 'video_note',
 ): Promise<string> {
+  // Comprime fotos do chat antes de subir (mesma razão de egress dos avatares):
+  // uma foto de 8 MB servida a toda a Resenha pesa demais. Áudio/vídeo passam direto.
+  if (kind === 'image' && file instanceof File) {
+    file = await compressImage(file, 1600)
+  }
   const maxBytes = kind === 'audio'
     ? 10 * 1024 * 1024
     : kind === 'image'

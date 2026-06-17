@@ -6,6 +6,7 @@ import { useChatStore, type ChatProfile } from '@/stores/chat.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { uploadChatMedia } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { optimizedImageUrl } from '@/lib/img'
 import { isSafeHttpUrl } from '@/lib/security'
 import type { ChatMessage, ChatPoll } from '@/types'
 import { Avatar } from '@/components/shared/Avatar'
@@ -933,7 +934,7 @@ function MessageBody({
   if (message.type === 'image' && isSafeHttpUrl(message.imageUrl)) {
     return (
       <button type="button" onClick={() => onImage(message.imageUrl!)} className="block overflow-hidden rounded-2xl active:scale-[0.98] transition-transform">
-        <img src={message.imageUrl} alt="Foto" loading="lazy" className="max-h-72 max-w-[260px] w-full object-cover transition hover:brightness-90" />
+        <img src={optimizedImageUrl(message.imageUrl, { w: 540, fit: 'inside' })} alt="Foto" loading="lazy" className="max-h-72 max-w-[260px] w-full object-cover transition hover:brightness-90" />
       </button>
     )
   }

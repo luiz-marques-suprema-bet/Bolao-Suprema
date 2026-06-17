@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Avatar } from '@/components/shared/Avatar'
 import { supabase, isMockMode } from '@/lib/supabase'
+import { optimizedImageUrl } from '@/lib/img'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { isSafeHttpUrl } from '@/lib/security'
 import type { ChatMessage } from '@/types'
@@ -87,7 +88,7 @@ export function ProfileSheet({ m, onClose }: { m: ChatMessage; onClose: () => vo
           style={{ background: snap?.bannerUrl ? undefined : m.color }}
         >
           {snap?.bannerUrl && (
-            <img src={snap.bannerUrl} alt="" className="w-full h-full object-cover" />
+            <img src={optimizedImageUrl(snap.bannerUrl, { w: 600, fit: 'cover' })} alt="" className="w-full h-full object-cover" />
           )}
           {/* Dark gradient for contrast */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
@@ -97,7 +98,7 @@ export function ProfileSheet({ m, onClose }: { m: ChatMessage; onClose: () => vo
         <div className="relative px-5 pb-4">
           <div className="-mt-10 mb-3 w-20 h-20 rounded-full overflow-hidden border-4 border-paper flex-shrink-0" style={{ background: m.color }}>
             {isSafeHttpUrl(m.avatarUrl)
-              ? <img src={m.avatarUrl} alt="" className="w-full h-full object-cover" />
+              ? <img src={optimizedImageUrl(m.avatarUrl, { w: 160, h: 160 })} alt="" className="w-full h-full object-cover" />
               : <Avatar initials={m.initials} color={m.color} size={80} />}
           </div>
 
