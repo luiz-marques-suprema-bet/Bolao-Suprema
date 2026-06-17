@@ -24,15 +24,46 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 export const isExplicitMockMode = explicitMockMode
 export const isMockMode = explicitMockMode || !isSupabaseConfigured
 
+// Redimensiona/comprime a imagem NO CLIENTE antes de subir. Fotos de celular
+// chegavam com 4–5 MB e, servidas a centenas de pessoas, estouraram a cota de
+// egress do Supabase (derrubou o projeto). Avatar -> 512px, banner -> 1280px,
+// webp q~0.82 → caem pra ~50–300 KB. GIF passa direto (preserva animação) e,
+// em qualquer falha, devolve o arquivo original (nunca bloqueia o upload).
+async function compressImage(file: File, maxDim: number, quality = 0.82): Promise<File> {
+  if (!file.type.startsWith('image/') || file.type === 'image/gif') return file
+  if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return file
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height))
+    const w = Math.max(1, Math.round(bitmap.width * scale))
+    const h = Math.max(1, Math.round(bitmap.height * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(bitmap, 0, 0, w, h)
+    bitmap.close?.()
+    const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/webp', quality))
+    if (!blob || blob.size >= file.size) return file
+    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.webp', { type: 'image/webp' })
+  } catch {
+    return file
+  }
+}
+
 export async function uploadFile(
   userId: string,
   filename: string,
   file: File,
 ): Promise<string> {
-  const maxBytes = 5 * 1024 * 1024
   const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-  if (file.size > maxBytes) throw new Error('Arquivo muito grande. Maximo: 5 MB.')
   if (!allowed.includes(file.type)) throw new Error('Formato invalido. Use JPEG, PNG, WebP ou GIF.')
+
+  const upload = await compressImage(file, filename === 'banner' ? 1280 : 512)
+
+  const maxBytes = 5 * 1024 * 1024
+  if (upload.size > maxBytes) throw new Error('Arquivo muito grande. Maximo: 5 MB.')
 
   const path = `${userId}/${filename}`
   const primaryBucket = filename === 'banner' ? 'banners' : 'avatars'
@@ -41,7 +72,7 @@ export async function uploadFile(
   for (const bucket of [primaryBucket, 'user-media']) {
     const { error } = await supabase.storage
       .from(bucket)
-      .upload(path, file, { upsert: true, contentType: file.type })
+      .upload(path, upload, { upsert: true, contentType: upload.type })
     if (!error) {
       const { publicUrl } = supabase.storage.from(bucket).getPublicUrl(path).data
       return `${publicUrl}?v=${Date.now()}`
