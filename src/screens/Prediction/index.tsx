@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useParams, useLocation } from 'react-router-dom'
+import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Flag } from '@/components/shared/Flag'
 import { Tooltip } from '@/components/shared/Tooltip'
@@ -1021,11 +1021,19 @@ const KO_POINTS_GUIDE = [
 ]
 
 function KnockoutTab() {
+  const navigate = useNavigate()
   const allMatches = useMatchesWithStatus(WC2026_MATCHES)
   const koMatches = allMatches.filter(m => m.stage !== 'group')
 
   return (
     <div className="pb-24">
+      <button
+        onClick={() => navigate('/chave')}
+        className="mx-4 mt-4 mb-1 flex w-[calc(100%-2rem)] items-center justify-between border-2 border-ink bg-ink px-4 py-2.5 text-paper transition-transform active:scale-[0.99]"
+      >
+        <span className="font-mono text-[11px] font-bold tracking-eyebrow">VER CHAVEAMENTO</span>
+        <span className="font-mono text-[11px]">→</span>
+      </button>
       {koMatches.length === 0 ? (
         /* ── Empty state: KO matches not in DB yet ── */
         <div className="mx-4 mt-8 p-6 ui-card text-center">

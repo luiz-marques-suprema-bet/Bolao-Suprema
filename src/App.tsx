@@ -31,6 +31,7 @@ const AdminScreen          = lazy(() => import('@/screens/Admin').then(m => ({ d
 const UserProfileScreen    = lazy(() => import('@/screens/UserProfile').then(m => ({ default: m.UserProfileScreen })))
 const RegulamentoScreen    = lazy(() => import('@/screens/Regulamento').then(m => ({ default: m.RegulamentoScreen })))
 const MyPredictionsScreen  = lazy(() => import('@/screens/MyPredictions').then(m => ({ default: m.MyPredictionsScreen })))
+const BracketScreen        = lazy(() => import('@/screens/Bracket').then(m => ({ default: m.BracketScreen })))
 const NotificationsScreen  = lazy(() => import('@/screens/Notifications').then(m => ({ default: m.NotificationsScreen })))
 
 function ScreenLoading() {
@@ -214,6 +215,7 @@ const router = createHashRouter([
           { path: '/bracket', element: <Navigate to="/prediction" state={{ tab: 'knockout' }} replace /> },
           { path: '/prediction', element: <PredictionScreen /> },
           { path: '/prediction/:matchId', element: <PredictionScreen /> },
+          { path: '/chave', element: <BracketScreen /> },
           { path: '/ranking', element: <RankingScreen /> },
           { path: '/espiadinha', element: <EspiadinhaScreen /> },
           { path: '/resenha', element: <ResenhaScreen /> },

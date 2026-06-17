@@ -14,6 +14,7 @@ const ESPIADINHA_NEW_KEY = 'bolao-espiadinha-novo-v2'
 const NAV_ITEMS = [
   { id: 'home',       label: 'HOME',     path: '/home',           tip: 'Resumo do dia, boletim rápido e destaques do bolão' },
   { id: 'prediction',label: 'PALPITAR', path: '/prediction',     tip: 'Faça seus palpites por grupo, mata-mata e apostas gerais' },
+  { id: 'bracket',   label: 'CHAVE',    path: '/chave',          tip: 'Chaveamento do mata-mata — acompanhe os confrontos fase a fase' },
   { id: 'mine',      label: 'MEUS PALPITES', path: '/meus-palpites',  tip: 'Histórico de todos os seus palpites com pontuação detalhada' },
   { id: 'ranking',   label: 'RANKING',  path: '/ranking',        tip: 'Classificação geral — veja quem está na frente e a quantos pts você está' },
   { id: 'espiadinha',label: 'ESPIADINHA', path: '/espiadinha',   tip: 'Espie os palpites dos outros — só de jogos que já começaram. Sem cola!' },
