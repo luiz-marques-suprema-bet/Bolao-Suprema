@@ -23,12 +23,16 @@ const WC_LEAGUE_ID = '4429'
 const TSDB_SEASON = '2026'
 const TSDB_BASE = `https://www.thesportsdb.com/api/v1/json/${TSDB_KEY}`
 
-// Rodadas da fase de grupos no TheSportsDB: 1, 2 e 3 (24 jogos cada = 72).
-// eventsround traz TODOS os jogos da rodada (ao vivo + encerrado + agendado),
-// entao um jogo encerrado nunca "some" antes de ser apurado. Os mata-matas
-// ainda nao sao publicados pela fonte (selecoes TBD); quando forem, somamos os
-// codigos aqui. Ate la, past/nextleague (abaixo) servem de rede de seguranca.
+// Rodadas no TheSportsDB (convencao confirmada nos dados reais da Copa 2022):
+//   grupos = 1, 2, 3 (24 jogos cada em 2026) · Oitavas = 16 · Quartas = 125 ·
+//   Semis = 150 · 3o lugar = 160 · Final = 200.
+// A Fase de 32 (nova em 2026) nao existia em 2022; o codigo mais provavel e 32
+// (segue o padrao "16 = oitavas"). eventsround traz TODOS os jogos da rodada, entao
+// um jogo encerrado nunca "some" antes de ser apurado. past/nextleague seguem de
+// rede de seguranca caso a Fase de 32 use outro codigo — reconfirmar quando a
+// fonte publicar os confrontos (~27/06).
 const GROUP_STAGE_ROUNDS = [1, 2, 3]
+const KNOCKOUT_ROUNDS = [32, 16, 125, 150, 160, 200]
 
 interface TsdbEvent {
   idEvent: string
@@ -111,6 +115,7 @@ async function fetchEventsSafe(path: string): Promise<TsdbEvent[]> {
 
 interface CurrentRow {
   match_code: string
+  stage?: string | null
   status?: string | null
   market_status?: string | null
   lock_reason?: string | null
@@ -155,7 +160,8 @@ Deno.serve(async (req) => {
         for (const e of await fetchEventsSafe(`eventspastleague.php?id=${WC_LEAGUE_ID}`)) byId.set(e.idEvent, e)
       }
       // Rodadas (prioridade maior): o dado completo sobrescreve a rede de seguranca.
-      for (const r of GROUP_STAGE_ROUNDS) {
+      // Grupos + mata-mata; rodadas que ainda nao existem voltam vazias (sem erro).
+      for (const r of [...GROUP_STAGE_ROUNDS, ...KNOCKOUT_ROUNDS]) {
         for (const e of await fetchEventsSafe(`eventsround.php?id=${WC_LEAGUE_ID}&r=${r}&s=${TSDB_SEASON}`)) byId.set(e.idEvent, e)
       }
       events = [...byId.values()]
@@ -176,7 +182,7 @@ Deno.serve(async (req) => {
       // Acha a nossa partida pelo par de selecoes (unico no Mundial).
       const { data: rows, error: findErr } = await supabase
         .from('matches')
-        .select('match_code,status,market_status,lock_reason,home_score,away_score,kickoff_utc')
+        .select('match_code,stage,status,market_status,lock_reason,home_score,away_score,kickoff_utc')
         .eq('home_code', homeCode)
         .eq('away_code', awayCode)
         .limit(1)
@@ -221,6 +227,17 @@ Deno.serve(async (req) => {
       const a = parseScore(ev.intAwayScore)
       const providerHasScore = h != null && a != null
       if (!providerHasScore) continue // sem placar real, nao toca
+
+      // No mata-mata, empate no tempo regulamentar = decidido em prorrogacao/
+      // penaltis. A fonte free nao entrega o vencedor dos penaltis, e gravar
+      // winner='draw' quebraria o "+2 quem avanca" e o avanco da chave. Entao NAO
+      // finalizamos esses casos automaticamente — ficam pro admin confirmar o
+      // classificado na mao (rede de seguranca combinada).
+      const isKnockout = (current.stage ?? 'group') !== 'group'
+      if (phase === 'finished' && isKnockout && h === a) {
+        planned.push({ match_code: current.match_code, ko_penaltis: `${h}x${a} — mata-mata empatado: confirmar classificado manualmente` })
+        continue
+      }
 
       const winner = h > a ? homeCode : a > h ? awayCode : 'draw'
       const patch = phase === 'finished'
