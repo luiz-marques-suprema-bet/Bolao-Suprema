@@ -202,6 +202,13 @@ Deno.serve(async (req) => {
 
       const phase = phaseOf(ev.strStatus)
 
+      // Um jogo JA encerrado nunca volta pra "ao vivo"/"agendado". Se ja temos
+      // finished e a fonte ainda mostra ao vivo (lag comum: a fonte demora a
+      // marcar FT) ou agendado, ignoramos — assim o cron NUNCA desfaz um
+      // encerramento (manual do admin ou automatico). Correcao de placar com a
+      // fonte tambem encerrada (phase==='finished') continua passando abaixo.
+      if (current.status === 'finished' && phase !== 'finished') continue
+
       // (A) Sincroniza o HORARIO de inicio com a fonte (jogos NAO encerrados).
       // Garante que o horario exibido e o fechamento da aposta batam com quando
       // o jogo realmente acontece — corrige escalas erradas antes de o jogo rolar.
