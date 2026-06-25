@@ -330,12 +330,13 @@ const SCORING_SECTIONS = [
     ],
   },
   {
-    label: 'MATA-MATA',
+    label: 'MATA-MATA · quem passa manda',
     rules: [
-      { pts: 12, label: 'Placar exato (tempo regulamentar)', tip: 'Placar perfeito nos 90 minutos. Prorrogação e pênaltis não contam para este critério.' },
-      { pts: 8,  label: 'Resultado + gols do vencedor',       tip: 'Acertou o resultado E os gols do time vencedor, no tempo regulamentar.' },
-      { pts: 5,  label: 'Resultado correto',                  tip: 'Acertou quem venceu no tempo regulamentar (sem contar prorr./pênaltis).' },
-      { pts: 2,  label: 'Classificado (incl. prorr./pênaltis)', tip: 'Acertou quem avança de fase — vale o resultado final, incluindo prorrogação e pênaltis.' },
+      { pts: 12, label: 'CRAVADA: placar exato + quem passa', tip: 'Acertou o placar dos 90 min E quem se classifica. A cravada só conta com o classificado certo. Prorrogação/pênaltis não contam pro placar, mas contam pro classificado.' },
+      { pts: 8,  label: 'Resultado + gols do vencedor + quem passa', tip: 'Acertou o resultado, os gols do time vencedor (90 min) E quem avança.' },
+      { pts: 5,  label: 'Resultado certo (90 min) + quem passa',      tip: 'Acertou quem venceu no tempo normal E quem se classifica.' },
+      { pts: 3,  label: 'Só acertou quem passa',                      tip: 'Errou o placar, mas cravou o classificado (incl. prorrogação/pênaltis).' },
+      { pts: 2,  label: 'Cravou o placar, mas errou quem passa',      tip: 'Consolação: acertou o placar dos 90 min, mas o outro time se classificou.' },
     ],
   },
   {

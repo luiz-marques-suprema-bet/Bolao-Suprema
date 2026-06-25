@@ -42,6 +42,33 @@ function koNum(id: string): number {
   return m ? parseInt(m[1], 10) : 0
 }
 
+// Estrutura fixa da Fase de 32 (espelha knockout_slot_map): qual posição de
+// grupo alimenta cada slot. W:X = 1º do grupo X · R:X = 2º do grupo X ·
+// B:* = um dos 8 melhores terceiros. Mostramos isso enquanto os times não saem,
+// pra chave já aparecer "montada" (como num bolão de verdade).
+const R32_SOURCES: Record<string, [string, string]> = {
+  'ko-r32-1': ['R:A', 'R:B'], 'ko-r32-2': ['W:E', 'B:1E'], 'ko-r32-3': ['W:F', 'R:C'],
+  'ko-r32-4': ['W:C', 'R:F'], 'ko-r32-5': ['W:I', 'B:1I'], 'ko-r32-6': ['R:E', 'R:I'],
+  'ko-r32-7': ['W:A', 'B:1A'], 'ko-r32-8': ['W:L', 'B:1L'], 'ko-r32-9': ['W:D', 'B:1D'],
+  'ko-r32-10': ['W:G', 'B:1G'], 'ko-r32-11': ['R:K', 'R:L'], 'ko-r32-12': ['W:H', 'R:J'],
+  'ko-r32-13': ['W:B', 'B:1B'], 'ko-r32-14': ['W:J', 'R:H'], 'ko-r32-15': ['W:K', 'B:1K'],
+  'ko-r32-16': ['R:D', 'R:G'],
+}
+
+function sourceLabel(src: string | undefined): string {
+  if (!src) return 'A definir'
+  if (src.startsWith('W:')) return `1º Grupo ${src.slice(2)}`
+  if (src.startsWith('R:')) return `2º Grupo ${src.slice(2)}`
+  if (src.startsWith('B:')) return '3º colocado'
+  return 'A definir'
+}
+
+// Rótulo de cada lado quando o time ainda não saiu (só na Fase de 32).
+function feederLabels(matchCode: string): [string | undefined, string | undefined] {
+  const src = R32_SOURCES[matchCode]
+  return src ? [sourceLabel(src[0]), sourceLabel(src[1])] : [undefined, undefined]
+}
+
 export function BracketScreen() {
   const navigate = useNavigate()
   const me = useAuthStore(s => s.user)
@@ -146,6 +173,8 @@ function BracketCard({ m, pick, pred, onPalpitar }: {
     )
   }, [finished, pred, pick, m])
 
+  const [homeFeeder, awayFeeder] = feederLabels(m.id)
+
   const clickable = bettable
   const Wrapper: 'button' | 'div' = clickable ? 'button' : 'div'
 
@@ -164,8 +193,8 @@ function BracketCard({ m, pick, pred, onPalpitar }: {
       </div>
 
       <div className="px-3 py-2.5 space-y-2">
-        <TeamRow team={m.home} score={showScore ? m.homeScore : null} winner={m.winner === m.home.code} myPick={pick === m.home.code} />
-        <TeamRow team={m.away} score={showScore ? m.awayScore : null} winner={m.winner === m.away.code} myPick={pick === m.away.code} />
+        <TeamRow team={m.home} score={showScore ? m.homeScore : null} winner={m.winner === m.home.code} myPick={pick === m.home.code} fallbackLabel={homeFeeder} />
+        <TeamRow team={m.away} score={showScore ? m.awayScore : null} winner={m.winner === m.away.code} myPick={pick === m.away.code} fallbackLabel={awayFeeder} />
       </div>
 
       <div className="flex items-center justify-between border-t border-hairline px-3 py-1.5">
@@ -184,13 +213,13 @@ function BracketCard({ m, pick, pred, onPalpitar }: {
   )
 }
 
-function TeamRow({ team, score, winner, myPick }: { team: Match['home']; score: number | null; winner: boolean; myPick: boolean }) {
+function TeamRow({ team, score, winner, myPick, fallbackLabel }: { team: Match['home']; score: number | null; winner: boolean; myPick: boolean; fallbackLabel?: string }) {
   const tbd = team.code === 'TBD'
   return (
     <div className="flex items-center gap-2.5">
-      <Flag team={team} size={24} />
+      <Flag team={team} size={24} placeholderLabel={fallbackLabel ?? 'A definir'} />
       <span className={cn('font-mono text-[12px] flex-1 truncate', winner ? 'font-bold text-ink' : tbd ? 'text-ink-4' : 'text-ink-2')}>
-        {tbd ? 'A definir' : team.name}
+        {tbd ? (fallbackLabel ?? 'A definir') : team.name}
         {myPick && !tbd && <span className="ml-1.5 font-mono text-[8px] text-ink-4">· seu</span>}
       </span>
       <span className={cn('font-display text-xl leading-none w-6 text-right', winner ? 'text-ink' : 'text-ink-3')}>
