@@ -337,9 +337,9 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
                       </button>
                     )}
                   </div>
-                  {/* atalhos: placares mais palpitados (quebram em linhas, sem scroll lateral) */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {scoreCounts.slice(0, 8).map(([score, n]) => {
+                  {/* todos os placares palpitados (quebram em linhas, sem scroll lateral) */}
+                  <div className="flex flex-wrap gap-2">
+                    {scoreCounts.map(([score, n]) => {
                       const [h, a] = score.split('×')
                       const active = scoreFilter === score
                       return (
@@ -347,10 +347,10 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
                           key={score}
                           type="button"
                           onClick={() => { if (active) { setFHome(''); setFAway('') } else { setFHome(h); setFAway(a) } }}
-                          className={cn('font-mono text-[10px] font-bold tabular-nums px-2 py-1 border transition-colors',
+                          className={cn('font-mono text-[12px] font-bold tabular-nums px-2.5 py-1.5 border transition-colors',
                             active ? 'bg-yellow text-[#0D0D0D] border-ink' : 'border-hairline text-ink-2 hover:bg-surface-hover')}
                         >
-                          {score} · {n}
+                          {score} <span className="text-ink-4 font-normal">· {n}</span>
                         </button>
                       )
                     })}
