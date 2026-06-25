@@ -8,7 +8,7 @@ import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { isBetOpen } from '@/lib/markets'
 import { isPlaceholderMatch } from '@/lib/matchGuards'
 import { calculateKoPoints } from '@/lib/scoring'
-import { computeGroupStandings, type StandingRow } from '@/lib/groupStandings'
+import { clinchedPositions } from '@/lib/clinched'
 import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
 import { formatMatchDate, formatMatchTime } from '@/lib/matchTime'
@@ -64,14 +64,15 @@ function feederLabel(name: string): string {
     .replace(/^Perdedor Semifinal (\d+)$/i, 'Perd. Semi $1')
 }
 
-// Resolve um feeder de grupo (1º/2º) para o time REAL assim que o grupo fecha —
-// mostra a seleção conhecida mesmo que o adversário ainda seja um placeholder.
-type GroupStandings = Record<string, StandingRow[] | null>
-function resolveFeeder(name: string, st: GroupStandings): Team | null {
+// Resolve um feeder de grupo (1º/2º) para o time real SÓ quando a vaga está
+// cravada por pontos (ver @/lib/clinched). Senão, fica o rótulo.
+type Clinched = Record<string, { first: string | null; second: string | null }>
+
+function resolveFeeder(name: string, clinched: Clinched): Team | null {
   let mm = name.match(/^Vencedor Grupo (\w)$/i)
-  if (mm) { const r = st[mm[1].toUpperCase()]; return r?.[0] ? (TEAMS[r[0].code] ?? null) : null }
+  if (mm) { const c = clinched[mm[1].toUpperCase()]?.first; return c ? (TEAMS[c] ?? null) : null }
   mm = name.match(/^2o Grupo (\w)$/i)
-  if (mm) { const r = st[mm[1].toUpperCase()]; return r?.[1] ? (TEAMS[r[1].code] ?? null) : null }
+  if (mm) { const c = clinched[mm[1].toUpperCase()]?.second; return c ? (TEAMS[c] ?? null) : null }
   return null
 }
 
@@ -86,14 +87,10 @@ export function BracketScreen() {
 
   useEffect(() => { if (me?.id) void syncBracket(me.id) }, [me?.id, syncBracket])
 
-  // Standings reais por grupo (só de grupos JÁ encerrados) — resolve os feeders.
-  const standings = useMemo<GroupStandings>(() => {
-    const map: GroupStandings = {}
-    for (const g of WC2026_GROUPS) {
-      const gm = allMatches.filter(m => m.group === g.id)
-      const done = gm.length > 0 && gm.every(m => m.status === 'finished')
-      map[g.id] = done ? computeGroupStandings(g, allMatches, {}) : null
-    }
+  // Vagas cravadas por pontos (1º/2º garantidos) — resolvem os feeders com segurança.
+  const clinched = useMemo<Clinched>(() => {
+    const map: Clinched = {}
+    for (const g of WC2026_GROUPS) map[g.id] = clinchedPositions(g, allMatches)
     return map
   }, [allMatches])
 
@@ -139,7 +136,7 @@ export function BracketScreen() {
                 m={m}
                 pick={slotId ? picks[slotId] : undefined}
                 pred={predictions[m.id]}
-                standings={standings}
+                clinched={clinched}
                 onPalpitar={() => navigate(`/prediction/${m.id}`)}
               />
             )
@@ -150,11 +147,11 @@ export function BracketScreen() {
   )
 }
 
-function BracketCard({ m, pick, pred, standings, onPalpitar }: {
+function BracketCard({ m, pick, pred, clinched, onPalpitar }: {
   m: Match
   pick?: string
   pred?: { homeScore: number; awayScore: number }
-  standings: GroupStandings
+  clinched: Clinched
   onPalpitar: () => void
 }) {
   const finished = m.status === 'finished'
@@ -189,8 +186,8 @@ function BracketCard({ m, pick, pred, standings, onPalpitar }: {
       </div>
 
       <div className="px-3 py-2.5 space-y-2">
-        <BracketTeam team={m.home} score={showScore ? m.homeScore : null} winner={m.winner === m.home.code} standings={standings} />
-        <BracketTeam team={m.away} score={showScore ? m.awayScore : null} winner={m.winner === m.away.code} standings={standings} />
+        <BracketTeam team={m.home} score={showScore ? m.homeScore : null} winner={m.winner === m.home.code} clinched={clinched} />
+        <BracketTeam team={m.away} score={showScore ? m.awayScore : null} winner={m.winner === m.away.code} clinched={clinched} />
       </div>
 
       <div className="flex items-center justify-between border-t border-hairline px-3 py-1.5">
@@ -205,13 +202,13 @@ function BracketCard({ m, pick, pred, standings, onPalpitar }: {
   )
 }
 
-function BracketTeam({ team, score, winner, standings }: {
+function BracketTeam({ team, score, winner, clinched }: {
   team: Match['home']
   score: number | null
   winner: boolean
-  standings: GroupStandings
+  clinched: Clinched
 }) {
-  const resolved = team.code === 'TBD' ? resolveFeeder(team.name, standings) : team
+  const resolved = team.code === 'TBD' ? resolveFeeder(team.name, clinched) : team
   const isReal = !!resolved && resolved.code !== 'TBD'
   const label = isReal ? resolved!.name : feederLabel(team.name)
   return (
