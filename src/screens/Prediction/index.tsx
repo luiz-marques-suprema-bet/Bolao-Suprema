@@ -199,7 +199,8 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
   const existing = predictions[match.id]
   const draft = drafts[match.id]
 
-  // Mata-mata: palpite de "quem avança" (vale +2, inclui pênaltis) — bracket_picks.
+  // Mata-mata: palpite de "quem avança" — é o que destrava os pontos (quem passa
+  // manda); inclui prorrogação e pênaltis. Guardado em bracket_picks.
   const isKnockout = match.stage !== 'group'
   const slotId = isKnockout ? matchCodeToSlotId(match.id) : null
   const advancerPick = useBracketStore(s => (slotId ? s.picks[slotId] : undefined))
@@ -297,7 +298,7 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
       {isKnockout && !isPlaceholder && slotId && (
         <div className="mt-5 pt-4 border-t border-hairline">
           <p className="font-mono text-[10px] tracking-eyebrow text-ink text-center font-bold">QUEM AVANÇA?</p>
-          <p className="font-mono text-[9px] text-ink-2 text-center mb-3">vale +2 · inclui prorrogação e pênaltis</p>
+          <p className="font-mono text-[9px] text-ink-2 text-center mb-3">quem passa manda · inclui prorrogação e pênaltis</p>
           <div className="flex gap-2 max-w-[360px] mx-auto">
             {[match.home, match.away].map(team => {
               const selected = advancerPick === team.code
