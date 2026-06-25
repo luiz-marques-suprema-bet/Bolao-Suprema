@@ -214,7 +214,8 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
 }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
-  const [scoreFilter, setScoreFilter] = useState<string | null>(null)
+  const [fHome, setFHome] = useState('')
+  const [fAway, setFAway] = useState('')
   const [rawPreds, setRawPreds] = useState<EspiaPredRow[] | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -248,6 +249,9 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
     }
     return [...m.entries()].sort((a, b) => b[1] - a[1])
   }, [allGuesses])
+
+  // Filtro de placar (campos manuais casa × visitante); ativa quando os dois têm valor.
+  const scoreFilter = fHome !== '' && fAway !== '' ? `${fHome}×${fAway}` : null
 
   // Filtro por nome + por placar; meu palpite sempre no topo da lista.
   const guesses = useMemo(() => {
@@ -305,26 +309,52 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
           ) : (
             <>
               {scoreCounts.length > 1 && (
-                <div className="flex gap-1.5 overflow-x-auto no-scrollbar border-b border-hairline px-3 py-2">
-                  <button
-                    type="button"
-                    onClick={() => setScoreFilter(null)}
-                    className={cn('flex-shrink-0 font-mono text-[10px] font-bold tracking-eyebrow px-2 py-1 border transition-colors',
-                      !scoreFilter ? 'bg-ink text-paper border-ink' : 'border-hairline text-ink-3 hover:text-ink')}
-                  >
-                    TODOS
-                  </button>
-                  {scoreCounts.map(([score, n]) => (
-                    <button
-                      key={score}
-                      type="button"
-                      onClick={() => setScoreFilter(s => (s === score ? null : score))}
-                      className={cn('flex-shrink-0 font-mono text-[10px] font-bold tabular-nums px-2 py-1 border transition-colors',
-                        scoreFilter === score ? 'bg-yellow text-[#0D0D0D] border-ink' : 'border-hairline text-ink-2 hover:bg-surface-hover')}
-                    >
-                      {score} · {n}
-                    </button>
-                  ))}
+                <div className="border-b border-hairline px-3 py-2.5 space-y-2">
+                  {/* placar manual: digite qualquer resultado */}
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[9px] tracking-eyebrow text-ink-4 flex-shrink-0">FILTRAR PLACAR</span>
+                    <input
+                      value={fHome}
+                      onChange={e => setFHome(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                      inputMode="numeric"
+                      placeholder="–"
+                      aria-label="gols casa"
+                      className="w-9 text-center font-display text-lg leading-none border border-line bg-card py-1 outline-none focus:border-ink"
+                    />
+                    <span className="font-display text-lg text-ink-4">×</span>
+                    <input
+                      value={fAway}
+                      onChange={e => setFAway(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                      inputMode="numeric"
+                      placeholder="–"
+                      aria-label="gols visitante"
+                      className="w-9 text-center font-display text-lg leading-none border border-line bg-card py-1 outline-none focus:border-ink"
+                    />
+                    {scoreFilter && (
+                      <button type="button" onClick={() => { setFHome(''); setFAway('') }}
+                        className="ml-1 font-mono text-[9px] tracking-eyebrow text-ink-3 underline underline-offset-2 hover:text-ink">
+                        LIMPAR
+                      </button>
+                    )}
+                  </div>
+                  {/* atalhos: placares mais palpitados (quebram em linhas, sem scroll lateral) */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {scoreCounts.slice(0, 8).map(([score, n]) => {
+                      const [h, a] = score.split('×')
+                      const active = scoreFilter === score
+                      return (
+                        <button
+                          key={score}
+                          type="button"
+                          onClick={() => { if (active) { setFHome(''); setFAway('') } else { setFHome(h); setFAway(a) } }}
+                          className={cn('font-mono text-[10px] font-bold tabular-nums px-2 py-1 border transition-colors',
+                            active ? 'bg-yellow text-[#0D0D0D] border-ink' : 'border-hairline text-ink-2 hover:bg-surface-hover')}
+                        >
+                          {score} · {n}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
               <div className="divide-y divide-hairline max-h-[60vh] overflow-y-auto">
