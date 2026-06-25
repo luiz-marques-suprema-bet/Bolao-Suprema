@@ -30,11 +30,14 @@ const GROUP_RULES = [
   { pts: 1,  label: 'Gols de uma equipe acertados', detail: 'ex: colocou 1×1 e foi 2×1',            accent: 'bg-paper-deep' },
 ]
 
+// Mata-mata: quem passa manda. Acertar o classificado destrava os pontos;
+// o placar do tempo normal (90′) é bônus em cima dele.
 const KO_RULES = [
-  { pts: 12, label: 'Placar exato (tempo regulamentar)', detail: 'apenas 90 min',                     accent: 'bg-green' },
-  { pts: 8,  label: 'Resultado + gols do vencedor',      detail: 'no tempo regulamentar',              accent: 'bg-yellow' },
-  { pts: 5,  label: 'Resultado correto',                  detail: 'vencedor no regulamentar',           accent: 'bg-yellow/60' },
-  { pts: 2,  label: 'Classificado acertado',              detail: 'incluindo prorrogação e pênaltis',   accent: 'bg-paper-deep' },
+  { pts: 12, label: 'CRAVADA: placar exato + quem passa', detail: 'placar do tempo normal (90′) E o classificado certo', accent: 'bg-green' },
+  { pts: 8,  label: 'Resultado + gols do vencedor',       detail: 'no 90′ · com o classificado certo',                  accent: 'bg-yellow' },
+  { pts: 5,  label: 'Resultado certo (90′)',              detail: 'com o classificado certo',                           accent: 'bg-yellow/60' },
+  { pts: 3,  label: 'Só acertou quem passa',              detail: 'errou o placar, mas cravou o classificado',          accent: 'bg-paper-deep' },
+  { pts: 2,  label: 'Cravou o placar, errou quem passa',  detail: 'consolação — só o placar do 90′',                    accent: 'bg-paper-deep' },
 ]
 
 const GENERAL_RULES = [
@@ -159,9 +162,10 @@ export function RegulamentoScreen() {
 
         {/* Prorrogação + Cancelamento */}
         <section className="grid md:grid-cols-2 gap-4">
-          <InfoCard title="PRORROGAÇÃO E PÊNALTIS" accent="border-l-4 border-l-paper-deep" items={[
-            'Placar considerado: tempo regulamentar (90 min).',
-            'Bônus +2 pts (classificado) vale o resultado final, incluindo prorr./pênaltis.',
+          <InfoCard title="MATA-MATA: QUEM PASSA MANDA" accent="border-l-4 border-l-green" items={[
+            'Acertar quem se classifica é o que vale — o placar é bônus em cima disso.',
+            'Placar considerado: tempo regulamentar (90 min). "Quem passa" inclui prorrogação e pênaltis.',
+            'A cravada (12 pts) só conta se você também acertar quem avança.',
           ]} />
           <InfoCard title="CANCELAMENTO" accent="border-l-4 border-l-red/60" items={[
             'Em caso de cancelamento, a organização pode anular a rodada ou considerar o resultado oficial.',

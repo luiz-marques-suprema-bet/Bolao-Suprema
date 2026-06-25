@@ -1013,11 +1013,13 @@ const KO_STAGE_LABELS: Record<string, string> = {
 }
 const KO_STAGE_ORDER = ['round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final']
 
+// Mata-mata: quem passa manda. Acertar o classificado destrava os pontos.
 const KO_POINTS_GUIDE = [
-  { pts: '+2',  label: 'Classificado acertado (incl. prorrogação/pênaltis)' },
-  { pts: '+5',  label: 'Resultado correto (vitória/derrota no regulamentar)' },
-  { pts: '+8',  label: 'Resultado + gols do vencedor' },
-  { pts: '+12', label: 'Placar exato (tempo regulamentar)' },
+  { pts: '+12', label: 'CRAVADA: placar exato (90′) + acertou quem passa' },
+  { pts: '+8',  label: 'Resultado + gols do vencedor + quem passa' },
+  { pts: '+5',  label: 'Resultado certo (90′) + quem passa' },
+  { pts: '+3',  label: 'Só acertou quem passa (errou o placar)' },
+  { pts: '+2',  label: 'Cravou o placar, mas errou quem passa' },
 ]
 
 function KnockoutTab() {

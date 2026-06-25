@@ -20,14 +20,23 @@ describe('scoring rules', () => {
     expect(calculateKoPoints({ homeScore: 2, awayScore: 1 }, { homeScore: 4, awayScore: 1 }, 'home', 'home')).toBe(5)
   })
 
-  it('scores knockout regular-time rules before advancer-only bonus', () => {
+  it('knockout: "quem passa manda" — acertando o classificado, o placar é bônus', () => {
+    // placar exato + quem passa = CRAVADA (12)
     expect(calculateKoPoints({ homeScore: 2, awayScore: 1 }, { homeScore: 2, awayScore: 1 }, 'home', 'home')).toBe(12)
+    // resultado + gols do vencedor + quem passa = 8
     expect(calculateKoPoints({ homeScore: 3, awayScore: 0 }, { homeScore: 3, awayScore: 1 }, 'home', 'home')).toBe(8)
+    // resultado certo (90') + quem passa = 5
     expect(calculateKoPoints({ homeScore: 2, awayScore: 1 }, { homeScore: 1, awayScore: 0 }, 'home', 'home')).toBe(5)
+    // errou o placar mas acertou quem passa = 3
+    expect(calculateKoPoints({ homeScore: 1, awayScore: 2 }, { homeScore: 1, awayScore: 1 }, 'home', 'home')).toBe(3)
   })
 
-  it('awards knockout qualified points when regular-time result misses but advancer is correct', () => {
-    expect(calculateKoPoints({ homeScore: 1, awayScore: 2 }, { homeScore: 1, awayScore: 1 }, 'home', 'home')).toBe(2)
+  it('knockout: errou quem passa — só consolação se cravou o placar do tempo normal', () => {
+    // cravou 1×1 mas o outro passou nos pênaltis → consolação (2)
+    expect(calculateKoPoints({ homeScore: 1, awayScore: 1 }, { homeScore: 1, awayScore: 1 }, 'home', 'away')).toBe(2)
+    // resultado de 90' "certo" mas errou quem passa → 0 (não basta o resultado)
+    expect(calculateKoPoints({ homeScore: 2, awayScore: 1 }, { homeScore: 3, awayScore: 1 }, 'away', 'home')).toBe(0)
+    // errou placar e quem passa → 0
     expect(calculateKoPoints({ homeScore: 1, awayScore: 2 }, { homeScore: 1, awayScore: 1 }, 'away', 'home')).toBe(0)
   })
 })

@@ -8,11 +8,16 @@ import type { MatchStage } from '@/types'
 //   Resultado correto (V/E/D)                 →  5 pts
 //   Gols de uma equipe correto                →  1 pt
 //
-// Mata-mata (tempo regulamentar):
-//   Placar exato                              → 12 pts
-//   Resultado + gols do vencedor              →  8 pts
-//   Resultado correto (quem avança na regul.) →  5 pts
-//   Classificado correto (incl. pens/prorrog) →  2 pts
+// Mata-mata — "quem passa manda" (acertar o CLASSIFICADO é obrigatório; o
+// placar do tempo regulamentar é bônus em cima dele):
+//   ACERTOU quem passa:
+//     Placar exato (90')              → 12 pts  (CRAVADA)
+//     Resultado + gols do vencedor    →  8 pts
+//     Resultado certo (90')           →  5 pts
+//     Só acertou quem passa           →  3 pts
+//   ERROU quem passa:
+//     Cravou o placar (90')           →  2 pts  (consolação)
+//     resto                           →  0 pts
 //
 // "Gols do vencedor": o +7/+8 exige acertar o resultado E o número de gols do
 // time VENCEDOR. Acertar só os gols do perdedor (com o resultado certo) vale 5,
@@ -74,9 +79,10 @@ export function calculatePoints(
 }
 
 /**
- * Versão mata-mata com suporte ao classificado via penaltis.
- * `realWinner` = vencedor real da partida (pode ter sido decidida nos pênaltis).
- * `predictedOutcome` = quem o usuário acha que vai passar (home/away).
+ * Mata-mata — "quem passa manda". Acertar o classificado é o que destrava os
+ * pontos; o placar do tempo regulamentar é bônus em cima.
+ * `predictedAdvancer` = quem o usuário acha que passa (home/away).
+ * `realAdvancer` = quem passou de verdade (pode ter sido nos pênaltis).
  */
 export function calculateKoPoints(
   prediction: PredictionInput,
@@ -89,11 +95,15 @@ export function calculateKoPoints(
   const winnerGoalsCorrect =
     (result.homeScore > result.awayScore && prediction.homeScore === result.homeScore) ||
     (result.awayScore > result.homeScore && prediction.awayScore === result.awayScore)
-  const advancerCorrect = predictedAdvancer !== null && predictedAdvancer === realAdvancer
+  const advancerCorrect = predictedAdvancer !== null && realAdvancer !== null && predictedAdvancer === realAdvancer
 
-  if (exactMatch) return 12
-  if (correctRegTime && winnerGoalsCorrect) return 8
-  if (correctRegTime) return 5
-  if (advancerCorrect) return 2
+  if (advancerCorrect) {
+    if (exactMatch) return 12              // CRAVADA: placar exato + quem passa
+    if (correctRegTime && winnerGoalsCorrect) return 8
+    if (correctRegTime) return 5
+    return 3                               // só acertou quem passa
+  }
+  // Errou quem passa: só a consolação por cravar o placar do tempo normal.
+  if (exactMatch) return 2
   return 0
 }
