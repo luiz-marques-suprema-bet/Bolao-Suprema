@@ -93,15 +93,19 @@ export function MyPredictionsScreen() {
     className: myTier?.label,
   }), [me, myEntry?.rank, myTier?.label])
 
-  // Jogo atual: o que está AO VIVO; senão o próximo a começar.
-  const currentGame = useMemo(() => {
+  // Jogos atuais: TODOS os que estão AO VIVO (pode ter 2+ ao mesmo tempo);
+  // se nenhum estiver ao vivo, mostra só o próximo a começar.
+  const currentGames = useMemo(() => {
     const playable = matches.filter(m => !isPlaceholderMatch(m) && m.kickoffUtc)
-    const live = playable.find(m => m.status === 'live')
-    if (live) return live
+    const live = playable
+      .filter(m => m.status === 'live')
+      .sort((a, b) => new Date(a.kickoffUtc).getTime() - new Date(b.kickoffUtc).getTime())
+    if (live.length) return live
     const now = Date.now()
-    return playable
+    const next = playable
       .filter(m => m.status !== 'finished' && new Date(m.kickoffUtc).getTime() > now)
-      .sort((a, b) => new Date(a.kickoffUtc).getTime() - new Date(b.kickoffUtc).getTime())[0] ?? null
+      .sort((a, b) => new Date(a.kickoffUtc).getTime() - new Date(b.kickoffUtc).getTime())[0]
+    return next ? [next] : []
   }, [matches])
 
   const filtered = useMemo(() => matches.filter(m => {
@@ -153,18 +157,18 @@ export function MyPredictionsScreen() {
           </button>
         </section>
 
-        {/* ── Jogo atual ─────────────────────────────────────────── */}
-        {currentGame && (
-          <section className="ui-card overflow-hidden border-2 border-yellow">
+        {/* ── Jogo(s) atual(is) — pode ter 2+ ao vivo simultâneos ── */}
+        {currentGames.map(game => (
+          <section key={game.id} className="ui-card overflow-hidden border-2 border-yellow">
             <div className="flex items-center justify-between bg-yellow/15 px-4 py-2">
               <span className="font-mono text-[9px] font-bold tracking-eyebrow text-ink">
-                {currentGame.status === 'live' ? '● JOGO AGORA' : 'PRÓXIMO JOGO'}
+                {game.status === 'live' ? '● JOGO AGORA' : 'PRÓXIMO JOGO'}
               </span>
-              <span className="font-mono text-[9px] text-ink-3">{formatMatchDate(currentGame)} · {formatMatchTime(currentGame)}</span>
+              <span className="font-mono text-[9px] text-ink-3">{formatMatchDate(game)} · {formatMatchTime(game)}</span>
             </div>
-            <CurrentGameBody match={currentGame} pred={predictions[currentGame.id]} onClick={() => navigate(`/prediction/${currentGame.id}`)} />
+            <CurrentGameBody match={game} pred={predictions[game.id]} onClick={() => navigate(`/prediction/${game.id}`)} />
           </section>
-        )}
+        ))}
 
         {/* ── Apostas especiais ──────────────────────────────────── */}
         <section className="ui-card p-4">

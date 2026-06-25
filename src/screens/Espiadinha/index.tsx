@@ -214,6 +214,7 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
 }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const [scoreFilter, setScoreFilter] = useState<string | null>(null)
   const [rawPreds, setRawPreds] = useState<EspiaPredRow[] | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -238,7 +239,23 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [rawPreds, profiles, resultKey],
   )
-  const guesses = query ? allGuesses.filter(g => norm(g.user.name).includes(norm(query))) : allGuesses
+  // Distribuição por placar (pra filtrar "quem palpitou 2×0"), mais usados primeiro.
+  const scoreCounts = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const g of allGuesses) {
+      const k = `${g.homeScore}×${g.awayScore}`
+      m.set(k, (m.get(k) ?? 0) + 1)
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1])
+  }, [allGuesses])
+
+  // Filtro por nome + por placar; meu palpite sempre no topo da lista.
+  const guesses = useMemo(() => {
+    let list = allGuesses
+    if (query) list = list.filter(g => norm(g.user.name).includes(norm(query)))
+    if (scoreFilter) list = list.filter(g => `${g.homeScore}×${g.awayScore}` === scoreFilter)
+    return [...list].sort((a, b) => (b.user.id === meId ? 1 : 0) - (a.user.id === meId ? 1 : 0))
+  }, [allGuesses, query, scoreFilter, meId])
 
   return (
     <div className="ui-card overflow-hidden">
@@ -287,6 +304,29 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
             </div>
           ) : (
             <>
+              {scoreCounts.length > 1 && (
+                <div className="flex gap-1.5 overflow-x-auto no-scrollbar border-b border-hairline px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => setScoreFilter(null)}
+                    className={cn('flex-shrink-0 font-mono text-[10px] font-bold tracking-eyebrow px-2 py-1 border transition-colors',
+                      !scoreFilter ? 'bg-ink text-paper border-ink' : 'border-hairline text-ink-3 hover:text-ink')}
+                  >
+                    TODOS
+                  </button>
+                  {scoreCounts.map(([score, n]) => (
+                    <button
+                      key={score}
+                      type="button"
+                      onClick={() => setScoreFilter(s => (s === score ? null : score))}
+                      className={cn('flex-shrink-0 font-mono text-[10px] font-bold tabular-nums px-2 py-1 border transition-colors',
+                        scoreFilter === score ? 'bg-yellow text-[#0D0D0D] border-ink' : 'border-hairline text-ink-2 hover:bg-surface-hover')}
+                    >
+                      {score} · {n}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="divide-y divide-hairline max-h-[60vh] overflow-y-auto">
                 {guesses.map(g => {
                   const isMe = g.user.id === meId
@@ -325,12 +365,16 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
                 })}
                 {guesses.length === 0 && (
                   <div className="px-4 py-5 text-center font-mono text-[10px] text-ink-4">
-                    {query ? 'Nenhum palpiteiro com esse nome neste jogo.' : 'Ninguém palpitou neste jogo.'}
+                    {scoreFilter ? `Ninguém cravou ${scoreFilter} neste jogo.`
+                      : query ? 'Nenhum palpiteiro com esse nome neste jogo.'
+                      : 'Ninguém palpitou neste jogo.'}
                   </div>
                 )}
               </div>
               <div className="border-t border-hairline px-4 py-2 font-mono text-[9px] text-ink-4">
-                {allGuesses.length} {allGuesses.length === 1 ? 'palpite' : 'palpites'}
+                {(scoreFilter || query)
+                  ? `${guesses.length} de ${allGuesses.length} palpites`
+                  : `${allGuesses.length} ${allGuesses.length === 1 ? 'palpite' : 'palpites'}`}
                 {settled ? ' · apurado' : ' · pontos saem na apuração'}
               </div>
             </>
