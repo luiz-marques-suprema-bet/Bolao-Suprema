@@ -272,17 +272,24 @@ export function ResenhaScreen() {
     toBottom()
   }, [messages.length])
 
-  // Backstop do realtime: enquanto a Resenha está aberta e visível, busca
-  // mensagens novas a cada 12s. Se o WebSocket cair (comum no mobile), as
-  // mensagens ainda aparecem sozinhas — sem F5. Não re-renderiza se nada mudou.
+  // Backstop do realtime. ANTES o 1º poll só rodava +12s depois de abrir, então,
+  // quando o WebSocket não entregava na hora (comum no mobile/ao navegar), a
+  // Resenha demorava ~10s pra mostrar mensagens novas. Agora busca NA HORA que
+  // abre e ao voltar o foco, e segue de backstop a cada 8s.
   useEffect(() => {
     const tick = () => {
       if (typeof document === 'undefined' || document.visibilityState === 'visible') {
         void useChatStore.getState().pollNewMessages()
       }
     }
-    const id = window.setInterval(tick, 12000)
-    return () => window.clearInterval(id)
+    tick() // catch-up imediato ao abrir
+    const onVisible = () => { if (document.visibilityState === 'visible') tick() }
+    document.addEventListener('visibilitychange', onVisible)
+    const id = window.setInterval(tick, 8000)
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [])
 
   useEffect(() => {
