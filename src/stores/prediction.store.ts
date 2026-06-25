@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Match, Prediction } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { WC2026_MATCHES } from '@/data/wc2026'
+import { TEAMS } from '@/data/teams'
 import { isBetOpen } from '@/lib/markets'
 import { isPlaceholderMatch } from '@/lib/matchGuards'
 import { validateChampionVice } from '@/lib/tournamentValidation'
@@ -83,10 +84,18 @@ function mergeMatchWithOverride(matchId: string): Match | null {
   const override = useMatchStore.getState().getOverride(matchId)
   if (!baseMatch) return null
   if (!override) return baseMatch
+  // Importante: aplicar os TIMES e o lockReason do banco. Sem isso, um jogo de
+  // mata-mata já materializado (ex.: RSA×CAN) era tratado como placeholder e o
+  // palpite era barrado com "aguardando classificados".
+  const home = override.homeCode && override.homeCode !== 'TBD' && TEAMS[override.homeCode] ? TEAMS[override.homeCode] : baseMatch.home
+  const away = override.awayCode && override.awayCode !== 'TBD' && TEAMS[override.awayCode] ? TEAMS[override.awayCode] : baseMatch.away
   return {
     ...baseMatch,
+    home,
+    away,
     status:       override.status,
     marketStatus: override.marketStatus ?? undefined,
+    lockReason:   override.lockReason ?? null,
     lockedAt:     override.lockedAt ?? null,
     settledAt:    override.settledAt ?? null,
     kickoffUtc:   override.kickoffUtc ?? baseMatch.kickoffUtc,

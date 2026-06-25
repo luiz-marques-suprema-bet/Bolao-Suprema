@@ -236,8 +236,22 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
     setDraft(match.id, home, value)
   }
 
+  // Mata-mata: se o placar tem vencedor, ELE avança (óbvio, não pergunta nada).
+  // Só pergunta "quem passa" quando o palpite é empate (vai a pênaltis).
+  const scoreWinner = isKnockout && !isPlaceholder
+    ? (home > away ? match.home : away > home ? match.away : null)
+    : null
+
   const handleConfirm = async () => {
     setSaveError(null)
+    if (isKnockout && slotId && !isPlaceholder) {
+      const advancerCode = scoreWinner ? scoreWinner.code : advancerPick
+      if (!advancerCode) {
+        setSaveError('Empate no palpite: escolha quem passa nos pênaltis.')
+        return
+      }
+      if (advancerPick !== advancerCode) setBracketPick(slotId, advancerCode)
+    }
     setSaving(true)
     const result = await confirmPrediction({
       id: `pred-${match.id}`,
@@ -297,28 +311,43 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
 
       {isKnockout && !isPlaceholder && slotId && (
         <div className="mt-5 pt-4 border-t border-hairline">
-          <p className="font-mono text-[10px] tracking-eyebrow text-ink text-center font-bold">QUEM AVANÇA?</p>
-          <p className="font-mono text-[9px] text-ink-2 text-center mb-3">quem passa manda · inclui prorrogação e pênaltis</p>
-          <div className="flex gap-2 max-w-[360px] mx-auto">
-            {[match.home, match.away].map(team => {
-              const selected = advancerPick === team.code
-              return (
-                <button
-                  key={team.code}
-                  type="button"
-                  onClick={() => setBracketPick(slotId, team.code)}
-                  className={cn(
-                    'flex-1 flex items-center justify-center gap-2 py-2.5 border-2 transition-colors',
-                    selected ? 'border-green bg-green/10 text-green' : 'border-hairline text-ink-2 hover:border-ink',
-                  )}
-                >
-                  <Flag team={team} size={20} />
-                  <span className="font-mono text-[11px] font-bold">{team.code}</span>
-                  {selected && <span className="font-mono text-[11px]">✓</span>}
-                </button>
-              )
-            })}
-          </div>
+          {scoreWinner ? (
+            // Placar com vencedor → ele avança automaticamente (sem pergunta).
+            <div className="text-center">
+              <p className="font-mono text-[10px] tracking-eyebrow text-ink font-bold">QUEM AVANÇA</p>
+              <div className="mt-2 inline-flex items-center gap-2 border-2 border-green bg-green/10 px-3 py-2">
+                <Flag team={scoreWinner} size={20} />
+                <span className="font-mono text-[11px] font-bold text-green">{scoreWinner.code} avança</span>
+              </div>
+              <p className="font-mono text-[9px] text-ink-3 mt-2">decidido pelo placar — sem empate, não vai a pênaltis.</p>
+            </div>
+          ) : (
+            // Empate no palpite → escolher quem passa nos pênaltis (é o que vale).
+            <>
+              <p className="font-mono text-[10px] tracking-eyebrow text-ink text-center font-bold">EMPATE — QUEM PASSA NOS PÊNALTIS?</p>
+              <p className="font-mono text-[9px] text-ink-2 text-center mb-3">obrigatório · é o que vale no mata-mata</p>
+              <div className="flex gap-2 max-w-[360px] mx-auto">
+                {[match.home, match.away].map(team => {
+                  const selected = advancerPick === team.code
+                  return (
+                    <button
+                      key={team.code}
+                      type="button"
+                      onClick={() => setBracketPick(slotId, team.code)}
+                      className={cn(
+                        'flex-1 flex items-center justify-center gap-2 py-2.5 border-2 transition-colors',
+                        selected ? 'border-green bg-green/10 text-green' : 'border-hairline text-ink-2 hover:border-ink',
+                      )}
+                    >
+                      <Flag team={team} size={20} />
+                      <span className="font-mono text-[11px] font-bold">{team.code}</span>
+                      {selected && <span className="font-mono text-[11px]">✓</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -1569,7 +1598,11 @@ export function PredictionScreen() {
   const { matchId } = useParams<{ matchId?: string }>()
   const location = useLocation()
   const rawTab = (location.state as { tab?: string } | null)?.tab
-  const initialTab: PredTab = rawTab === 'champion' ? 'champion' : rawTab === 'knockout' ? 'knockout' : 'groups'
+  // Vindo de um jogo específico (/prediction/:matchId), abre na aba certa:
+  // mata-mata se o código for ko-*, senão grupos.
+  const initialTab: PredTab = rawTab === 'champion' ? 'champion'
+    : (rawTab === 'knockout' || matchId?.startsWith('ko-')) ? 'knockout'
+    : 'groups'
   const [tab, setTab] = useState<PredTab>(initialTab)
   const allMatches = useMatchesWithStatus(WC2026_MATCHES)
 
@@ -1586,6 +1619,16 @@ export function PredictionScreen() {
   useEffect(() => {
     setSelectedGroup(initialGroup)
   }, [initialGroup])
+
+  // Veio de um jogo específico → rola até ele (o card já abre o palpite sozinho
+  // quando ainda não há aposta). Espera o conteúdo da aba renderizar.
+  useEffect(() => {
+    if (!matchId) return
+    const t = setTimeout(() => {
+      document.getElementById(`match-row-${matchId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 250)
+    return () => clearTimeout(t)
+  }, [matchId])
 
   const predMap = useMemo(() => {
     const m: Record<string, { homeScore: number; awayScore: number }> = {}
