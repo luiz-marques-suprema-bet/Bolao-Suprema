@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Flag } from '@/components/shared/Flag'
 import { useAuthStore } from '@/stores/auth.store'
@@ -8,10 +8,12 @@ import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { isBetOpen } from '@/lib/markets'
 import { isPlaceholderMatch } from '@/lib/matchGuards'
 import { calculateKoPoints } from '@/lib/scoring'
-import { WC2026_MATCHES } from '@/data/wc2026'
+import { computeGroupStandings, type StandingRow } from '@/lib/groupStandings'
+import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
+import { TEAMS } from '@/data/teams'
 import { formatMatchDate, formatMatchTime } from '@/lib/matchTime'
 import { cn } from '@/lib/utils'
-import type { Match, MatchStage } from '@/types'
+import type { Match, MatchStage, Team } from '@/types'
 
 function koNum(id: string): number {
   const m = id.match(/(\d+)$/)
@@ -28,15 +30,14 @@ function matchCodeToSlotId(code: string): string | null {
   return null
 }
 
-const COLUMNS: { key: string; label: string; stages: MatchStage[] }[] = [
-  { key: 'r32', label: '16 AVOS DE FINAL', stages: ['round_of_32'] },
-  { key: 'r16', label: 'OITAVAS DE FINAL', stages: ['round_of_16'] },
-  { key: 'qf', label: 'QUARTAS DE FINAL', stages: ['quarter_final'] },
-  { key: 'sf', label: 'SEMIFINAIS', stages: ['semi_final'] },
-  { key: 'fin', label: '3º LUGAR E FINAL', stages: ['final', 'third_place'] },
+const TABS: { key: string; label: string; stages: MatchStage[] }[] = [
+  { key: 'r32', label: '16 AVOS', stages: ['round_of_32'] },
+  { key: 'r16', label: 'OITAVAS', stages: ['round_of_16'] },
+  { key: 'qf', label: 'QUARTAS', stages: ['quarter_final'] },
+  { key: 'sf', label: 'SEMIS', stages: ['semi_final'] },
+  { key: 'fin', label: 'FINAL · 3º', stages: ['final', 'third_place'] },
 ]
 
-// Numeração no estilo ESPN (fase de grupos = 72 jogos → mata-mata começa em 73).
 function partidaLabel(m: Match): string {
   const n = koNum(m.id)
   switch (m.stage) {
@@ -50,7 +51,7 @@ function partidaLabel(m: Match): string {
   }
 }
 
-// Encurta os rótulos de "quem alimenta o slot" pra caber no card.
+// Rótulo curto de "quem alimenta o slot" quando o time ainda não saiu.
 function feederLabel(name: string): string {
   return name
     .replace(/^Vencedor Grupo (\w)$/i, '1º $1')
@@ -63,12 +64,16 @@ function feederLabel(name: string): string {
     .replace(/^Perdedor Semifinal (\d+)$/i, 'Perd. Semi $1')
 }
 
-const BRACKET_CSS = `
-.bkt-col{display:flex;flex-direction:column;justify-content:space-around;gap:10px;flex:1}
-.bkt-card{position:relative}
-.bkt-has-next .bkt-card::after{content:'';position:absolute;left:100%;top:50%;width:18px;height:1px;background:rgb(var(--color-ink) / 0.18)}
-.bkt-has-prev .bkt-card::before{content:'';position:absolute;right:100%;top:50%;width:18px;height:1px;background:rgb(var(--color-ink) / 0.18)}
-`
+// Resolve um feeder de grupo (1º/2º) para o time REAL assim que o grupo fecha —
+// mostra a seleção conhecida mesmo que o adversário ainda seja um placeholder.
+type GroupStandings = Record<string, StandingRow[] | null>
+function resolveFeeder(name: string, st: GroupStandings): Team | null {
+  let mm = name.match(/^Vencedor Grupo (\w)$/i)
+  if (mm) { const r = st[mm[1].toUpperCase()]; return r?.[0] ? (TEAMS[r[0].code] ?? null) : null }
+  mm = name.match(/^2o Grupo (\w)$/i)
+  if (mm) { const r = st[mm[1].toUpperCase()]; return r?.[1] ? (TEAMS[r[1].code] ?? null) : null }
+  return null
+}
 
 export function BracketScreen() {
   const navigate = useNavigate()
@@ -77,22 +82,31 @@ export function BracketScreen() {
   const picks = useBracketStore(s => s.picks)
   const syncBracket = useBracketStore(s => s.syncFromSupabase)
   const allMatches = useMatchesWithStatus(WC2026_MATCHES)
+  const [tab, setTab] = useState('r32')
 
   useEffect(() => { if (me?.id) void syncBracket(me.id) }, [me?.id, syncBracket])
 
-  const byCol = useMemo(() =>
-    COLUMNS.map(col => ({
-      ...col,
-      matches: allMatches
-        .filter(m => col.stages.includes(m.stage))
-        .sort((a, b) => (col.stages.indexOf(a.stage) - col.stages.indexOf(b.stage)) || (koNum(a.id) - koNum(b.id))),
-    })),
-    [allMatches],
+  // Standings reais por grupo (só de grupos JÁ encerrados) — resolve os feeders.
+  const standings = useMemo<GroupStandings>(() => {
+    const map: GroupStandings = {}
+    for (const g of WC2026_GROUPS) {
+      const gm = allMatches.filter(m => m.group === g.id)
+      const done = gm.length > 0 && gm.every(m => m.status === 'finished')
+      map[g.id] = done ? computeGroupStandings(g, allMatches, {}) : null
+    }
+    return map
+  }, [allMatches])
+
+  const col = TABS.find(t => t.key === tab) ?? TABS[0]
+  const matches = useMemo(() =>
+    allMatches
+      .filter(m => col.stages.includes(m.stage))
+      .sort((a, b) => (col.stages.indexOf(a.stage) - col.stages.indexOf(b.stage)) || (koNum(a.id) - koNum(b.id))),
+    [allMatches, col],
   )
 
   return (
     <div className="min-h-dvh bg-paper pb-24 md:pb-10">
-      <style>{BRACKET_CSS}</style>
       <div className="app-shell py-6 md:py-8">
         <header className="mb-2">
           <p className="font-mono text-[10px] tracking-eyebrow text-ink-3">MATA-MATA · COPA 2026</p>
@@ -100,44 +114,47 @@ export function BracketScreen() {
         </header>
         <div className="mb-4 border-l-2 border-green bg-green/5 px-3 py-1.5 inline-block">
           <span className="font-mono text-[9px] text-ink-2 leading-snug">
-            Arrasta pro lado pra ver as fases · toque num jogo aberto pra palpitar · <strong>quem passa manda</strong>.
+            Toque numa fase pra filtrar · num jogo aberto pra palpitar · <strong>quem passa manda</strong>.
           </span>
         </div>
 
-        <div className="overflow-x-auto -mx-4 px-4 pb-4">
-          <div className="flex items-stretch min-w-max">
-            {byCol.map((col, ci) => (
-              <div key={col.key} className="flex flex-col w-[208px] flex-shrink-0 px-2">
-                <div className="font-mono text-[9px] tracking-eyebrow text-ink-3 text-center pb-2 mb-2 border-b border-hairline">
-                  {col.label}
-                </div>
-                <div className={cn('bkt-col', ci < byCol.length - 1 && 'bkt-has-next', ci > 0 && 'bkt-has-prev')}>
-                  {col.matches.map(m => {
-                    const slotId = matchCodeToSlotId(m.id)
-                    return (
-                      <BracketCard
-                        key={m.id}
-                        m={m}
-                        pick={slotId ? picks[slotId] : undefined}
-                        pred={predictions[m.id]}
-                        onPalpitar={() => navigate(`/prediction/${m.id}`)}
-                      />
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* Abas que filtram a fase (estilo ESPN) */}
+        <div className="flex flex-wrap gap-2 mb-5">
+          {TABS.map(t => (
+            <button key={t.key} type="button" onClick={() => setTab(t.key)}
+              className={cn('px-3.5 py-1.5 font-mono text-[11px] font-bold tracking-eyebrow rounded-full border-2 transition-colors',
+                tab === t.key ? 'bg-ink text-paper border-ink' : 'border-line-strong text-ink-3 hover:text-ink hover:bg-surface-hover')}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Grid responsivo — aproveita a largura no mobile e no desktop */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {matches.map(m => {
+            const slotId = matchCodeToSlotId(m.id)
+            return (
+              <BracketCard
+                key={m.id}
+                m={m}
+                pick={slotId ? picks[slotId] : undefined}
+                pred={predictions[m.id]}
+                standings={standings}
+                onPalpitar={() => navigate(`/prediction/${m.id}`)}
+              />
+            )
+          })}
         </div>
       </div>
     </div>
   )
 }
 
-function BracketCard({ m, pick, pred, onPalpitar }: {
+function BracketCard({ m, pick, pred, standings, onPalpitar }: {
   m: Match
   pick?: string
   pred?: { homeScore: number; awayScore: number }
+  standings: GroupStandings
   onPalpitar: () => void
 }) {
   const finished = m.status === 'finished'
@@ -162,41 +179,48 @@ function BracketCard({ m, pick, pred, onPalpitar }: {
   return (
     <Wrapper
       {...(bettable ? { type: 'button' as const, onClick: onPalpitar } : {})}
-      className={cn('bkt-card ui-card overflow-hidden w-full text-left',
+      className={cn('ui-card overflow-hidden w-full text-left',
         live && 'ring-1 ring-red',
         bettable && 'cursor-pointer transition-colors hover:bg-surface-hover')}
     >
-      <div className="flex items-center justify-between px-2 py-1 border-b border-hairline bg-card-muted/40">
-        <span className="font-mono text-[8px] tracking-eyebrow text-ink-4">{partidaLabel(m)}</span>
-        {pick && <span className="font-mono text-[8px] font-bold text-ink-3">passa ▸ {pick}</span>}
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-hairline bg-card-muted/40">
+        <span className="font-mono text-[9px] tracking-eyebrow text-ink-4">{partidaLabel(m)}</span>
+        {pick && <span className="font-mono text-[9px] font-bold text-ink-3">passa ▸ {pick}</span>}
       </div>
 
-      <div className="px-2 py-1.5 space-y-1">
-        <BracketTeam team={m.home} score={showScore ? m.homeScore : null} winner={m.winner === m.home.code} />
-        <BracketTeam team={m.away} score={showScore ? m.awayScore : null} winner={m.winner === m.away.code} />
+      <div className="px-3 py-2.5 space-y-2">
+        <BracketTeam team={m.home} score={showScore ? m.homeScore : null} winner={m.winner === m.home.code} standings={standings} />
+        <BracketTeam team={m.away} score={showScore ? m.awayScore : null} winner={m.winner === m.away.code} standings={standings} />
       </div>
 
-      <div className="flex items-center justify-between border-t border-hairline px-2 py-1">
-        <span className="font-mono text-[8px] text-ink-4">
-          {live ? 'AO VIVO' : finished ? 'fim' : `${formatMatchDate(m)} · ${formatMatchTime(m)}`}
+      <div className="flex items-center justify-between border-t border-hairline px-3 py-1.5">
+        <span className="font-mono text-[9px] text-ink-4">
+          {live ? 'AO VIVO' : finished ? 'encerrado' : `${formatMatchDate(m)} · ${formatMatchTime(m)}`}
         </span>
         {finished && points != null
-          ? <span className={cn('font-mono text-[9px] font-bold', points > 0 ? 'text-green' : 'text-ink-4')}>+{points}</span>
-          : bettable && <span className="font-mono text-[8px] font-bold tracking-eyebrow text-green-deep">{pred ? 'EDITAR' : 'PALPITAR'}</span>}
+          ? <span className={cn('font-mono text-[10px] font-bold', points > 0 ? 'text-green' : 'text-ink-4')}>+{points} pts</span>
+          : bettable && <span className="font-mono text-[9px] font-bold tracking-eyebrow text-green-deep">{pred ? 'EDITAR →' : 'PALPITAR →'}</span>}
       </div>
     </Wrapper>
   )
 }
 
-function BracketTeam({ team, score, winner }: { team: Match['home']; score: number | null; winner: boolean }) {
-  const tbd = team.code === 'TBD'
+function BracketTeam({ team, score, winner, standings }: {
+  team: Match['home']
+  score: number | null
+  winner: boolean
+  standings: GroupStandings
+}) {
+  const resolved = team.code === 'TBD' ? resolveFeeder(team.name, standings) : team
+  const isReal = !!resolved && resolved.code !== 'TBD'
+  const label = isReal ? resolved!.name : feederLabel(team.name)
   return (
-    <div className="flex items-center gap-1.5">
-      <Flag team={team} size={18} />
-      <span className={cn('font-mono text-[10px] flex-1 truncate leading-tight', winner ? 'font-bold text-ink' : tbd ? 'text-ink-4' : 'text-ink-2')}>
-        {tbd ? feederLabel(team.name) : team.name}
+    <div className="flex items-center gap-2.5">
+      <Flag team={isReal ? resolved : null} placeholderLabel={feederLabel(team.name)} size={22} />
+      <span className={cn('font-mono text-[12px] flex-1 truncate', winner ? 'font-bold text-ink' : isReal ? 'text-ink-2' : 'text-ink-4')}>
+        {label}
       </span>
-      <span className={cn('font-display text-sm leading-none w-3.5 text-right', winner ? 'text-ink' : 'text-ink-3')}>
+      <span className={cn('font-display text-lg leading-none w-5 text-right', winner ? 'text-ink' : 'text-ink-3')}>
         {score ?? ''}
       </span>
     </div>
