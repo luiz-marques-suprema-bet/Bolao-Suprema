@@ -50,6 +50,10 @@ export interface MatchStatusOverride {
   matchCode: string
   status: MatchStatus
   marketStatus?: MarketStatus | null
+  // Times do banco — mudam no mata-mata conforme os classificados saem
+  // (materialização). Para a fase de grupos são sempre os mesmos do estático.
+  homeCode?: string | null
+  awayCode?: string | null
   homeScore: number | null
   awayScore: number | null
   liveMinute?: string | null
