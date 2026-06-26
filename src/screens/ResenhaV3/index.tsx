@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/auth.store'
@@ -171,6 +171,14 @@ export function ResenhaScreen() {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
   const initialScrollDone = useRef(false)
+  const nearBottomRef = useRef(true)
+
+  // Mantém registro de "o usuário está coladinho no fim?" — define se mensagens
+  // novas devem rolar sozinhas (sim, se está no fim) ou respeitar a leitura dele.
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (el) nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 160
+  }, [])
   const actionButtonRef = useRef<HTMLButtonElement | null>(null)
   const actionPanelRef = useRef<HTMLDivElement | null>(null)
   const videoAutoStopRef = useRef(false)
@@ -251,25 +259,21 @@ export function ResenhaScreen() {
       .slice(0, 6)
   }, [draft, profiles])
 
-  // Ao ABRIR a Resenha, vai direto pra última mensagem — de forma robusta:
-  // avatares/imagens carregam depois e empurram o layout, então o scroll antigo
-  // (uma vez só) deixava o usuário no meio. Aqui repetimos em rAF + timeout pra
-  // pegar esse reflow. Depois de aberto, segue rolando a cada mensagem nova.
-  useEffect(() => {
+  // Posiciona no FIM antes de o navegador pintar (useLayoutEffect) → abre já na
+  // última mensagem, sem aquele "pulo pro meio e depois pro fim". Depois, só
+  // acompanha mensagem nova se o usuário já estava no fim; senão respeita a
+  // rolagem dele. Imagens têm tamanho reservado (abaixo), então não empurram.
+  useLayoutEffect(() => {
     if (!messages.length) return
-    const toBottom = () => {
-      const el = scrollRef.current
-      if (el) el.scrollTop = el.scrollHeight
-      else endRef.current?.scrollIntoView({ block: 'end' })
-    }
+    const el = scrollRef.current
+    if (!el) return
     if (!initialScrollDone.current) {
       initialScrollDone.current = true
-      toBottom()
-      const r = requestAnimationFrame(toBottom)
-      const t = window.setTimeout(toBottom, 200)
-      return () => { cancelAnimationFrame(r); window.clearTimeout(t) }
+      el.scrollTop = el.scrollHeight
+      nearBottomRef.current = true
+    } else if (nearBottomRef.current) {
+      el.scrollTop = el.scrollHeight
     }
-    toBottom()
   }, [messages.length])
 
   // Backstop do realtime. ANTES o 1º poll só rodava +12s depois de abrir, então,
@@ -551,7 +555,7 @@ export function ResenhaScreen() {
             )}
           </AnimatePresence>
 
-          <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2.5 sm:px-4 sm:py-4">
+          <div ref={scrollRef} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2.5 sm:px-4 sm:py-4">
             {!isLoaded && <LoadingChat />}
             {isLoaded && messages.length === 0 && <EmptyResenha />}
 
@@ -954,12 +958,13 @@ function MessageBody({
     return <PollCard poll={message.poll} userId={currentUserId} profiles={profiles} onVote={onVote} />
   }
   if (message.type === 'gif' && isSafeHttpUrl(message.gifUrl)) {
-    return <img src={message.gifUrl} alt="GIF" loading="lazy" className="max-h-72 w-full rounded-2xl object-contain" />
+    // Altura reservada (h-44) → não empurra o layout ao carregar (chat liso).
+    return <img src={message.gifUrl} alt="GIF" loading="lazy" className="h-44 w-full max-w-[260px] rounded-2xl object-contain bg-paper-deep" />
   }
   if (message.type === 'image' && isSafeHttpUrl(message.imageUrl)) {
     return (
       <button type="button" onClick={() => onImage(message.imageUrl!)} className="block overflow-hidden rounded-2xl active:scale-[0.98] transition-transform">
-        <img src={optimizedImageUrl(message.imageUrl, { w: 540, fit: 'inside' })} alt="Foto" loading="lazy" className="max-h-72 max-w-[260px] w-full object-cover transition hover:brightness-90" />
+        <img src={optimizedImageUrl(message.imageUrl, { w: 540, fit: 'inside' })} alt="Foto" loading="lazy" className="h-44 w-[240px] object-cover bg-paper-deep transition hover:brightness-90" />
       </button>
     )
   }
