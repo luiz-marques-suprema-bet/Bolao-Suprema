@@ -169,6 +169,7 @@ export function ResenhaScreen() {
   const [onlineMenuOpen, setOnlineMenuOpen] = useState(false)
   const [messageMenuId, setMessageMenuId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const contentRef = useRef<HTMLDivElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
   const initialScrollDone = useRef(false)
   const nearBottomRef = useRef(true)
@@ -275,6 +276,20 @@ export function ResenhaScreen() {
       el.scrollTop = el.scrollHeight
     }
   }, [messages.length])
+
+  // Quando a altura do conteúdo cresce (imagem/GIF terminou de carregar), re-fixa
+  // no fim SE o usuário já estava embaixo — assim a mídia carregando não dá mais
+  // aquele "pulo". Quem subiu pra ler histórico (nearBottom=false) não é puxado.
+  useEffect(() => {
+    const content = contentRef.current
+    const el = scrollRef.current
+    if (!content || !el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      if (nearBottomRef.current) el.scrollTop = el.scrollHeight
+    })
+    ro.observe(content)
+    return () => ro.disconnect()
+  }, [])
 
   // Backstop do realtime. ANTES o 1º poll só rodava +12s depois de abrir, então,
   // quando o WebSocket não entregava na hora (comum no mobile/ao navegar), a
@@ -556,6 +571,7 @@ export function ResenhaScreen() {
           </AnimatePresence>
 
           <div ref={scrollRef} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2.5 sm:px-4 sm:py-4">
+           <div ref={contentRef}>
             {!isLoaded && <LoadingChat />}
             {isLoaded && messages.length === 0 && <EmptyResenha />}
 
@@ -588,6 +604,7 @@ export function ResenhaScreen() {
               })}
             </AnimatePresence>
             <div ref={endRef} />
+           </div>
           </div>
 
           <footer className="shrink-0 border-t border-hairline bg-paper/95 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-sm">
@@ -958,13 +975,14 @@ function MessageBody({
     return <PollCard poll={message.poll} userId={currentUserId} profiles={profiles} onVote={onVote} />
   }
   if (message.type === 'gif' && isSafeHttpUrl(message.gifUrl)) {
-    // Altura reservada (h-44) → não empurra o layout ao carregar (chat liso).
-    return <img src={message.gifUrl} alt="GIF" loading="lazy" className="h-44 w-full max-w-[260px] rounded-2xl object-contain bg-paper-deep" />
+    return <img src={message.gifUrl} alt="GIF" loading="lazy" className="max-h-72 w-auto max-w-[260px] rounded-2xl object-contain bg-paper-deep" />
   }
   if (message.type === 'image' && isSafeHttpUrl(message.imageUrl)) {
+    // Sem corte: cards de cravada são verticais. object-contain mostra a imagem
+    // inteira; o ResizeObserver da lista re-fixa o scroll ao carregar (sem pulo).
     return (
       <button type="button" onClick={() => onImage(message.imageUrl!)} className="block overflow-hidden rounded-2xl active:scale-[0.98] transition-transform">
-        <img src={optimizedImageUrl(message.imageUrl, { w: 540, fit: 'inside' })} alt="Foto" loading="lazy" className="h-44 w-[240px] object-cover bg-paper-deep transition hover:brightness-90" />
+        <img src={optimizedImageUrl(message.imageUrl, { w: 540, fit: 'inside' })} alt="Foto" loading="lazy" className="max-h-[420px] w-auto max-w-[260px] object-contain bg-paper-deep transition hover:brightness-90" />
       </button>
     )
   }

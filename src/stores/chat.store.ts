@@ -241,8 +241,14 @@ function isRateLimited(type?: ChatMessage['type']): boolean {
   return false
 }
 
+// Ordena por horário e, em EMPATE de horário (rajada de mensagens no mesmo
+// instante — comum nas cravadas), desempata pelo id. Sem isso a ordem do grupo
+// empatado embaralhava a cada update e o AnimatePresence "sumia e voltava" msgs.
 function sortMessages(messages: ChatMessage[]) {
-  return [...messages].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  return [...messages].sort((a, b) => {
+    const t = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    return t !== 0 ? t : a.id.localeCompare(b.id)
+  })
 }
 
 function mergeMessage(messages: ChatMessage[], msg: ChatMessage) {
@@ -586,7 +592,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       .is('deleted_at', null)
       .order('created_at', { ascending: true })
       .limit(80)
-    if (newest) query = query.gt('created_at', newest)
+    // gte (não gt) pra NÃO perder mensagens criadas no mesmo instante da última
+    // que temos (rajada de cravadas). mergeMessage deduplica por id, então
+    // re-buscar a própria "newest" é inofensivo.
+    if (newest) query = query.gte('created_at', newest)
     const { data, error } = await query
     if (error || !data || data.length === 0) return
     const rows = data as unknown as MessageRow[]
