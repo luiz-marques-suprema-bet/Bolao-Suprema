@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { Eyebrow } from '@/components/shared/Eyebrow'
 import { Flag } from '@/components/shared/Flag'
 import { useAuthStore } from '@/stores/auth.store'
@@ -150,9 +150,14 @@ function MatchRowAdmin({
   const [editResult, setEditResult] = useState(false)
   const [homeGoals, setHomeGoals] = useState(currentHomeScore ?? 0)
   const [awayGoals, setAwayGoals] = useState(currentAwayScore ?? 0)
+  const [winnerPick, setWinnerPick] = useState<string | null>(null)
 
   const homeTeam = TEAMS[homeCode]
   const awayTeam = TEAMS[awayCode]
+  // No mata-mata, empate no tempo normal = decidido nos pênaltis/prorrogação →
+  // o admin precisa dizer quem avançou (a TheSportsDB grátis não traz isso).
+  const isKnockout = stage !== 'group'
+  const needsWinner = isKnockout && homeGoals === awayGoals
 
   async function handleStatusChange(newStatus: MatchStatus) {
     if (isMockMode) { onAction('Mock mode: status não persiste', false); return }
@@ -169,7 +174,26 @@ function MatchRowAdmin({
 
   async function handleSetResult() {
     if (isMockMode) { onAction('Mock mode: resultado não persiste', false); return }
+    if (needsWinner && !winnerPick) {
+      onAction('Empate no mata-mata: escolha quem avançou (pênaltis).', false)
+      return
+    }
     setBusy(true)
+    // Mata-mata empatado: settle_match_result gravaria winner='draw' (não avança a
+    // chave nem pontua o "quem passa"). Usamos admin_update_match_status com o
+    // vencedor explícito → triggers apuram + a próxima fase preenche sozinha.
+    if (needsWinner && winnerPick) {
+      const err = await updateMatchStatus(matchCode, 'finished', { homeScore: homeGoals, awayScore: awayGoals, winner: winnerPick })
+      if (err) {
+        onAction(`Erro: ${err.message}`, false)
+      } else {
+        applyOverride({ matchCode, status: 'finished', marketStatus: 'settled', homeScore: homeGoals, awayScore: awayGoals })
+        onAction(`✓ ${matchCode}: ${winnerPick} avançou (pênaltis) · palpites apurados`, true)
+        setEditResult(false)
+      }
+      setBusy(false)
+      return
+    }
     const { scored, error } = await setMatchResult(matchCode, homeGoals, awayGoals, stage)
     if (error) {
       onAction(`Erro: ${error}`, false)
@@ -228,23 +252,51 @@ function MatchRowAdmin({
       </div>
 
       {editResult && (
-        <div className="px-4 pb-3 bg-paper-deep border-t border-hairline flex items-center gap-3 flex-wrap">
-          <span className="font-mono text-[9px] tracking-eyebrow text-ink-3">PLACAR FINAL:</span>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[11px] font-bold">{homeCode}</span>
-            <input type="number" min={0} max={20} value={homeGoals}
-              onChange={e => setHomeGoals(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-12 border-2 border-ink text-center font-mono text-[14px] font-bold px-1 py-1 bg-yellow outline-none" />
-            <span className="font-mono text-ink-4">×</span>
-            <input type="number" min={0} max={20} value={awayGoals}
-              onChange={e => setAwayGoals(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-12 border-2 border-ink text-center font-mono text-[14px] font-bold px-1 py-1 bg-yellow outline-none" />
-            <span className="font-mono text-[11px] font-bold">{awayCode}</span>
+        <div className="px-4 pb-3 pt-1 bg-paper-deep border-t border-hairline space-y-2.5">
+          <div className="flex items-end gap-3 flex-wrap">
+            <div className="text-center">
+              <div className="font-mono text-[8px] tracking-eyebrow text-ink-4 mb-1">CASA</div>
+              <div className="flex items-center gap-1.5">
+                <Flag team={homeTeam} size={16} />
+                <span className="font-mono text-[11px] font-bold">{homeCode}</span>
+                <input type="number" min={0} max={30} value={homeGoals}
+                  onChange={e => { setHomeGoals(Math.max(0, parseInt(e.target.value) || 0)); setWinnerPick(null) }}
+                  className="w-12 border-2 border-ink text-center font-mono text-[15px] font-bold px-1 py-1 bg-yellow outline-none" />
+              </div>
+            </div>
+            <span className="font-mono text-ink-4 pb-2">×</span>
+            <div className="text-center">
+              <div className="font-mono text-[8px] tracking-eyebrow text-ink-4 mb-1">FORA</div>
+              <div className="flex items-center gap-1.5">
+                <input type="number" min={0} max={30} value={awayGoals}
+                  onChange={e => { setAwayGoals(Math.max(0, parseInt(e.target.value) || 0)); setWinnerPick(null) }}
+                  className="w-12 border-2 border-ink text-center font-mono text-[15px] font-bold px-1 py-1 bg-yellow outline-none" />
+                <span className="font-mono text-[11px] font-bold">{awayCode}</span>
+                <Flag team={awayTeam} size={16} />
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2 ml-auto">
+
+          {needsWinner && (
+            <div className="border-2 border-yellow/70 bg-yellow/10 px-3 py-2">
+              <div className="font-mono text-[9px] tracking-eyebrow text-ink-2 mb-1.5">EMPATE NO MATA-MATA — QUEM AVANÇOU? (pênaltis/prorrogação)</div>
+              <div className="flex gap-2 flex-wrap">
+                {[homeCode, awayCode].map(code => (
+                  <button key={code} type="button" onClick={() => setWinnerPick(code)}
+                    className={cn('flex items-center gap-1.5 border-2 px-3 py-1 font-mono text-[11px] font-bold transition-colors',
+                      winnerPick === code ? 'bg-ink border-ink text-paper' : 'border-ink/30 text-ink-3 hover:border-ink')}>
+                    <Flag team={TEAMS[code]} size={16} /> {code} avança
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
             <button onClick={() => setEditResult(false)} className="btn-ghost text-[9px] px-2 py-1">CANCELAR</button>
-            <button onClick={handleSetResult} disabled={busy} className="btn-yellow text-[9px] px-3 py-1 disabled:opacity-40">
-              CONFIRMAR + PONTUAR →
+            <button onClick={handleSetResult} disabled={busy || (needsWinner && !winnerPick)}
+              className="btn-yellow text-[9px] px-3 py-1 disabled:opacity-40 ml-auto">
+              {needsWinner ? 'CONFIRMAR AVANÇO + PONTUAR →' : 'CONFIRMAR + PONTUAR →'}
             </button>
           </div>
         </div>
@@ -758,11 +810,106 @@ export function AdminScreen() {
 
 // ─── Shared hook ─────────────────────────────────────────────────────────────
 
+// ─── Filtros de partida (fase + status + grupo + busca) ─────────────────────────
+
+type StageFilter = 'all' | 'group' | 'round_of_32' | 'round_of_16' | 'quarter_final' | 'semi_final' | 'finals'
+
+const STAGE_FILTERS: Array<{ id: StageFilter; label: string }> = [
+  { id: 'all', label: 'TODAS' },
+  { id: 'group', label: 'GRUPOS' },
+  { id: 'round_of_32', label: '16-AVOS' },
+  { id: 'round_of_16', label: 'OITAVAS' },
+  { id: 'quarter_final', label: 'QUARTAS' },
+  { id: 'semi_final', label: 'SEMIS' },
+  { id: 'finals', label: 'FINAL · 3º' },
+]
+
+const STATUS_FILTERS: Array<{ id: 'all' | 'scheduled' | 'open' | 'locked' | 'finished'; label: string }> = [
+  { id: 'all', label: 'TODOS' },
+  { id: 'scheduled', label: 'AGENDADOS' },
+  { id: 'open', label: 'ABERTOS' },
+  { id: 'locked', label: 'BLOQ.' },
+  { id: 'finished', label: 'ENCERR.' },
+]
+
+function stageMatchesFilter(stage: MatchStage, f: StageFilter): boolean {
+  if (f === 'all') return true
+  if (f === 'finals') return stage === 'final' || stage === 'third_place'
+  return stage === f
+}
+
+function FilterChip({ active, onClick, children, small }: { active: boolean; onClick: () => void; children: ReactNode; small?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'font-mono uppercase border-2 transition-colors',
+        small ? 'text-[8px] px-2 py-1' : 'text-[9px] px-2.5 py-1.5',
+        active ? 'bg-ink border-ink text-paper' : 'border-hairline text-ink-3 hover:border-ink',
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+interface MatchFilterControlsProps {
+  filter: 'all' | 'scheduled' | 'open' | 'locked' | 'finished'
+  setFilter: (f: 'all' | 'scheduled' | 'open' | 'locked' | 'finished') => void
+  stageFilter: StageFilter
+  setStageFilter: (s: StageFilter) => void
+  selectedGroup: string
+  setSelectedGroup: (g: string) => void
+  search: string
+  setSearch: (s: string) => void
+}
+
+function MatchFilterControls(p: MatchFilterControlsProps) {
+  const showGroups = p.stageFilter === 'all' || p.stageFilter === 'group'
+  const Row = ({ label, children }: { label: string; children: ReactNode }) => (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="w-12 flex-shrink-0 font-mono text-[8px] tracking-eyebrow text-ink-4">{label}</span>
+      {children}
+    </div>
+  )
+  return (
+    <div className="space-y-2.5">
+      <input
+        value={p.search}
+        onChange={e => p.setSearch(e.target.value)}
+        placeholder="Buscar time, sigla ou código (ex.: BRA, ko-r32-1)…"
+        className="w-full border-2 border-hairline bg-card px-3 py-2 font-mono text-[11px] outline-none focus:border-ink"
+      />
+      <Row label="FASE">
+        {STAGE_FILTERS.map(f => (
+          <FilterChip key={f.id} active={p.stageFilter === f.id} onClick={() => p.setStageFilter(f.id)}>{f.label}</FilterChip>
+        ))}
+      </Row>
+      <Row label="STATUS">
+        {STATUS_FILTERS.map(f => (
+          <FilterChip key={f.id} active={p.filter === f.id} onClick={() => p.setFilter(f.id)}>{f.label}</FilterChip>
+        ))}
+      </Row>
+      {showGroups && (
+        <Row label="GRUPO">
+          <FilterChip small active={p.selectedGroup === 'all'} onClick={() => p.setSelectedGroup('all')}>TODOS</FilterChip>
+          {WC2026_GROUPS.map(g => (
+            <FilterChip small key={g.id} active={p.selectedGroup === g.id} onClick={() => p.setSelectedGroup(g.id)}>{g.id}</FilterChip>
+          ))}
+        </Row>
+      )}
+    </div>
+  )
+}
+
 function useAdminData() {
   const { overrides, init } = useMatchStore()
   const [kpis, setKpis] = useState<KpiData | null>(null)
   const [filter, setFilter] = useState<'all' | 'scheduled' | 'open' | 'locked' | 'finished'>('all')
+  const [stageFilter, setStageFilter] = useState<StageFilter>('all')
   const [selectedGroup, setSelectedGroup] = useState<string>('all')
+  const [search, setSearch] = useState('')
   const { msg: toast, show: showToast } = useToast()
 
   useEffect(() => { init() }, [init])
@@ -776,13 +923,17 @@ function useAdminData() {
     return { ...m, status: ov.status, homeScore: ov.homeScore, awayScore: ov.awayScore }
   })
 
+  const inGroupContext = stageFilter === 'all' || stageFilter === 'group'
+  const q = search.trim().toLowerCase()
   const filtered = allMatches.filter(m => {
     if (filter !== 'all' && m.status !== filter) return false
-    if (selectedGroup !== 'all' && m.group !== selectedGroup) return false
+    if (stageFilter !== 'all' && !stageMatchesFilter(m.stage, stageFilter)) return false
+    if (inGroupContext && selectedGroup !== 'all' && m.group !== selectedGroup) return false
+    if (q && !`${m.home.code} ${m.away.code} ${m.home.name} ${m.away.name} ${m.id}`.toLowerCase().includes(q)) return false
     return true
   })
 
-  return { kpis, filtered, allMatches, overrides, filter, setFilter, selectedGroup, setSelectedGroup, toast, showToast }
+  return { kpis, filtered, allMatches, overrides, filter, setFilter, stageFilter, setStageFilter, selectedGroup, setSelectedGroup, search, setSearch, toast, showToast }
 }
 
 type AdminTab = 'operation' | 'people' | 'comms' | 'health'
@@ -894,7 +1045,7 @@ function AdminHealthPanel() {
 // ─── Mobile ───────────────────────────────────────────────────────────────────
 
 function AdminMobile() {
-  const { kpis, filtered, filter, setFilter, selectedGroup, setSelectedGroup, toast, showToast } = useAdminData()
+  const { kpis, filtered, filter, setFilter, stageFilter, setStageFilter, selectedGroup, setSelectedGroup, search, setSearch, toast, showToast } = useAdminData()
   const [activeTab, setActiveTab] = useState<AdminTab>('operation')
 
   return (
@@ -959,37 +1110,12 @@ function AdminMobile() {
           </div>
 
           <div className="px-4 pt-3">
-            <div className="flex gap-1.5 flex-wrap mb-2">
-              {(['all', 'scheduled', 'open', 'locked', 'finished'] as const).map(f => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={cn(
-                    'font-mono text-[9px] px-2.5 py-1.5 border-2 uppercase transition-colors',
-                    filter === f ? 'bg-ink border-ink text-paper' : 'border-hairline text-ink-3 hover:border-ink'
-                  )}
-                >
-                  {f === 'all' ? 'TODOS' : f === 'scheduled' ? 'AGEND.' : f === 'open' ? 'ABERTOS' : f === 'locked' ? 'BLOQ.' : 'ENCERR.'}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-1 flex-wrap">
-              <button
-                onClick={() => setSelectedGroup('all')}
-                className={cn('font-mono text-[8px] px-2 py-1 border', selectedGroup === 'all' ? 'bg-ink text-paper border-ink' : 'border-hairline text-ink-3')}
-              >
-                TODOS GRUPOS
-              </button>
-              {WC2026_GROUPS.map(g => (
-                <button
-                  key={g.id}
-                  onClick={() => setSelectedGroup(g.id)}
-                  className={cn('font-mono text-[8px] px-2 py-1 border', selectedGroup === g.id ? 'bg-ink text-paper border-ink' : 'border-hairline text-ink-3')}
-                >
-                  {g.id}
-                </button>
-              ))}
-            </div>
+            <MatchFilterControls
+              filter={filter} setFilter={setFilter}
+              stageFilter={stageFilter} setStageFilter={setStageFilter}
+              selectedGroup={selectedGroup} setSelectedGroup={setSelectedGroup}
+              search={search} setSearch={setSearch}
+            />
           </div>
 
           <div className="ui-panel mx-4 mt-3">
@@ -1025,7 +1151,7 @@ function AdminMobile() {
 // ─── Desktop ──────────────────────────────────────────────────────────────────
 
 function AdminDesktop() {
-  const { kpis, filtered, filter, setFilter, selectedGroup, setSelectedGroup, toast, showToast } = useAdminData()
+  const { kpis, filtered, filter, setFilter, stageFilter, setStageFilter, selectedGroup, setSelectedGroup, search, setSearch, toast, showToast } = useAdminData()
   const [activeTab, setActiveTab] = useState<AdminTab>('operation')
 
   return (
@@ -1081,37 +1207,17 @@ function AdminDesktop() {
         <div className="grid grid-cols-[1.6fr_1fr] gap-5">
           <div className="space-y-4">
             <div className="ui-panel">
-              <div className="px-4 py-3 border-b border-hairline flex items-center gap-3 flex-wrap">
-                <span className="font-mono text-[10px] tracking-eyebrow text-ink-3">FILTRAR:</span>
-                {(['all', 'scheduled', 'open', 'locked', 'finished'] as const).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className={cn(
-                      'font-mono text-[9px] px-2.5 py-1.5 border-2 uppercase transition-colors',
-                      filter === f ? 'bg-ink border-ink text-paper' : 'border-hairline text-ink-3 hover:border-ink'
-                    )}
-                  >
-                    {f === 'all' ? 'TODOS' : f === 'scheduled' ? 'AGENDADOS' : f === 'open' ? 'ABERTOS' : f === 'locked' ? 'BLOQ.' : 'ENCERR.'}
-                  </button>
-                ))}
-                <div className="ml-auto flex gap-1 flex-wrap">
-                  <button
-                    onClick={() => setSelectedGroup('all')}
-                    className={cn('font-mono text-[9px] px-2 py-1 border', selectedGroup === 'all' ? 'bg-ink text-paper border-ink' : 'border-hairline text-ink-3')}
-                  >
-                    TODOS
-                  </button>
-                  {WC2026_GROUPS.map(g => (
-                    <button
-                      key={g.id}
-                      onClick={() => setSelectedGroup(g.id)}
-                      className={cn('font-mono text-[9px] px-2 py-1 border', selectedGroup === g.id ? 'bg-ink text-paper border-ink' : 'border-hairline text-ink-3')}
-                    >
-                      {g.id}
-                    </button>
-                  ))}
-                </div>
+              <div className="px-4 py-3 border-b border-hairline flex items-center justify-between gap-3">
+                <span className="font-display text-lg">PARTIDAS</span>
+                <span className="font-mono text-[10px] text-ink-3">{filtered.length} no filtro</span>
+              </div>
+              <div className="px-4 py-3 border-b border-hairline">
+                <MatchFilterControls
+                  filter={filter} setFilter={setFilter}
+                  stageFilter={stageFilter} setStageFilter={setStageFilter}
+                  selectedGroup={selectedGroup} setSelectedGroup={setSelectedGroup}
+                  search={search} setSearch={setSearch}
+                />
               </div>
 
               <div className="divide-y divide-hairline max-h-[560px] overflow-y-auto">
