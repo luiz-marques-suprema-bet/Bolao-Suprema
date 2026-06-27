@@ -332,11 +332,11 @@ const SCORING_SECTIONS = [
   {
     label: 'MATA-MATA · quem passa manda',
     rules: [
-      { pts: 12, label: 'CRAVADA: placar exato + quem passa', tip: 'Acertou o placar dos 90 min E quem se classifica. A cravada só conta com o classificado certo. Prorrogação/pênaltis não contam pro placar, mas contam pro classificado.' },
-      { pts: 8,  label: 'Resultado + gols do vencedor + quem passa', tip: 'Acertou o resultado, os gols do time vencedor (90 min) E quem avança.' },
-      { pts: 5,  label: 'Resultado certo (90 min) + quem passa',      tip: 'Acertou quem venceu no tempo normal E quem se classifica.' },
-      { pts: 3,  label: 'Só acertou quem passa',                      tip: 'Errou o placar, mas cravou o classificado (incl. prorrogação/pênaltis).' },
-      { pts: 2,  label: 'Cravou o placar, mas errou quem passa',      tip: 'Consolação: acertou o placar dos 90 min, mas o outro time se classificou.' },
+      { pts: 12, label: 'CRAVADA: placar exato + quem passa', tip: 'Acertou o placar certinho E quem se classifica. A cravada só conta com o classificado certo.' },
+      { pts: 8,  label: 'Resultado + gols do vencedor + quem passa', tip: 'Acertou o resultado, os gols do time vencedor E quem avança.' },
+      { pts: 5,  label: 'Resultado certo + quem passa',               tip: 'Acertou quem venceu E quem se classifica.' },
+      { pts: 3,  label: 'Só acertou quem passa',                      tip: 'Errou o placar, mas cravou quem se classifica.' },
+      { pts: 2,  label: 'Cravou o placar, mas errou quem passa',      tip: 'Consolação: acertou o placar, mas o outro time se classificou.' },
     ],
   },
   {
@@ -352,15 +352,18 @@ const SCORING_SECTIONS = [
 function ScoringRulesBox({ rules: _rules }: { rules: ScoringRule[] }) {
   return (
     <div className="ui-card p-4">
-      <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">COMO PONTUAR</p>
+      <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-1">COMO PONTUAR</p>
+      <p className="font-mono text-[10px] text-ink-4 leading-snug mb-3">
+        Em cada jogo vale só a faixa mais alta que você acertar — elas não somam entre si.
+      </p>
       <div className="space-y-4">
         {SCORING_SECTIONS.map(section => (
           <div key={section.label}>
             <p className="font-mono text-[8px] tracking-eyebrow text-ink-4 mb-1.5">{section.label}</p>
             <div className="space-y-1.5">
               {section.rules.map(r => (
-                <div key={r.label} className="flex items-center gap-2">
-                  <span className="font-display text-xl text-green w-8 flex-shrink-0">+{r.pts}</span>
+                <div key={r.label} className="flex items-baseline gap-2">
+                  <span className="font-display text-xl text-green w-8 flex-shrink-0 text-right tabular-nums">{r.pts}</span>
                   <FloatingTooltip label={r.tip}>
                     <span className="font-mono text-[11px] text-ink-3 cursor-default underline decoration-dotted decoration-ink-4 underline-offset-2">
                       {r.label}

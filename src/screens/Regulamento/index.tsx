@@ -31,13 +31,13 @@ const GROUP_RULES = [
 ]
 
 // Mata-mata: quem passa manda. Acertar o classificado destrava os pontos;
-// o placar do tempo normal (90′) é bônus em cima dele.
+// o placar é bônus em cima dele.
 const KO_RULES = [
-  { pts: 12, label: 'CRAVADA: placar exato + quem passa', detail: 'placar do tempo normal (90′) E o classificado certo', accent: 'bg-green' },
-  { pts: 8,  label: 'Resultado + gols do vencedor',       detail: 'no 90′ · com o classificado certo',                  accent: 'bg-yellow' },
-  { pts: 5,  label: 'Resultado certo (90′)',              detail: 'com o classificado certo',                           accent: 'bg-yellow/60' },
-  { pts: 3,  label: 'Só acertou quem passa',              detail: 'errou o placar, mas cravou o classificado',          accent: 'bg-paper-deep' },
-  { pts: 2,  label: 'Cravou o placar, errou quem passa',  detail: 'consolação — só o placar do 90′',                    accent: 'bg-paper-deep' },
+  { pts: 12, label: 'CRAVADA: placar exato + quem passa', detail: 'o placar certinho E o classificado certo', accent: 'bg-green' },
+  { pts: 8,  label: 'Resultado + gols do vencedor',       detail: 'com o classificado certo',                 accent: 'bg-yellow' },
+  { pts: 5,  label: 'Resultado certo',                    detail: 'com o classificado certo',                 accent: 'bg-yellow/60' },
+  { pts: 3,  label: 'Só acertou quem passa',              detail: 'errou o placar, mas cravou o classificado', accent: 'bg-paper-deep' },
+  { pts: 2,  label: 'Cravou o placar, errou quem passa',  detail: 'consolação — acertou só o placar',          accent: 'bg-paper-deep' },
 ]
 
 const GENERAL_RULES = [
@@ -160,11 +160,10 @@ export function RegulamentoScreen() {
           </div>
         </section>
 
-        {/* Prorrogação + Cancelamento */}
+        {/* Mata-mata + Cancelamento */}
         <section className="grid md:grid-cols-2 gap-4">
           <InfoCard title="MATA-MATA: QUEM PASSA MANDA" accent="border-l-4 border-l-green" items={[
             'Acertar quem se classifica é o que vale — o placar é bônus em cima disso.',
-            'Placar considerado: tempo regulamentar (90 min). "Quem passa" inclui prorrogação e pênaltis.',
             'A cravada (12 pts) só conta se você também acertar quem avança.',
           ]} />
           <InfoCard title="CANCELAMENTO" accent="border-l-4 border-l-red/60" items={[
