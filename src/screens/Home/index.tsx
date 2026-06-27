@@ -1202,8 +1202,9 @@ function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void 
 }
 
 // Frame de entrada pro mata-mata — o card INTEIRO é clicável (no mobile não
-// havia um ponto claro pra abrir a chave a não ser palpitando). Card escuro com
-// acento amarelo e um leve motivo de chaveamento pra destacar na Home.
+// havia um ponto claro pra abrir a chave a não ser palpitando). Card claro no
+// estilo do app (tokens que adaptam claro/escuro sozinhos) + sombra amarela no
+// hover e seta amarela; sem fundo escuro/ilegível e sem desenho de linhas.
 function MinhaChaveCard({ className }: { className?: string }) {
   const navigate = useNavigate()
   return (
@@ -1212,30 +1213,23 @@ function MinhaChaveCard({ className }: { className?: string }) {
       onClick={() => navigate('/bracket')}
       aria-label="Abrir o chaveamento do mata-mata"
       className={cn(
-        'group relative flex w-full flex-col overflow-hidden rounded-2xl border-2 border-ink bg-ink text-left text-paper transition-transform active:scale-[0.99] hover:border-yellow',
+        'group flex w-full items-center justify-between gap-4 rounded-2xl border-2 border-ink bg-card p-5 text-left shadow-card transition-transform active:scale-[0.99] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-card-yellow sm:p-6',
         className,
       )}
     >
-      <svg aria-hidden viewBox="0 0 120 80" preserveAspectRatio="none" className="pointer-events-none absolute right-0 top-0 h-full w-1/2 text-paper">
-        <path d="M4 14 H44 M4 30 H44 M44 14 V30 M44 22 H82 M4 50 H44 M4 66 H44 M44 50 V66 M44 58 H82 M82 22 V58 M82 40 H118" fill="none" stroke="currentColor" strokeWidth="2" strokeOpacity="0.08" />
-      </svg>
-      <div className="relative flex flex-1 flex-col p-5 sm:p-6">
-        <p className="font-mono text-[10px] tracking-eyebrow text-paper/55">MATA-MATA · COPA 2026</p>
-        <div className="mt-1 font-display text-[2rem] leading-none sm:text-4xl">CHAVEAMENTO</div>
-        <div className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 font-mono text-[9px] tracking-eyebrow text-paper/70">
-          <span>FASE DE 32</span><span className="text-paper/30">›</span>
-          <span>OITAVAS</span><span className="text-paper/30">›</span>
-          <span>QUARTAS</span><span className="text-paper/30">›</span>
-          <span>SEMIS</span><span className="text-paper/30">›</span>
-          <span className="text-yellow">FINAL</span>
+      <div className="min-w-0">
+        <p className="font-mono text-[10px] tracking-eyebrow text-ink-3">MATA-MATA · COPA 2026</p>
+        <div className="mt-0.5 font-display text-3xl leading-none sm:text-4xl">CHAVEAMENTO</div>
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 font-mono text-[9px] tracking-eyebrow text-ink-3">
+          <span>FASE DE 32</span><span className="text-ink-4">›</span>
+          <span>OITAVAS</span><span className="text-ink-4">›</span>
+          <span>QUARTAS</span><span className="text-ink-4">›</span>
+          <span>SEMIS</span><span className="text-ink-4">›</span>
+          <span className="rounded bg-ink px-1.5 py-0.5 text-paper">FINAL</span>
         </div>
-        <div className="mt-auto flex items-center justify-between gap-3 pt-5">
-          <span className="font-mono text-[10px] leading-snug text-paper/55">Veja a chave e palpite nos mata-matas</span>
-          <span className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-yellow px-3.5 py-1.5 font-mono text-[11px] font-bold tracking-eyebrow text-ink transition-transform group-hover:translate-x-0.5">
-            ABRIR →
-          </span>
-        </div>
+        <p className="mt-3 font-mono text-[10px] text-ink-4">Veja a chave e palpite nos mata-matas</p>
       </div>
+      <span className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-full bg-yellow font-display text-2xl text-ink transition-transform group-hover:translate-x-0.5">→</span>
     </button>
   )
 }
