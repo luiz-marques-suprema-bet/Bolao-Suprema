@@ -407,7 +407,6 @@ function BreakdownBox({ items }: { items: RankingBreakdown[] }) {
 // ─── Mobile ───────────────────────────────────────────────────────────────────
 
 function RankingMobile() {
-  const [tab, setTab] = useState<'geral' | 'semana'>('geral')
   const { ranking: fullRanking, loading, error } = useRanking()
   const [query, setQuery] = useState('')
   const myEntry = fullRanking.find(r => r.isYou)
@@ -476,16 +475,6 @@ function RankingMobile() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 border-b border-line">
-        {(['geral', 'semana'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={cn('py-2.5 font-mono text-[10px] font-bold tracking-eyebrow uppercase transition-colors',
-              tab === t ? 'bg-yellow text-[#0D0D0D]' : 'text-ink-3 hover:bg-surface-hover')}>
-            {t}
-          </button>
-        ))}
-      </div>
-
       <div className="px-4 pt-3">
         <InlineSearch query={query} setQuery={setQuery} />
       </div>
@@ -496,17 +485,13 @@ function RankingMobile() {
         </div>
       )}
 
-      {tab === 'geral' && fullRanking.length === 0 && (
+      {fullRanking.length === 0 && (
         <div className="mx-4 mt-4">
           <ScoringRulesBox rules={[]} />
         </div>
       )}
 
-      {tab === 'semana' ? (
-        <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
-          <p className="font-mono text-[11px] text-ink-3">Ranking semanal disponível após o início dos jogos.</p>
-        </div>
-      ) : fullRanking.length === 0 ? (
+      {fullRanking.length === 0 ? (
         loading ? null : (
           <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
             <p className="font-mono text-[11px] text-ink-3">Nenhum palpite pontuado ainda.</p>
