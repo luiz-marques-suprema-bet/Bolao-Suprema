@@ -920,7 +920,11 @@ function useAdminData() {
   const allMatches = WC2026_MATCHES.map(m => {
     const ov = overrides[m.id]
     if (!ov) return m
-    return { ...m, status: ov.status, homeScore: ov.homeScore, awayScore: ov.awayScore }
+    // Sobrepõe TIMES materializados (mata-mata) além de status/placar — senão o
+    // painel mostrava "TBD × TBD" mesmo nos jogos do 16-avos já definidos.
+    const home = ov.homeCode && ov.homeCode !== 'TBD' && TEAMS[ov.homeCode] ? TEAMS[ov.homeCode] : m.home
+    const away = ov.awayCode && ov.awayCode !== 'TBD' && TEAMS[ov.awayCode] ? TEAMS[ov.awayCode] : m.away
+    return { ...m, status: ov.status, homeScore: ov.homeScore, awayScore: ov.awayScore, winner: ov.winner ?? m.winner, home, away }
   })
 
   const inGroupContext = stageFilter === 'all' || stageFilter === 'group'

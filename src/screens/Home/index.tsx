@@ -893,6 +893,10 @@ function ResenhaCard() {
   const isLoaded = useChatStore(s => s.isLoaded)
   const recent   = messages.slice(-4)
 
+  // Pega na hora as mensagens mais novas ao abrir a Home (não espera o realtime),
+  // pra não mostrar um remetente desatualizado no #RESENHA.
+  useEffect(() => { void useChatStore.getState().pollNewMessages() }, [])
+
   return (
     <div className="ui-panel flex flex-col overflow-hidden">
       <div className="px-4 py-3 border-b border-hairline flex items-baseline justify-between">

@@ -148,6 +148,17 @@ function AppLayout() {
   // o que foi perdido enquanto estava em 2o plano (sem precisar de F5).
   useTabResync(() => { void resyncChat(); void resyncMatches() })
 
+  // Backstop global: mantém a Resenha fresca em QUALQUER tela (não só na /resenha).
+  // O widget #RESENHA da Home mostrava o remetente errado/atrasado quando o
+  // realtime perdia uma mensagem; este poll leve garante que todas as telas
+  // (Home, sino, etc.) fiquem em dia mesmo se o WebSocket falhar.
+  useEffect(() => {
+    if (!user?.id) return
+    const poll = () => { if (document.visibilityState === 'visible') void useChatStore.getState().pollNewMessages() }
+    const id = window.setInterval(poll, 15000)
+    return () => window.clearInterval(id)
+  }, [user?.id])
+
   return (
     <div className="min-h-dvh flex flex-col">
       {isDesktop && <DesktopNav />}
