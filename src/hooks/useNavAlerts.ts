@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { WC2026_MATCHES } from '@/data/wc2026'
-import { useMatchStore } from '@/stores/match.store'
+import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { usePredictionStore } from '@/stores/prediction.store'
 import { getBettingDeadline } from '@/lib/matchTime'
 import { isBetOpen } from '@/lib/markets'
 import { isPlaceholderMatch } from '@/lib/matchGuards'
 import { supabase, isMockMode } from '@/lib/supabase'
-import type { Match } from '@/types'
 
 const SEEN_NOTICE_KEY = 'bolao-global-notices-seen-at'
 const NOTICE_EVENT = 'bolao-global-notices-seen'
@@ -39,21 +38,11 @@ function formatDeadline(deadline: Date): string {
   }).format(deadline)
 }
 
-function mergeMatch(base: Match, override: ReturnType<typeof useMatchStore.getState>['overrides'][string] | undefined): Match {
-  if (!override) return base
-  return {
-    ...base,
-    status: override.status,
-    marketStatus: override.marketStatus ?? undefined,
-    lockedAt: override.lockedAt ?? null,
-    lockReason: override.lockReason ?? null,
-    settledAt: override.settledAt ?? null,
-    kickoffUtc: override.kickoffUtc ?? base.kickoffUtc,
-  }
-}
-
 export function useNavAlerts() {
-  const overrides = useMatchStore(s => s.overrides)
+  // useMatchesWithStatus faz o merge COMPLETO com o banco — inclusive home/away,
+  // que materializam no mata-mata. (O merge antigo daqui ignorava os times, então
+  // jogos de mata-mata já sorteados ficavam fora do lembrete de 72h.)
+  const matches = useMatchesWithStatus(WC2026_MATCHES)
   const predictions = usePredictionStore(s => s.predictions)
   const [notices, setNotices] = useState<NoticeSummary[]>([])
   const [seenAt, setSeenAt] = useState(() => localStorage.getItem(SEEN_NOTICE_KEY) ?? '')
@@ -86,8 +75,7 @@ export function useNavAlerts() {
 
   const urgentPicks = useMemo<UrgentPickAlert[]>(() => {
     const now = new Date()
-    return WC2026_MATCHES
-      .map(match => mergeMatch(match, overrides[match.id]))
+    return matches
       .filter(match => !predictions[match.id])
       .filter(match => !isPlaceholderMatch(match))
       .filter(match => isBetOpen(match, now))
@@ -105,7 +93,7 @@ export function useNavAlerts() {
         detail: `fecha ${formatDeadline(deadline)}`,
         hoursLeft: Math.max(0, Math.floor(hoursLeft)),
       }))
-  }, [overrides, predictions])
+  }, [matches, predictions])
 
   const unseenNoticeCount = useMemo(() => {
     const seenTime = seenAt ? new Date(seenAt).getTime() : 0
