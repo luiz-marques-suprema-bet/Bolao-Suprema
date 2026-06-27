@@ -119,7 +119,7 @@ export function BracketScreen() {
         <div className="flex flex-wrap gap-2 mb-5">
           {TABS.map(t => (
             <button key={t.key} type="button" onClick={() => setTab(t.key)}
-              className={cn('px-3.5 py-1.5 font-mono text-[11px] font-bold tracking-eyebrow rounded-full border-2 transition-colors',
+              className={cn('px-3.5 py-1.5 font-mono text-[11px] font-bold tracking-eyebrow border-2 transition-colors',
                 tab === t.key ? 'bg-ink text-paper border-ink' : 'border-line-strong text-ink-3 hover:text-ink hover:bg-surface-hover')}>
               {t.label}
             </button>

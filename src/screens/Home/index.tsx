@@ -1213,7 +1213,7 @@ function MinhaChaveCard({ className }: { className?: string }) {
       onClick={() => navigate('/bracket')}
       aria-label="Abrir o chaveamento do mata-mata"
       className={cn(
-        'group flex w-full items-center justify-between gap-4 rounded-2xl border-2 border-ink bg-card p-5 text-left shadow-card transition-transform active:scale-[0.99] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-card-yellow sm:p-6',
+        'group flex w-full items-center justify-between gap-4 border-2 border-ink bg-card p-5 text-left shadow-card transition-transform active:scale-[0.99] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-card-yellow sm:p-6',
         className,
       )}
     >
@@ -1225,11 +1225,11 @@ function MinhaChaveCard({ className }: { className?: string }) {
           <span>OITAVAS</span><span className="text-ink-4">›</span>
           <span>QUARTAS</span><span className="text-ink-4">›</span>
           <span>SEMIS</span><span className="text-ink-4">›</span>
-          <span className="rounded bg-ink px-1.5 py-0.5 text-paper">FINAL</span>
+          <span className="bg-ink px-1.5 py-0.5 text-paper">FINAL</span>
         </div>
         <p className="mt-3 font-mono text-[10px] text-ink-4">Veja a chave e palpite nos mata-matas</p>
       </div>
-      <span className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-full bg-yellow font-display text-2xl text-ink transition-transform group-hover:translate-x-0.5">→</span>
+      <span className="grid h-12 w-12 flex-shrink-0 place-items-center border-2 border-ink bg-yellow font-display text-2xl text-ink transition-transform group-hover:translate-x-0.5">→</span>
     </button>
   )
 }
