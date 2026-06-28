@@ -7,7 +7,6 @@ import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/stores/auth.store'
 import { usePredictionStore } from '@/stores/prediction.store'
 import { useChatStore } from '@/stores/chat.store'
-import { useMatchStore } from '@/stores/match.store'
 import { useBoletimStore } from '@/stores/boletim.store'
 import { BoletimCard, CreateModal, BoletimViewModal } from '@/screens/Boletim'
 import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
@@ -17,8 +16,9 @@ import { fetchRanking, subscribeRankingUpdates } from '@/lib/ranking'
 import { fetchFeaturedVideos } from '@/lib/scorebat'
 import type { ScorebatVideo } from '@/lib/scorebat'
 import { formatMatchDate, formatMatchTime } from '@/lib/matchTime'
-import { getEffectiveMarketStatus, isBetOpen } from '@/lib/markets'
+import { isBetOpen } from '@/lib/markets'
 import { isPlaceholderMatch } from '@/lib/matchGuards'
+import { selectUpcomingMatches } from '@/lib/upcomingMatches'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { useTabResync } from '@/hooks/useTabResync'
 import { fetchWC26News, getCachedWC26News, isConfigured as newsConfigured } from '@/lib/footballnews'
@@ -843,7 +843,7 @@ function GroupsGrid({ predictions }: { predictions: Record<string, unknown> }) {
 
 function useHomeData() {
   const me = useAuthStore(s => s.user)
-  const { overrides, isLoaded } = useMatchStore()
+  const matches = useMatchesWithStatus(WC2026_MATCHES)
   const [ranking, setRanking] = useState<RankingEntry[]>([])
 
   const loadRanking = useCallback(() => {
@@ -869,12 +869,9 @@ function useHomeData() {
   // Aba voltou ao foco → recarrega o ranking (pega apuracoes perdidas em 2o plano).
   useTabResync(loadRanking)
 
-  const upcoming = isLoaded
-    ? WC2026_MATCHES.map((m): Match => { const ov = overrides[m.id]; return ov ? { ...m, ...ov } : m })
-        .filter(m => getEffectiveMarketStatus(m) === 'open').slice(0, 8)
-    : WC2026_MATCHES.filter(m => m.status === 'scheduled').slice(0, 8)
+  const upcoming = selectUpcomingMatches(matches)
 
-  return { ranking, upcoming }
+  return { ranking, upcoming, matches }
 }
 
 // ─── Resenha card ─────────────────────────────────────────────────────────────
@@ -1244,11 +1241,10 @@ function HomeMobile() {
   const navigate = useNavigate()
   const user = useAuthStore(s => s.user)
   const { predictions, championPick, vicePick, scorerPick } = usePredictionStore()
-  const { ranking, upcoming } = useHomeData()
+  const { ranking, upcoming, matches: liveMatches } = useHomeData()
   const [quickPickMatch, setQuickPickMatch] = useState<Match | null>(null)
 
   const totalMatches   = WC2026_MATCHES.length
-  const liveMatches    = useMatchesWithStatus(WC2026_MATCHES)
   const phase          = activePhaseProgress(liveMatches, predictions)
   const schedule       = heroSchedule(liveMatches)
   const apostasFeitas  = [championPick, vicePick, scorerPick].filter(Boolean).length
@@ -1268,28 +1264,34 @@ function HomeMobile() {
           <div className="px-4 py-3 border-b border-hairline flex items-baseline justify-between">
             <div className="flex items-baseline gap-2">
               <span className="font-display text-lg">PRÓXIMOS</span>
-              <span className="font-mono text-[10px] text-ink-3">jogos abertos</span>
+              <span className="font-mono text-[10px] text-ink-3">até a final</span>
             </div>
           </div>
           <div className="divide-y divide-hairline">
             {upcoming.slice(0, 6).map(match => {
               const hasPick = !!predictions[match.id]
+              const canPick = isBetOpen(match)
+              const placeholder = isPlaceholderMatch(match)
               return (
-                <button key={match.id} onClick={() => setQuickPickMatch(match)}
+                <button key={match.id} onClick={() => canPick ? setQuickPickMatch(match) : navigate(match.stage === 'group' ? '/prediction' : '/bracket')}
                   className={cn('w-full flex items-center gap-3 px-4 py-3 text-left transition-colors active:scale-[0.99]',
                     hasPick ? 'bg-green/10 hover:bg-green/15' : 'hover:bg-surface-hover')}>
                   <div className="font-mono text-[8px] text-ink-3 w-12 flex-shrink-0">{match.stage === 'group' ? <>GRUPO<br/>{match.group}</> : (match.stageLabel ?? 'MATA-MATA')}</div>
                   <Flag team={match.home} size={22} />
-                  <span className="font-mono text-[11px] font-bold flex-1 truncate">{match.home.code}</span>
+                  <span className="font-mono text-[11px] font-bold flex-1 truncate">{placeholder ? '—' : match.home.code}</span>
                   <div className="text-center flex-shrink-0">
                     <div className="font-mono text-[8px] text-ink-4">{formatMatchDate(match)}</div>
                     <div className="font-display text-base leading-tight">{formatMatchTime(match)}</div>
                   </div>
-                  <span className="font-mono text-[11px] font-bold flex-1 text-right truncate">{match.away.code}</span>
+                  <span className="font-mono text-[11px] font-bold flex-1 text-right truncate">{placeholder ? '—' : match.away.code}</span>
                   <Flag team={match.away} size={22} />
-                  {hasPick
-                    ? <span className="font-mono text-[10px] text-green flex-shrink-0">✓</span>
-                    : <span className="font-mono text-[8px] font-bold tracking-eyebrow bg-yellow text-ink px-1.5 py-0.5 flex-shrink-0 leading-none">PENDENTE</span>}
+                  {hasPick ? (
+                    <span className="font-mono text-[10px] text-green flex-shrink-0">✓</span>
+                  ) : canPick ? (
+                    <span className="font-mono text-[8px] font-bold tracking-eyebrow bg-yellow text-ink px-1.5 py-0.5 flex-shrink-0 leading-none">PENDENTE</span>
+                  ) : (
+                    <span className="font-mono text-[8px] font-bold tracking-eyebrow text-ink-3 flex-shrink-0 leading-none">{placeholder ? 'A DEFINIR' : 'BLOQUEADO'}</span>
+                  )}
                 </button>
               )
             })}
@@ -1403,11 +1405,10 @@ function HomeDesktop() {
   const navigate = useNavigate()
   const user = useAuthStore(s => s.user)
   const { predictions, championPick, vicePick, scorerPick } = usePredictionStore()
-  const { ranking, upcoming } = useHomeData()
+  const { ranking, upcoming, matches: liveMatches } = useHomeData()
   const [quickPickMatch, setQuickPickMatch] = useState<Match | null>(null)
 
   const totalMatches  = WC2026_MATCHES.length
-  const liveMatches   = useMatchesWithStatus(WC2026_MATCHES)
   const phase         = activePhaseProgress(liveMatches, predictions)
   const schedule      = heroSchedule(liveMatches)
   const apostasFeitas = [championPick, vicePick, scorerPick].filter(Boolean).length
@@ -1515,13 +1516,15 @@ function HomeDesktop() {
           <div className="ui-panel">
             <div className="px-4 py-3 border-b border-hairline flex items-baseline gap-2">
               <span className="font-display text-lg">PRÓXIMOS</span>
-              <span className="font-mono text-[10px] text-ink-3">jogos · grupo</span>
+              <span className="font-mono text-[10px] text-ink-3">jogos · até a final</span>
             </div>
             <div className="divide-y divide-hairline">
               {upcoming.slice(0, 6).map(match => {
                 const hasPick = !!predictions[match.id]
+                const canPick = isBetOpen(match)
+                const placeholder = isPlaceholderMatch(match)
                 return (
-                  <button key={match.id} onClick={() => setQuickPickMatch(match)}
+                  <button key={match.id} onClick={() => canPick ? setQuickPickMatch(match) : navigate(match.stage === 'group' ? '/prediction' : '/bracket')}
                     className={cn('w-full flex items-center gap-4 px-4 py-3 transition-colors text-left group active:scale-[0.99]',
                       hasPick ? 'bg-green/10 hover:bg-green/15' : 'hover:bg-surface-hover')}>
                     <div className="flex-shrink-0 w-12 text-center">
@@ -1539,9 +1542,13 @@ function HomeDesktop() {
                       <div className="font-mono text-[12px] font-bold truncate text-right">{match.away.name}</div>
                       <Flag team={match.away} size={26} />
                     </div>
-                    {hasPick
-                      ? <span className="font-mono text-[10px] text-green flex-shrink-0">✓</span>
-                      : <span className="font-mono text-[8px] font-bold tracking-eyebrow bg-yellow text-ink px-1.5 py-0.5 flex-shrink-0 leading-none">PENDENTE</span>}
+                    {hasPick ? (
+                      <span className="font-mono text-[10px] text-green flex-shrink-0">✓</span>
+                    ) : canPick ? (
+                      <span className="font-mono text-[8px] font-bold tracking-eyebrow bg-yellow text-ink px-1.5 py-0.5 flex-shrink-0 leading-none">PENDENTE</span>
+                    ) : (
+                      <span className="font-mono text-[8px] font-bold tracking-eyebrow text-ink-3 flex-shrink-0 leading-none">{placeholder ? 'A DEFINIR' : 'BLOQUEADO'}</span>
+                    )}
                   </button>
                 )
               })}
