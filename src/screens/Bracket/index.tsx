@@ -9,6 +9,7 @@ import { isBetOpen } from '@/lib/markets'
 import { isPlaceholderMatch } from '@/lib/matchGuards'
 import { calculateKoPoints } from '@/lib/scoring'
 import { clinchedPositions } from '@/lib/clinched'
+import { matchCodeToSlotId } from '@/lib/bracket2026'
 import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
 import { formatMatchDate, formatMatchTime } from '@/lib/matchTime'
@@ -18,16 +19,6 @@ import type { Match, MatchStage, Team } from '@/types'
 function koNum(id: string): number {
   const m = id.match(/(\d+)$/)
   return m ? parseInt(m[1], 10) : 0
-}
-
-function matchCodeToSlotId(code: string): string | null {
-  if (/^ko-r32-\d+$/.test(code)) return code.replace('ko-r32-', 'r32_')
-  if (/^ko-r16-\d+$/.test(code)) return code.replace('ko-r16-', 'r16_')
-  if (/^ko-qf-\d+$/.test(code)) return code.replace('ko-qf-', 'qf_')
-  if (/^ko-sf-\d+$/.test(code)) return code.replace('ko-sf-', 'sf_')
-  if (code === 'ko-third-1') return 'third_1'
-  if (code === 'ko-final-1') return 'final_1'
-  return null
 }
 
 const TABS: { key: string; label: string; stages: MatchStage[] }[] = [

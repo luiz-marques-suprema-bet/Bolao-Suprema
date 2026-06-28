@@ -15,23 +15,12 @@ import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { formatMatchDate, formatMatchDateTime, getEarliestKickoff } from '@/lib/matchTime'
 import { isBetOpen } from '@/lib/markets'
 import { isPlaceholderMatch, isPlaceholderTeam } from '@/lib/matchGuards'
+import { getKnockoutScoreWinner, matchCodeToSlotId } from '@/lib/bracket2026'
 import type { Match } from '@/types'
 
 type PredTab = 'groups' | 'knockout' | 'champion'
 
 const GROUP_LABELS = ['A','B','C','D','E','F','G','H','I','J','K','L'] as const
-
-// Converte o código do jogo de mata-mata no slot_id do bracket (espelha o
-// match_slot_id do banco), para casar o palpite de "quem avança" (bracket_picks).
-function matchCodeToSlotId(code: string): string | null {
-  if (/^ko-r32-\d+$/.test(code)) return code.replace('ko-r32-', 'r32_')
-  if (/^ko-r16-\d+$/.test(code)) return code.replace('ko-r16-', 'r16_')
-  if (/^ko-qf-\d+$/.test(code))  return code.replace('ko-qf-', 'qf_')
-  if (/^ko-sf-\d+$/.test(code))  return code.replace('ko-sf-', 'sf_')
-  if (code === 'ko-third-1')     return 'third_1'
-  if (code === 'ko-final-1')     return 'final_1'
-  return null
-}
 
 // ─── Standings engine ─────────────────────────────────────────────────────────
 
@@ -238,9 +227,7 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
 
   // Mata-mata: se o placar tem vencedor, ELE avança (óbvio, não pergunta nada).
   // Só pergunta "quem passa" quando o palpite é empate (vai a pênaltis).
-  const scoreWinner = isKnockout && !isPlaceholder
-    ? (home > away ? match.home : away > home ? match.away : null)
-    : null
+  const scoreWinner = !isPlaceholder ? getKnockoutScoreWinner(match, home, away) : null
 
   const handleConfirm = async () => {
     setSaveError(null)

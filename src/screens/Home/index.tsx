@@ -6,6 +6,7 @@ import { Avatar } from '@/components/shared/Avatar'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/stores/auth.store'
 import { usePredictionStore } from '@/stores/prediction.store'
+import { useBracketStore } from '@/stores/bracket.store'
 import { useChatStore } from '@/stores/chat.store'
 import { useBoletimStore } from '@/stores/boletim.store'
 import { BoletimCard, CreateModal, BoletimViewModal } from '@/screens/Boletim'
@@ -19,6 +20,7 @@ import { formatMatchDate, formatMatchTime } from '@/lib/matchTime'
 import { isBetOpen } from '@/lib/markets'
 import { isPlaceholderMatch } from '@/lib/matchGuards'
 import { selectUpcomingMatches } from '@/lib/upcomingMatches'
+import { getKnockoutScoreWinner, matchCodeToSlotId } from '@/lib/bracket2026'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { useTabResync } from '@/hooks/useTabResync'
 import { fetchWC26News, getCachedWC26News, isConfigured as newsConfigured } from '@/lib/footballnews'
@@ -1086,6 +1088,10 @@ function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void 
   const isDesktop = useIsDesktop()
   const existing = predictions[match.id]
   const draft = drafts[match.id]
+  const isKnockout = match.stage !== 'group'
+  const slotId = isKnockout ? matchCodeToSlotId(match.id) : null
+  const advancerPick = useBracketStore(s => (slotId ? s.picks[slotId] : undefined))
+  const setBracketPick = useBracketStore(s => s.setPick)
 
   const [home, setHome] = useState(draft?.home ?? existing?.homeScore ?? 0)
   const [away, setAway] = useState(draft?.away ?? existing?.awayScore ?? 0)
@@ -1095,11 +1101,20 @@ function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void 
 
   const hasPick = !!existing
 
-  const updateHome = (v: number) => { setHome(v); setDraft(match.id, v, away) }
-  const updateAway = (v: number) => { setAway(v); setDraft(match.id, home, v) }
+  const updateHome = (v: number) => { setSaveError(null); setHome(v); setDraft(match.id, v, away) }
+  const updateAway = (v: number) => { setSaveError(null); setAway(v); setDraft(match.id, home, v) }
+  const scoreWinner = getKnockoutScoreWinner(match, home, away)
 
   const handleConfirm = async () => {
     setSaveError(null)
+    if (isKnockout && slotId) {
+      const advancerCode = scoreWinner ? scoreWinner.code : advancerPick
+      if (!advancerCode) {
+        setSaveError('Empate no palpite: escolha quem passa nos pênaltis.')
+        return
+      }
+      if (advancerPick !== advancerCode) setBracketPick(slotId, advancerCode)
+    }
     setSaving(true)
     const result = await confirmPrediction({
       id: `pred-${match.id}`,
@@ -1127,7 +1142,7 @@ function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void 
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 40, opacity: 0 }}
         transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-        className="relative w-full max-w-sm ui-card shadow-none"
+        className="relative max-h-[calc(100dvh-5rem)] w-full max-w-sm overflow-y-auto ui-card shadow-none"
       >
         <button onClick={onClose}
           className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center font-mono text-[11px] text-ink-3 hover:text-ink border border-hairline hover:border-ink transition-colors z-10">
@@ -1186,6 +1201,45 @@ function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void 
               </div>
             </div>
           </div>
+          {isKnockout && slotId && (
+            <div className="mt-4 border-t border-hairline pt-4">
+              {scoreWinner ? (
+                <div className="text-center">
+                  <p className="font-mono text-[9px] font-bold tracking-eyebrow text-ink">QUEM AVANÇA</p>
+                  <div className="mt-2 inline-flex items-center gap-2 border-2 border-green bg-green/10 px-3 py-2">
+                    <Flag team={scoreWinner} size={20} />
+                    <span className="font-mono text-[10px] font-bold text-green">{scoreWinner.code} AVANÇA</span>
+                  </div>
+                  <p className="mt-2 font-mono text-[8px] text-ink-3">definido pelo placar</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-center font-mono text-[9px] font-bold tracking-eyebrow text-ink">EMPATE — QUEM PASSA NOS PÊNALTIS?</p>
+                  <p className="mb-3 text-center font-mono text-[8px] text-ink-3">obrigatório · é o que vale no mata-mata</p>
+                  <div className="flex gap-2">
+                    {[match.home, match.away].map(team => {
+                      const selected = advancerPick === team.code
+                      return (
+                        <button
+                          key={team.code}
+                          type="button"
+                          onClick={() => { setSaveError(null); setBracketPick(slotId, team.code) }}
+                          className={cn(
+                            'flex flex-1 items-center justify-center gap-2 border-2 py-2.5 transition-colors',
+                            selected ? 'border-green bg-green/10 text-green' : 'border-hairline text-ink-2 hover:border-ink',
+                          )}
+                        >
+                          <Flag team={team} size={20} />
+                          <span className="font-mono text-[10px] font-bold">{team.code}</span>
+                          {selected && <span className="font-mono text-[10px]">✓</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           {saveError && (
             <p className="font-mono text-[10px] text-red text-center mt-3 border border-red/30 bg-red/5 px-2 py-1.5">{saveError}</p>
           )}
