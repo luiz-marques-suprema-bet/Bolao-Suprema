@@ -153,7 +153,14 @@ function BracketCard({ m, pick, pred, clinched, onPalpitar }: {
 
   const points = useMemo(() => {
     if (!finished || !pred) return null
-    const predAdv = pick === m.home.code ? 'home' : pick === m.away.code ? 'away' : null
+    // "Quem passa" = palpite explícito OU, na falta dele, o vencedor do placar
+    // cravado (placar decisivo já indica quem passa) — espelha o cálculo do banco.
+    const predAdv: 'home' | 'away' | null =
+      pick === m.home.code ? 'home'
+      : pick === m.away.code ? 'away'
+      : pred.homeScore > pred.awayScore ? 'home'
+      : pred.homeScore < pred.awayScore ? 'away'
+      : null
     const realAdv = m.winner === m.home.code ? 'home' : m.winner === m.away.code ? 'away' : null
     return calculateKoPoints(
       { homeScore: pred.homeScore, awayScore: pred.awayScore },
