@@ -328,10 +328,14 @@ async function fetchMessageRows() {
     if (attempt.filterDeleted) query = query.is('deleted_at', null)
 
     const { data, error } = await query
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(250)
 
-    if (!error) return { rows: data as MessageRow[], error: null }
+    // As 250 MAIS RECENTES (DESC) revertidas pra ordem cronológica. ANTES era
+    // ascending+limit, que pegava as 250 mais ANTIGAS — com >250 mensagens o chat
+    // e o widget da Home mostravam mensagens velhas e o poll ia "corrigindo"
+    // depois (flicker / remetente errado / sumiço).
+    if (!error) return { rows: (data as MessageRow[]).reverse(), error: null }
     lastError = error
     console.warn('[Chat] message select fallback:', error.message)
   }
@@ -394,7 +398,9 @@ async function loadChatSnapshot(
 
   const messageRows = rows ?? []
   await fetchProfiles(messageRows.map(row => row.user_id))
-  let messages = messageRows.map(row => mapRow(row, myUserId))
+  // Ordena pela MESMA regra do merge (horário + desempate por id) pra snapshot e
+  // realtime/poll nunca produzirem ordens diferentes (evita reordenar na tela).
+  let messages = sortMessages(messageRows.map(row => mapRow(row, myUserId)))
 
   const [{ data: voteRows }, reactionsResult, { data: pinData }] = await Promise.all([
     supabase.from('poll_votes').select('message_id, user_id, option_id'),
@@ -575,7 +581,15 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     if (!myUserId) return
     const snapshot = await loadChatSnapshot(myUserId)
     if ('error' in snapshot) return
-    set({ messages: snapshot.messages, pinnedId: snapshot.pinnedId })
+    // MERGE (não substitui): antes o resync trocava a lista inteira pelo snapshot,
+    // então mensagens novas (vindas do realtime/poll mas ainda fora do snapshot)
+    // SUMIAM e voltavam, e o scroll resetava pro topo. Mesclando por id, nada some
+    // e a posição/identidade da lista fica estável.
+    set(s => {
+      let merged = s.messages
+      for (const m of snapshot.messages) merged = mergeMessage(merged, m)
+      return { messages: merged, pinnedId: snapshot.pinnedId }
+    })
   },
 
   // Backstop: busca incremental só das mensagens MAIS NOVAS (created_at > a

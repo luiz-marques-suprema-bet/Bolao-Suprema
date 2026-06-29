@@ -67,6 +67,27 @@ function resolveFeeder(name: string, clinched: Clinched): Team | null {
   return null
 }
 
+// Resolve um feeder de MATA-MATA ("Venc. 16-avos N", "Venc. Oitavas N"…) para o
+// time real assim que o jogo de origem termina — mostra o classificado avançando
+// (aguardando o adversário) mesmo antes do confronto se materializar.
+function resolveKoFeeder(name: string, byId: Map<string, Match>): Team | null {
+  const take = (code: string, kind: 'winner' | 'loser'): Team | null => {
+    const m = byId.get(code)
+    if (!m || m.status !== 'finished' || !m.winner) return null
+    const w = m.winner as string
+    if (w === 'draw') return null
+    if (kind === 'winner') return TEAMS[w] ?? null
+    const loser = w === m.home.code ? m.away.code : m.home.code
+    return loser && loser !== 'TBD' ? (TEAMS[loser] ?? null) : null
+  }
+  let mm = name.match(/^Vencedor Fase de 32 (\d+)$/i); if (mm) return take(`ko-r32-${mm[1]}`, 'winner')
+  mm = name.match(/^Vencedor Oitavas (\d+)$/i);          if (mm) return take(`ko-r16-${mm[1]}`, 'winner')
+  mm = name.match(/^Vencedor Quartas (\d+)$/i);          if (mm) return take(`ko-qf-${mm[1]}`, 'winner')
+  mm = name.match(/^Vencedor Semifinal (\d+)$/i);        if (mm) return take(`ko-sf-${mm[1]}`, 'winner')
+  mm = name.match(/^Perdedor Semifinal (\d+)$/i);        if (mm) return take(`ko-sf-${mm[1]}`, 'loser')
+  return null
+}
+
 export function BracketScreen() {
   const navigate = useNavigate()
   const me = useAuthStore(s => s.user)
@@ -84,6 +105,9 @@ export function BracketScreen() {
     for (const g of WC2026_GROUPS) map[g.id] = clinchedPositions(g, allMatches)
     return map
   }, [allMatches])
+
+  // Lookup por código — resolve os feeders de mata-mata (vencedor/perdedor) já jogados.
+  const byId = useMemo(() => new Map(allMatches.map(m => [m.id, m])), [allMatches])
 
   const col = TABS.find(t => t.key === tab) ?? TABS[0]
   const matches = useMemo(() =>
@@ -128,6 +152,7 @@ export function BracketScreen() {
                 pick={slotId ? picks[slotId] : undefined}
                 pred={predictions[m.id]}
                 clinched={clinched}
+                byId={byId}
                 onPalpitar={() => navigate(`/prediction/${m.id}`)}
               />
             )
@@ -138,11 +163,12 @@ export function BracketScreen() {
   )
 }
 
-function BracketCard({ m, pick, pred, clinched, onPalpitar }: {
+function BracketCard({ m, pick, pred, clinched, byId, onPalpitar }: {
   m: Match
   pick?: string
   pred?: { homeScore: number; awayScore: number }
   clinched: Clinched
+  byId: Map<string, Match>
   onPalpitar: () => void
 }) {
   const finished = m.status === 'finished'
@@ -184,8 +210,8 @@ function BracketCard({ m, pick, pred, clinched, onPalpitar }: {
       </div>
 
       <div className="px-3 py-2.5 space-y-2">
-        <BracketTeam team={m.home} score={showScore ? m.homeScore : null} winner={m.winner === m.home.code} clinched={clinched} />
-        <BracketTeam team={m.away} score={showScore ? m.awayScore : null} winner={m.winner === m.away.code} clinched={clinched} />
+        <BracketTeam team={m.home} score={showScore ? m.homeScore : null} winner={m.winner === m.home.code} clinched={clinched} byId={byId} />
+        <BracketTeam team={m.away} score={showScore ? m.awayScore : null} winner={m.winner === m.away.code} clinched={clinched} byId={byId} />
       </div>
 
       <div className="flex items-center justify-between border-t border-hairline px-3 py-1.5">
@@ -200,13 +226,14 @@ function BracketCard({ m, pick, pred, clinched, onPalpitar }: {
   )
 }
 
-function BracketTeam({ team, score, winner, clinched }: {
+function BracketTeam({ team, score, winner, clinched, byId }: {
   team: Match['home']
   score: number | null
   winner: boolean
   clinched: Clinched
+  byId: Map<string, Match>
 }) {
-  const resolved = team.code === 'TBD' ? resolveFeeder(team.name, clinched) : team
+  const resolved = team.code === 'TBD' ? (resolveFeeder(team.name, clinched) ?? resolveKoFeeder(team.name, byId)) : team
   const isReal = !!resolved && resolved.code !== 'TBD'
   const label = isReal ? resolved!.name : feederLabel(team.name)
   return (
