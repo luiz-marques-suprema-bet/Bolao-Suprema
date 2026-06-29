@@ -311,15 +311,26 @@ export async function markNotificationRead(notificationId: string) {
   return ok(true)
 }
 
+// Escapa uma célula de CSV: aspas/vírgula/;/quebra de linha viram campo entre
+// aspas; prefixo defensivo contra injeção de fórmula no Excel (=,+,-,@).
+function csvCell(value: unknown): string {
+  if (value == null) return ''
+  const s = String(value)
+  const safe = /^[=+\-@]/.test(s) ? `'${s}` : s
+  return /[",;\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
+}
+
 export function downloadCsv(filename: string, rows: Array<Record<string, unknown>>) {
   const headers = Array.from(rows.reduce((set, row) => {
     Object.keys(row).forEach(key => set.add(key))
     return set
   }, new Set<string>()))
-  const csv = [
-    headers.join(','),
-    ...rows.map(row => headers.map(h => JSON.stringify(row[h] ?? '')).join(',')),
-  ].join('\n')
+  const lines = [
+    headers.map(csvCell).join(','),
+    ...rows.map(row => headers.map(h => csvCell(row[h])).join(',')),
+  ]
+  // BOM (﻿) → Excel lê como UTF-8 e os acentos não viram mojibake. CRLF p/ Excel.
+  const csv = '﻿' + lines.join('\r\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

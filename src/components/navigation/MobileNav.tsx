@@ -25,13 +25,18 @@ export function MobileNav() {
   const { totalCount, hasUrgentPick } = useNavAlerts()
   const [espiadinhaSeen, markEspiadinhaSeen] = useSeenFlag(ESPIADINHA_NEW_KEY)
 
+  // Admin precisa alcançar o painel pelo celular (antes só existia no desktop).
+  const items = user?.isAdmin
+    ? [...NAV_ITEMS.slice(0, -1), { id: 'admin', label: 'ADMIN', icon: '⚙', path: '/admin' }, NAV_ITEMS[NAV_ITEMS.length - 1]]
+    : NAV_ITEMS
+
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-hairline bg-paper/95 shadow-[0_-16px_34px_rgba(0,0,0,0.18)] backdrop-blur-md"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="grid h-14 grid-cols-8">
-        {NAV_ITEMS.map((item) => {
+      <div className="grid h-14" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+        {items.map((item) => {
           const active = pathname === item.path
           const isProfile = item.id === 'profile'
           const showAlertBadge = item.id === 'alerts' && totalCount > 0
@@ -46,7 +51,7 @@ export function MobileNav() {
               }}
               className={cn(
                 'relative flex min-w-0 flex-col items-center justify-center gap-0.5 py-2.5 transition-all active:scale-90 active:opacity-60',
-                active ? 'text-ink' : 'text-ink-4'
+                active ? 'text-ink' : item.id === 'admin' ? 'text-red' : 'text-ink-4'
               )}
             >
               {isProfile && user ? (

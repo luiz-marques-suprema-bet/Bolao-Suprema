@@ -6,7 +6,6 @@ import { useMatchStore } from '@/stores/match.store'
 import { useIsDesktop } from '@/hooks/useBreakpoint'
 import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
 import { TEAMS } from '@/data/teams'
-import { POINT_RULES } from '@/types'
 import { supabase, isMockMode } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { formatMatchDateTime } from '@/lib/matchTime'
@@ -14,14 +13,24 @@ import {
   downloadCsv,
   settleMatchResult,
   adminUpdateMatchStatus,
-  adminBulkMatchStatus,
   adminDeletePrediction,
   adminSetUserRole,
-  fetchAuditLogs,
   fetchSystemHealth,
 } from '@/services/product'
-import { Tooltip } from '@/components/shared/Tooltip'
 import type { MarketStatus, MatchStatus, MatchStage } from '@/types'
+
+// Código técnico da partida (g-h-4, ko-r32-1…) → rótulo legível pro admin ver
+// nos palpites. Grupos mostram os times; mata-mata mostra a fase.
+const MATCH_LABEL: Record<string, string> = Object.fromEntries(
+  WC2026_MATCHES.map(m => {
+    const hasTeams = m.home.code !== 'TBD' && m.away.code !== 'TBD'
+    if (hasTeams) return [m.id, `${m.home.code} × ${m.away.code}${m.group ? ` · Grupo ${m.group}` : ''}`]
+    return [m.id, m.stageLabel ?? m.id]
+  }),
+)
+function matchLabel(code: string): string {
+  return MATCH_LABEL[code] ?? code
+}
 
 function marketStatusFor(status: MatchStatus): MarketStatus {
   if (status === 'locked') return 'locked'
@@ -305,52 +314,31 @@ function MatchRowAdmin({
   )
 }
 
-// ─── Bulk actions ─────────────────────────────────────────────────────────────
-
-async function openGroupMatches(groupCode: string, onAction: (msg: string, ok: boolean) => void) {
-  if (isMockMode) { onAction('Mock mode: ação não persiste', false); return }
-  const matchCodes = WC2026_MATCHES.filter(m => m.group === groupCode).map(m => m.id)
-  const result = await adminBulkMatchStatus('open', ['scheduled'], matchCodes)
-  if (result.error) onAction(`Erro: ${result.error}`, false)
-  else onAction(`✓ Partidas do Grupo ${groupCode} abertas`, true)
-}
-
-async function lockAllOpenMatches(onAction: (msg: string, ok: boolean) => void) {
-  if (isMockMode) { onAction('Mock mode: ação não persiste', false); return }
-  const result = await adminBulkMatchStatus('locked', ['open'])
-  if (result.error) onAction(`Erro: ${result.error}`, false)
-  else onAction(`✓ ${result.data ?? 0} partidas → BLOQUEADAS`, true)
-}
-
-async function openAllMatches(onAction: (msg: string, ok: boolean) => void) {
-  if (isMockMode) { onAction('Mock mode: ação não persiste', false); return }
-  const result = await adminBulkMatchStatus('open', ['scheduled', 'locked'])
-  if (result.error) onAction(`Erro: ${result.error}`, false)
-  else onAction(`✓ ${result.data ?? 0} partidas → ABERTAS`, true)
-}
-
 // ─── Export CSV ───────────────────────────────────────────────────────────────
 
 async function exportRankingCsv() {
-  const { data: users } = await supabase.from('users').select('id, first_name, last_name, dept, email')
+  const { data: users } = await supabase.from('users').select('id, first_name, last_name, dept, email, participant_status')
   const { data: pts } = await supabase.from('predictions').select('user_id, points_earned')
   if (!users || !pts) return
   const pointsMap: Record<string, number> = {}
-  for (const p of pts) {
+  const countMap: Record<string, number> = {}
+  for (const p of pts as Array<{ user_id: string; points_earned: number | null }>) {
     pointsMap[p.user_id] = (pointsMap[p.user_id] ?? 0) + (p.points_earned ?? 0)
+    countMap[p.user_id] = (countMap[p.user_id] ?? 0) + 1
   }
-  const rows = users
-    .map(u => ({ nome: `${u.first_name} ${u.last_name}`.trim(), dept: u.dept, email: u.email, pontos: pointsMap[u.id] ?? 0 }))
-    .sort((a, b) => b.pontos - a.pontos)
-    .map((r, i) => `${i + 1},${r.nome},${r.dept},${r.email},${r.pontos}`)
-  const csv = ['#,Nome,Departamento,Email,Pontos', ...rows].join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `ranking-bolao-suprema-${new Date().toISOString().slice(0, 10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  const ranked = (users as Array<{ id: string; first_name: string | null; last_name: string | null; dept: string | null; email: string; participant_status: string | null }>)
+    .map(u => ({
+      Nome: `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email,
+      Departamento: u.dept ?? '',
+      Email: u.email,
+      Status: u.participant_status ?? '',
+      Palpites: countMap[u.id] ?? 0,
+      Pontos: pointsMap[u.id] ?? 0,
+    }))
+    .sort((a, b) => b.Pontos - a.Pontos)
+    .map((r, i) => ({ '#': i + 1, ...r }))
+  // downloadCsv já cuida de BOM (acentos), escape e CRLF → abre limpo no Excel.
+  downloadCsv(`ranking-bolao-suprema-${new Date().toISOString().slice(0, 10)}.csv`, ranked)
 }
 
 // ─── KPI card ─────────────────────────────────────────────────────────────────
@@ -386,19 +374,26 @@ interface PredRow {
 
 function ParticipantsPanel({ onToast }: { onToast: (msg: string, ok: boolean) => void }) {
   const [participants, setParticipants] = useState<ParticipantRow[]>([])
+  const [pointsByUser, setPointsByUser] = useState<Record<string, number>>({})
   const [expanded, setExpanded] = useState<string | null>(null)
   const [preds, setPreds] = useState<PredRow[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [query, setQuery] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('users')
-      .select('id,first_name,last_name,dept,email,participant_status')
-      .order('first_name', { ascending: true })
-    if (error) onToast(`Erro ao carregar participantes: ${error.message}`, false)
-    setParticipants((data ?? []) as ParticipantRow[])
+    const [usersRes, ptsRes] = await Promise.all([
+      supabase.from('users').select('id,first_name,last_name,dept,email,participant_status').order('first_name', { ascending: true }),
+      supabase.from('predictions').select('user_id, points_earned'),
+    ])
+    if (usersRes.error) onToast(`Erro ao carregar participantes: ${usersRes.error.message}`, false)
+    setParticipants((usersRes.data ?? []) as ParticipantRow[])
+    const pts: Record<string, number> = {}
+    for (const p of (ptsRes.data ?? []) as Array<{ user_id: string; points_earned: number | null }>) {
+      pts[p.user_id] = (pts[p.user_id] ?? 0) + (p.points_earned ?? 0)
+    }
+    setPointsByUser(pts)
     setLoading(false)
   }, [onToast])
 
@@ -447,32 +442,58 @@ function ParticipantsPanel({ onToast }: { onToast: (msg: string, ok: boolean) =>
 
   const total = participants.length
   const blocked = participants.filter(p => p.participant_status === 'blocked').length
+  const fullName = (p: ParticipantRow) => [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email
+  const q = query.trim().toLowerCase()
+  const visible = participants
+    .filter(p => !q || `${fullName(p)} ${p.email} ${p.dept ?? ''}`.toLowerCase().includes(q))
+    .sort((a, b) => (pointsByUser[b.id] ?? 0) - (pointsByUser[a.id] ?? 0))
+
+  function exportCsv() {
+    const rows = [...participants]
+      .sort((a, b) => (pointsByUser[b.id] ?? 0) - (pointsByUser[a.id] ?? 0))
+      .map((p, i) => ({
+        '#': i + 1,
+        Nome: fullName(p),
+        Departamento: p.dept ?? '',
+        Email: p.email,
+        Status: p.participant_status ?? '',
+        Pontos: pointsByUser[p.id] ?? 0,
+      }))
+    downloadCsv(`participantes-bolao-suprema-${new Date().toISOString().slice(0, 10)}.csv`, rows)
+  }
 
   return (
     <section className="ui-panel mb-6">
       <div className="ui-panel-header flex items-center justify-between gap-3">
         <div>
           <div className="font-display text-xl">PARTICIPANTES</div>
-          <div className="font-mono text-[9px] text-paper/50">{total} cadastrados · {blocked} bloqueados</div>
+          <div className="font-mono text-[9px] text-paper/50">{total} cadastrados · {blocked} bloqueados · ordenados por pontos</div>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => downloadCsv(`participantes-${Date.now()}.csv`, participants as unknown as Array<Record<string, unknown>>)}
-            className="btn-ghost text-[9px]"
-          >
-            CSV ↓
-          </button>
+          <button onClick={exportCsv} className="btn-ghost text-[9px]">CSV ↓</button>
           <button disabled={busy || loading} onClick={load} className="btn-yellow text-[10px]">↺</button>
         </div>
+      </div>
+
+      <div className="px-4 py-3 border-b border-hairline">
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Buscar participante por nome, e-mail ou setor…"
+          className="w-full border-2 border-hairline bg-card px-3 py-2 font-mono text-[11px] outline-none focus:border-ink"
+        />
       </div>
 
       {loading && (
         <div className="px-4 py-6 font-mono text-[11px] text-ink-4 text-center animate-pulse">CARREGANDO…</div>
       )}
 
-      <div className="divide-y divide-hairline max-h-96 overflow-y-auto">
-        {participants.map(p => {
-          const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email
+      <div className="divide-y divide-hairline max-h-[460px] overflow-y-auto">
+        {!loading && visible.length === 0 && (
+          <div className="px-4 py-6 text-center font-mono text-[11px] text-ink-4">Nenhum participante encontrado.</div>
+        )}
+        {visible.map(p => {
+          const name = fullName(p)
           const isBlocked = p.participant_status === 'blocked'
           const isOpen = expanded === p.id
           return (
@@ -480,7 +501,7 @@ function ParticipantsPanel({ onToast }: { onToast: (msg: string, ok: boolean) =>
               <div className="flex items-center gap-3 px-4 py-3">
                 <div className="flex-1 min-w-0">
                   <div className="font-mono text-[11px] font-bold truncate">{name}</div>
-                  <div className="font-mono text-[9px] text-ink-4 truncate">{p.dept || '—'}</div>
+                  <div className="font-mono text-[9px] text-ink-4 truncate">{p.dept || '—'} · {pointsByUser[p.id] ?? 0} pts</div>
                 </div>
                 {isBlocked && (
                   <span className="font-mono text-[8px] bg-red/10 text-red px-2 py-0.5 flex-shrink-0 border border-red/30">
@@ -516,7 +537,7 @@ function ParticipantsPanel({ onToast }: { onToast: (msg: string, ok: boolean) =>
                     preds.map(pred => (
                       <div key={pred.id} className="flex items-center justify-between gap-3">
                         <span className="font-mono text-[10px]">
-                          <span className="font-bold">{pred.match_code}</span>
+                          <span className="font-bold">{matchLabel(pred.match_code)}</span>
                           {' '}· {pred.home_score ?? '?'}×{pred.away_score ?? '?'}
                           {pred.points_earned != null && (
                             <span className="text-green ml-1">+{pred.points_earned}pts</span>
@@ -972,26 +993,58 @@ function AdminTabBar({ active, onChange }: { active: AdminTab; onChange: (tab: A
   )
 }
 
+// Rótulos legíveis pras ações de auditoria que importam pro admin.
+const AUDIT_LABELS: Record<string, string> = {
+  match_settled: 'Resultado apurado',
+  match_status_updated: 'Status de jogo alterado',
+  knockout_materialized: 'Mata-mata materializado',
+  knockout_advanced: 'Avanço no mata-mata',
+  user_role_updated: 'Papel alterado',
+  participant_removed: 'Participante removido',
+  participant_status_updated: 'Bloqueio/desbloqueio',
+  prediction_deleted: 'Palpite removido (admin)',
+}
+// Ruído: cada palpite/perfil salvo gera log; some pra auditoria mostrar o que importa.
+const AUDIT_NOISE = ['prediction_created', 'prediction_updated', 'general_picks_updated', 'profile_updated', 'ranking_refreshed']
+
+interface AuditRow { id: string; action: string; entity_type: string | null; entity_id: string | null; created_at: string; actor: string | null }
+
 function AdminHealthPanel() {
   const [health, setHealth] = useState<Array<{ label: string; value: string | number; sub: string }>>([])
-  const [logs, setLogs] = useState<Array<{ id?: string; action?: string; entity_type?: string; entity_id?: string; created_at?: string }>>([])
+  const [logs, setLogs] = useState<AuditRow[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     setLoading(true)
     const [healthRes, auditRes] = await Promise.all([
       fetchSystemHealth(),
-      fetchAuditLogs(12),
+      supabase
+        .from('audit_logs')
+        .select('id, action, entity_type, entity_id, created_at, actor_user_id')
+        .not('action', 'in', `(${AUDIT_NOISE.join(',')})`)
+        .order('created_at', { ascending: false })
+        .limit(30),
     ])
     if (healthRes.data) {
       setHealth([
-        { label: 'USUARIOS', value: healthRes.data.usersTotal, sub: `${healthRes.data.usersPending} pendentes` },
+        { label: 'USUÁRIOS', value: healthRes.data.usersTotal, sub: `${healthRes.data.usersPending} pendentes` },
         { label: 'PALPITES', value: healthRes.data.predictionsTotal, sub: 'total salvo' },
         { label: 'MERCADOS ABERTOS', value: healthRes.data.marketsOpen, sub: `${healthRes.data.marketsLocked} travados` },
         { label: 'SEM KICKOFF', value: healthRes.data.matchesWithoutKickoff, sub: 'deve ser 0 em jogos reais' },
       ])
     }
-    setLogs((auditRes.data ?? []) as Array<{ id?: string; action?: string; entity_type?: string; entity_id?: string; created_at?: string }>)
+    const raw = (auditRes.data ?? []) as Array<{ id: string; action: string; entity_type: string | null; entity_id: string | null; created_at: string; actor_user_id: string | null }>
+    const actorIds = Array.from(new Set(raw.map(l => l.actor_user_id).filter(Boolean))) as string[]
+    let names: Record<string, string> = {}
+    if (actorIds.length) {
+      const { data: us } = await supabase.from('users').select('id, first_name, last_name').in('id', actorIds)
+      names = Object.fromEntries(((us ?? []) as Array<{ id: string; first_name: string | null; last_name: string | null }>)
+        .map(u => [u.id, `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim()]))
+    }
+    setLogs(raw.map(l => ({
+      id: l.id, action: l.action, entity_type: l.entity_type, entity_id: l.entity_id, created_at: l.created_at,
+      actor: l.actor_user_id ? (names[l.actor_user_id] || null) : null,
+    })))
     setLoading(false)
   }, [])
 
@@ -1003,7 +1056,7 @@ function AdminHealthPanel() {
         <div className="ui-panel-header flex items-center justify-between gap-3">
           <div>
             <div className="font-display text-xl">SAÚDE OPERACIONAL</div>
-            <div className="font-mono text-[9px] text-paper/50">visao rapida do backend e trilha de auditoria</div>
+            <div className="font-mono text-[9px] text-paper/50">visão rápida do backend</div>
           </div>
           <button disabled={loading} onClick={load} className="btn-yellow text-[10px]">↺</button>
         </div>
@@ -1020,22 +1073,24 @@ function AdminHealthPanel() {
 
       <div className="ui-panel">
         <div className="ui-panel-header">
-          <div className="font-display text-xl">AUDITORIA RECENTE</div>
+          <div className="font-display text-xl">ATIVIDADE DO ADMIN</div>
+          <div className="font-mono text-[9px] text-paper/50">resultados, papéis e bloqueios — sem o ruído dos palpites</div>
         </div>
         {logs.length === 0 ? (
-          <div className="px-4 py-5 font-mono text-[11px] text-ink-4">Nenhum evento recente carregado.</div>
+          <div className="px-4 py-5 font-mono text-[11px] text-ink-4">Nenhuma ação registrada ainda.</div>
         ) : (
-          <div className="divide-y divide-hairline">
-            {logs.map((log, index) => (
-              <div key={log.id ?? index} className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="divide-y divide-hairline max-h-[420px] overflow-y-auto">
+            {logs.map(log => (
+              <div key={log.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                 <div className="min-w-0">
-                  <div className="truncate font-mono text-[11px] font-bold">{log.action ?? 'evento'}</div>
+                  <div className="truncate font-mono text-[11px] font-bold">{AUDIT_LABELS[log.action] ?? log.action}</div>
                   <div className="truncate font-mono text-[9px] text-ink-4">
-                    {log.entity_type ?? 'sistema'} {log.entity_id ? `- ${log.entity_id}` : ''}
+                    {log.entity_type === 'match' && log.entity_id ? matchLabel(log.entity_id) : (log.entity_id ?? log.entity_type ?? 'sistema')}
+                    {log.actor ? ` · por ${log.actor}` : ''}
                   </div>
                 </div>
                 <span className="shrink-0 font-mono text-[9px] text-ink-4">
-                  {log.created_at ? new Date(log.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                  {new Date(log.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             ))}
@@ -1104,15 +1159,6 @@ function AdminMobile() {
 
       {activeTab === 'operation' && (
         <>
-          <div className="px-4 pt-3 space-y-2">
-            <button onClick={() => openAllMatches(showToast)} className="btn-ghost w-full justify-center text-[10px] border-green/60 text-green">
-              ABRIR TODAS AS APOSTAS
-            </button>
-            <button onClick={() => lockAllOpenMatches(showToast)} className="btn-ghost w-full justify-center text-[10px]">
-              BLOQUEAR TODAS AS APOSTAS ABERTAS
-            </button>
-          </div>
-
           <div className="px-4 pt-3">
             <MatchFilterControls
               filter={filter} setFilter={setFilter}
@@ -1167,15 +1213,7 @@ function AdminDesktop() {
             <Eyebrow>ADMIN · BOLÃO DA SUPREMA</Eyebrow>
             <h1 className="font-display text-4xl mt-1">PAINEL DE CONTROLE</h1>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => exportRankingCsv()} className="btn-ghost">EXPORTAR CSV ↓</button>
-            <button onClick={() => openAllMatches(showToast)} className="btn-ghost border-green/60 text-green">
-              ABRIR TODAS
-            </button>
-            <button onClick={() => lockAllOpenMatches(showToast)} className="btn-ghost border-yellow/60">
-              BLOQUEAR TODAS
-            </button>
-          </div>
+          <button onClick={() => exportRankingCsv()} className="btn-ghost">EXPORTAR RANKING (CSV) ↓</button>
         </div>
 
         {toast && (
@@ -1208,113 +1246,44 @@ function AdminDesktop() {
         {activeTab === 'health' && <AdminHealthPanel />}
 
         {activeTab === 'operation' && (
-        <div className="grid grid-cols-[1.6fr_1fr] gap-5">
-          <div className="space-y-4">
-            <div className="ui-panel">
-              <div className="px-4 py-3 border-b border-hairline flex items-center justify-between gap-3">
-                <span className="font-display text-lg">PARTIDAS</span>
-                <span className="font-mono text-[10px] text-ink-3">{filtered.length} no filtro</span>
-              </div>
-              <div className="px-4 py-3 border-b border-hairline">
-                <MatchFilterControls
-                  filter={filter} setFilter={setFilter}
-                  stageFilter={stageFilter} setStageFilter={setStageFilter}
-                  selectedGroup={selectedGroup} setSelectedGroup={setSelectedGroup}
-                  search={search} setSearch={setSearch}
-                />
-              </div>
+          <div className="ui-panel">
+            <div className="px-4 py-3 border-b border-hairline flex items-center justify-between gap-3">
+              <span className="font-display text-lg">PARTIDAS</span>
+              <span className="font-mono text-[10px] text-ink-3">{filtered.length} no filtro</span>
+            </div>
+            <div className="px-4 py-3 border-b border-hairline">
+              <MatchFilterControls
+                filter={filter} setFilter={setFilter}
+                stageFilter={stageFilter} setStageFilter={setStageFilter}
+                selectedGroup={selectedGroup} setSelectedGroup={setSelectedGroup}
+                search={search} setSearch={setSearch}
+              />
+            </div>
 
-              <div className="divide-y divide-hairline max-h-[560px] overflow-y-auto">
-                {filtered.length === 0 ? (
-                  <div className="px-5 py-8 text-center font-mono text-[11px] text-ink-4">
-                    Nenhuma partida com esse filtro
-                  </div>
-                ) : (
-                  filtered.map(m => (
-                    <MatchRowAdmin
-                      key={m.id}
-                      matchCode={m.id}
-                      homeCode={m.home.code}
-                      awayCode={m.away.code}
-                      dateStr={formatMatchDateTime(m)}
-                      group={m.group}
-                      currentStatus={m.status}
-                      currentHomeScore={m.homeScore}
-                      currentAwayScore={m.awayScore}
-                      stage={m.stage}
-                      onAction={showToast}
-                    />
-                  ))
-                )}
-              </div>
+            <div className="divide-y divide-hairline max-h-[620px] overflow-y-auto">
+              {filtered.length === 0 ? (
+                <div className="px-5 py-8 text-center font-mono text-[11px] text-ink-4">
+                  Nenhuma partida com esse filtro
+                </div>
+              ) : (
+                filtered.map(m => (
+                  <MatchRowAdmin
+                    key={m.id}
+                    matchCode={m.id}
+                    homeCode={m.home.code}
+                    awayCode={m.away.code}
+                    dateStr={formatMatchDateTime(m)}
+                    group={m.group}
+                    currentStatus={m.status}
+                    currentHomeScore={m.homeScore}
+                    currentAwayScore={m.awayScore}
+                    stage={m.stage}
+                    onAction={showToast}
+                  />
+                ))
+              )}
             </div>
           </div>
-
-          <div className="space-y-4">
-            <div className="ui-card p-4">
-              <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">AÇÕES POR GRUPO</p>
-              <div className="grid grid-cols-3 gap-1.5 mb-3">
-                {WC2026_GROUPS.map(g => (
-                  <button
-                    key={g.id}
-                    onClick={() => openGroupMatches(g.id, showToast)}
-                    className="btn-ghost text-[9px] px-2 py-1.5"
-                  >
-                    ABRIR GRUPO {g.id}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => openAllMatches(showToast)}
-                className="btn-ghost w-full justify-center text-[10px] border-green/60 text-green mb-2"
-              >
-                ABRIR TODAS AS APOSTAS
-              </button>
-              <button
-                onClick={() => lockAllOpenMatches(showToast)}
-                className="btn-ghost w-full justify-center text-[10px] border-yellow/60"
-              >
-                BLOQUEAR TODAS AS APOSTAS ABERTAS
-              </button>
-            </div>
-
-            <div className="ui-card p-4">
-              <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">DATAS-CHAVE</p>
-              <div className="space-y-2">
-                {[
-                  { date: '11 JUN', label: 'Início fase de grupos' },
-                  { date: '28 JUN', label: 'Fase de 32' },
-                  { date: '4 JUL',  label: 'Oitavas de final' },
-                  { date: '9 JUL',  label: 'Quartas de final' },
-                  { date: '14 JUL', label: 'Semifinais' },
-                  { date: '18 JUL', label: '3° lugar' },
-                  { date: '19 JUL', label: 'FINAL' },
-                ].map(d => (
-                  <div key={d.date} className="flex items-center gap-3">
-                    <span className="font-display text-base w-16 flex-shrink-0">{d.date}</span>
-                    <span className="font-mono text-[11px] text-ink-3">{d.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="ui-card p-4">
-              <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">TABELA DE PONTUAÇÃO</p>
-              <div className="space-y-1.5">
-                {POINT_RULES.map(r => (
-                  <div key={r.id} className="flex items-center gap-2">
-                    <span className="font-display text-lg text-green w-7 flex-shrink-0">+{r.points}</span>
-                    <Tooltip content={r.description} side="top" maxWidth={340}>
-                      <span className="font-mono text-[10px] text-ink-3 cursor-default underline decoration-dotted decoration-ink-4 underline-offset-2">
-                        {r.label}
-                      </span>
-                    </Tooltip>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
         )}
       </div>
     </div>
