@@ -334,7 +334,7 @@ const SCORING_SECTIONS = [
     rules: [
       { pts: 12, label: 'CRAVADA: placar exato + quem passa', tip: 'Acertou o placar certinho E quem se classifica. A cravada só conta com o classificado certo.' },
       { pts: 8,  label: 'Resultado + gols do vencedor + quem passa', tip: 'Acertou o resultado, os gols do time vencedor E quem avança.' },
-      { pts: 5,  label: 'Resultado certo + quem passa',               tip: 'Acertou quem venceu E quem se classifica.' },
+      { pts: 5,  label: 'Resultado certo + quem passa',               tip: 'Acertou o resultado — vitória, empate ou derrota — E quem se classifica.' },
       { pts: 3,  label: 'Só acertou quem passa',                      tip: 'Errou o placar, mas cravou quem se classifica.' },
       { pts: 2,  label: 'Cravou o placar, mas errou quem passa',      tip: 'Consolação: acertou o placar, mas o outro time se classificou.' },
     ],

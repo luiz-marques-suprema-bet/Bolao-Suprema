@@ -173,12 +173,25 @@ export function ResenhaScreen() {
   const endRef = useRef<HTMLDivElement | null>(null)
   const initialScrollDone = useRef(false)
   const nearBottomRef = useRef(true)
+  const [showJump, setShowJump] = useState(false)
 
   // Mantém registro de "o usuário está coladinho no fim?" — define se mensagens
   // novas devem rolar sozinhas (sim, se está no fim) ou respeitar a leitura dele.
+  // Também controla o botão "↓ recentes" (aparece quando subiu no histórico).
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
-    if (el) nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 160
+    if (!el) return
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 160
+    nearBottomRef.current = near
+    setShowJump(!near)
+  }, [])
+
+  const jumpToRecent = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    nearBottomRef.current = true
+    setShowJump(false)
   }, [])
   const actionButtonRef = useRef<HTMLButtonElement | null>(null)
   const actionPanelRef = useRef<HTMLDivElement | null>(null)
@@ -570,6 +583,7 @@ export function ResenhaScreen() {
             )}
           </AnimatePresence>
 
+          <div className="relative flex min-h-0 flex-1 flex-col">
           <div ref={scrollRef} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2.5 sm:px-4 sm:py-4">
            <div ref={contentRef}>
             {!isLoaded && <LoadingChat />}
@@ -605,6 +619,13 @@ export function ResenhaScreen() {
             </AnimatePresence>
             <div ref={endRef} />
            </div>
+          </div>
+          {showJump && (
+            <button type="button" onClick={jumpToRecent} aria-label="Ir para as mensagens mais recentes"
+              className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 border-2 border-ink bg-paper px-3 py-1.5 font-mono text-[10px] font-bold tracking-eyebrow shadow-card transition-colors hover:bg-surface-hover active:scale-95">
+              ↓ RECENTES
+            </button>
+          )}
           </div>
 
           <footer className="shrink-0 border-t border-hairline bg-paper/95 shadow-[0_-6px_16px_rgba(0,0,0,0.06)] backdrop-blur-sm">
