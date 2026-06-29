@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Flag } from '@/components/shared/Flag'
@@ -1585,13 +1585,27 @@ export function PredictionScreen() {
   const { matchId } = useParams<{ matchId?: string }>()
   const location = useLocation()
   const rawTab = (location.state as { tab?: string } | null)?.tab
+  const allMatches = useMatchesWithStatus(WC2026_MATCHES)
   // Vindo de um jogo específico (/prediction/:matchId), abre na aba certa:
   // mata-mata se o código for ko-*, senão grupos.
   const initialTab: PredTab = rawTab === 'champion' ? 'champion'
     : (rawTab === 'knockout' || matchId?.startsWith('ko-')) ? 'knockout'
     : 'groups'
   const [tab, setTab] = useState<PredTab>(initialTab)
-  const allMatches = useMatchesWithStatus(WC2026_MATCHES)
+
+  // Se a fase de grupos já acabou, abre direto no MATA-MATA (evita um clique).
+  // Só como DEFAULT: aba explícita (state.tab) ou jogo específico (ko-*) têm
+  // prioridade, e não sobrescreve depois que a pessoa troca de aba. Espera os
+  // dados do banco (o estático não sabe que os grupos encerraram).
+  const groupsDone = useMemo(() => {
+    const groups = allMatches.filter(m => m.stage === 'group')
+    return groups.length > 0 && groups.every(m => m.status === 'finished')
+  }, [allMatches])
+  const autoDefaulted = useRef(Boolean(rawTab || matchId))
+  useEffect(() => {
+    if (autoDefaulted.current) return
+    if (groupsDone) { autoDefaulted.current = true; setTab('knockout') }
+  }, [groupsDone])
 
   const initialGroup = useMemo(() => {
     if (!matchId) return 'A'
