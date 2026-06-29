@@ -13,7 +13,6 @@ import {
   downloadCsv,
   settleMatchResult,
   adminUpdateMatchStatus,
-  adminDeletePrediction,
   adminSetUserRole,
   fetchSystemHealth,
 } from '@/services/product'
@@ -317,28 +316,26 @@ function MatchRowAdmin({
 // ─── Export CSV ───────────────────────────────────────────────────────────────
 
 async function exportRankingCsv() {
-  const { data: users } = await supabase.from('users').select('id, first_name, last_name, dept, email, participant_status')
-  const { data: pts } = await supabase.from('predictions').select('user_id, points_earned')
-  if (!users || !pts) return
-  const pointsMap: Record<string, number> = {}
-  const countMap: Record<string, number> = {}
-  for (const p of pts as Array<{ user_id: string; points_earned: number | null }>) {
-    pointsMap[p.user_id] = (pointsMap[p.user_id] ?? 0) + (p.points_earned ?? 0)
-    countMap[p.user_id] = (countMap[p.user_id] ?? 0) + 1
-  }
-  const ranked = (users as Array<{ id: string; first_name: string | null; last_name: string | null; dept: string | null; email: string; participant_status: string | null }>)
-    .map(u => ({
-      Nome: `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email,
-      Departamento: u.dept ?? '',
-      Email: u.email,
-      Status: u.participant_status ?? '',
-      Palpites: countMap[u.id] ?? 0,
-      Pontos: pointsMap[u.id] ?? 0,
+  // Exporta da MESMA fonte do ranking que os jogadores veem (current_ranking):
+  // só ativos, com a pontuação oficial (jogos + especiais + mata-mata) e os
+  // desempates. Antes somava predictions de TODOS os usuários (incl. pendentes/
+  // bloqueados) → não batia com o ranking.
+  const { data } = await supabase
+    .from('current_ranking')
+    .select('rank, first_name, last_name, dept, pts, correct, exact_score')
+    .order('rank', { ascending: true })
+  if (!data) return
+  const rows = (data as Array<{ rank: number; first_name: string | null; last_name: string | null; dept: string | null; pts: number; correct: number; exact_score: number }>)
+    .map(r => ({
+      '#': r.rank,
+      Nome: `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim(),
+      Setor: r.dept ?? '',
+      Pontos: r.pts,
+      Acertos: r.correct,
+      Cravadas: r.exact_score,
     }))
-    .sort((a, b) => b.Pontos - a.Pontos)
-    .map((r, i) => ({ '#': i + 1, ...r }))
   // downloadCsv já cuida de BOM (acentos), escape e CRLF → abre limpo no Excel.
-  downloadCsv(`ranking-bolao-suprema-${new Date().toISOString().slice(0, 10)}.csv`, ranked)
+  downloadCsv(`ranking-bolao-suprema-${new Date().toISOString().slice(0, 10)}.csv`, rows)
 }
 
 // ─── KPI card ─────────────────────────────────────────────────────────────────
@@ -355,13 +352,30 @@ function KpiCard({ label, value, sub }: { label: string; value: number | string;
 
 // ─── Participants Panel ────────────────────────────────────────────────────────
 
-interface ParticipantRow {
+interface PersonRow {
   id: string
   first_name: string | null
   last_name: string | null
   dept: string | null
   email: string
   participant_status: string | null
+  is_admin: boolean
+  is_marketing: boolean
+  is_owner: boolean
+}
+
+interface RankStat { rank: number; pts: number; correct: number; exact_score: number }
+
+interface MatchResult {
+  match_code: string
+  home_code: string | null
+  away_code: string | null
+  home_score: number | null
+  away_score: number | null
+  winner: string | null
+  stage: string
+  group_code: string | null
+  kickoff_utc: string | null
 }
 
 interface PredRow {
@@ -372,194 +386,298 @@ interface PredRow {
   points_earned: number | null
 }
 
-function ParticipantsPanel({ onToast }: { onToast: (msg: string, ok: boolean) => void }) {
-  const [participants, setParticipants] = useState<ParticipantRow[]>([])
-  const [pointsByUser, setPointsByUser] = useState<Record<string, number>>({})
-  const [expanded, setExpanded] = useState<string | null>(null)
-  const [preds, setPreds] = useState<PredRow[]>([])
+const personName = (p: PersonRow) => [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email
+
+function PeoplePanel({ onToast }: { onToast: (msg: string, ok: boolean) => void }) {
+  const me = useAuthStore(s => s.user)
+  const isOwner = me?.isOwner ?? false
+  const [people, setPeople] = useState<PersonRow[]>([])
+  const [ranks, setRanks] = useState<Record<string, RankStat>>({})
+  const [results, setResults] = useState<Record<string, MatchResult>>({})
   const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [usersRes, ptsRes] = await Promise.all([
-      supabase.from('users').select('id,first_name,last_name,dept,email,participant_status').order('first_name', { ascending: true }),
-      supabase.from('predictions').select('user_id, points_earned'),
+    const [usersRes, rankRes, matchRes] = await Promise.all([
+      supabase.from('users').select('id,first_name,last_name,dept,email,participant_status,is_admin,is_marketing,is_owner').order('first_name', { ascending: true }),
+      supabase.from('current_ranking').select('user_id, rank, pts, correct, exact_score'),
+      supabase.from('matches').select('match_code,home_code,away_code,home_score,away_score,winner,stage,group_code,kickoff_utc'),
     ])
     if (usersRes.error) onToast(`Erro ao carregar participantes: ${usersRes.error.message}`, false)
-    setParticipants((usersRes.data ?? []) as ParticipantRow[])
-    const pts: Record<string, number> = {}
-    for (const p of (ptsRes.data ?? []) as Array<{ user_id: string; points_earned: number | null }>) {
-      pts[p.user_id] = (pts[p.user_id] ?? 0) + (p.points_earned ?? 0)
+    setPeople((usersRes.data ?? []) as PersonRow[])
+    const rk: Record<string, RankStat> = {}
+    for (const r of (rankRes.data ?? []) as Array<{ user_id: string; rank: number; pts: number; correct: number; exact_score: number }>) {
+      rk[r.user_id] = { rank: r.rank, pts: r.pts, correct: r.correct, exact_score: r.exact_score }
     }
-    setPointsByUser(pts)
+    setRanks(rk)
+    const rs: Record<string, MatchResult> = {}
+    for (const m of (matchRes.data ?? []) as MatchResult[]) rs[m.match_code] = m
+    setResults(rs)
     setLoading(false)
   }, [onToast])
 
   useEffect(() => { if (!isMockMode) load() }, [load])
 
-  async function toggleBlock(p: ParticipantRow) {
-    setBusy(true)
+  const ptsOf = (id: string) => ranks[id]?.pts ?? 0
+  const q = query.trim().toLowerCase()
+  const visible = people
+    .filter(p => !q || `${personName(p)} ${p.email} ${p.dept ?? ''}`.toLowerCase().includes(q))
+    .sort((a, b) => ptsOf(b.id) - ptsOf(a.id))
+  const selected = people.find(p => p.id === selectedId) ?? null
+  const total = people.length
+  const blocked = people.filter(p => p.participant_status === 'blocked').length
+
+  async function toggleBlock(p: PersonRow) {
+    setBusy(p.id + 'block')
     const newStatus = p.participant_status === 'blocked' ? 'active' : 'blocked'
     const { error } = await supabase.rpc('update_participant_status', { p_user_id: p.id, p_status: newStatus })
-    if (error) { onToast(`Erro: ${error.message}`, false); setBusy(false); return }
-    const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email
-    onToast(`✓ ${name} → ${newStatus === 'blocked' ? 'BLOQUEADO' : 'DESBLOQUEADO'}`, true)
-    await load()
-    setBusy(false)
+    if (error) onToast(`Erro: ${error.message}`, false)
+    else { onToast(`✓ ${personName(p)} → ${newStatus === 'blocked' ? 'BLOQUEADO' : 'ATIVO'}`, true); await load() }
+    setBusy(null)
   }
 
-  async function loadPreds(userId: string) {
-    if (expanded === userId) { setExpanded(null); setPreds([]); return }
-    const { data } = await supabase
-      .from('predictions')
-      .select('id,match_code,home_score,away_score,points_earned')
-      .eq('user_id', userId)
-      .order('match_code')
-    setPreds((data ?? []) as PredRow[])
-    setExpanded(userId)
+  async function toggleRole(p: PersonRow, field: 'is_admin' | 'is_marketing') {
+    if (!isOwner) { onToast('Apenas o proprietário pode alterar papéis.', false); return }
+    setBusy(p.id + field)
+    const res = await adminSetUserRole(p.id, field === 'is_admin' ? { isAdmin: !p.is_admin } : { isMarketing: !p.is_marketing })
+    if (res.error) onToast(`Erro: ${res.error}`, false)
+    else { onToast('✓ Papel atualizado', true); await load() }
+    setBusy(null)
   }
-
-  async function undoPred(predId: string) {
-    setBusy(true)
-    const result = await adminDeletePrediction(predId)
-    if (result.error) {
-      onToast(`Erro ao desfazer palpite: ${result.error}`, false)
-    } else {
-      onToast('✓ Palpite removido', true)
-      if (expanded) {
-        const { data } = await supabase
-          .from('predictions')
-          .select('id,match_code,home_score,away_score,points_earned')
-          .eq('user_id', expanded)
-          .order('match_code')
-        setPreds((data ?? []) as PredRow[])
-      }
-    }
-    setBusy(false)
-  }
-
-  const total = participants.length
-  const blocked = participants.filter(p => p.participant_status === 'blocked').length
-  const fullName = (p: ParticipantRow) => [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email
-  const q = query.trim().toLowerCase()
-  const visible = participants
-    .filter(p => !q || `${fullName(p)} ${p.email} ${p.dept ?? ''}`.toLowerCase().includes(q))
-    .sort((a, b) => (pointsByUser[b.id] ?? 0) - (pointsByUser[a.id] ?? 0))
 
   function exportCsv() {
-    const rows = [...participants]
-      .sort((a, b) => (pointsByUser[b.id] ?? 0) - (pointsByUser[a.id] ?? 0))
-      .map((p, i) => ({
-        '#': i + 1,
-        Nome: fullName(p),
-        Departamento: p.dept ?? '',
+    const rows = [...people]
+      .sort((a, b) => ptsOf(b.id) - ptsOf(a.id))
+      .map(p => ({
+        Nome: personName(p),
+        Setor: p.dept ?? '',
         Email: p.email,
         Status: p.participant_status ?? '',
-        Pontos: pointsByUser[p.id] ?? 0,
+        Pontos: ranks[p.id]?.pts ?? 0,
+        Acertos: ranks[p.id]?.correct ?? 0,
       }))
     downloadCsv(`participantes-bolao-suprema-${new Date().toISOString().slice(0, 10)}.csv`, rows)
   }
 
   return (
-    <section className="ui-panel mb-6">
-      <div className="ui-panel-header flex items-center justify-between gap-3">
-        <div>
-          <div className="font-display text-xl">PARTICIPANTES</div>
-          <div className="font-mono text-[9px] text-paper/50">{total} cadastrados · {blocked} bloqueados · ordenados por pontos</div>
+    <section className="grid gap-4 lg:grid-cols-[330px_1fr]">
+      {/* Lista (mestre) */}
+      <div className="ui-panel flex flex-col">
+        <div className="ui-panel-header flex items-center justify-between gap-3">
+          <div>
+            <div className="font-display text-lg">PARTICIPANTES</div>
+            <div className="font-mono text-[9px] text-paper/55">{total} · {blocked} bloqueados</div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={exportCsv} className="btn-ghost text-[9px]">CSV ↓</button>
+            <button disabled={loading} onClick={load} className="btn-yellow text-[10px]">↺</button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={exportCsv} className="btn-ghost text-[9px]">CSV ↓</button>
-          <button disabled={busy || loading} onClick={load} className="btn-yellow text-[10px]">↺</button>
+        <div className="border-b border-hairline p-3">
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar por nome, e-mail ou setor…"
+            className="w-full border-2 border-hairline bg-card px-3 py-2 font-mono text-[11px] outline-none focus:border-ink" />
         </div>
-      </div>
-
-      <div className="px-4 py-3 border-b border-hairline">
-        <input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Buscar participante por nome, e-mail ou setor…"
-          className="w-full border-2 border-hairline bg-card px-3 py-2 font-mono text-[11px] outline-none focus:border-ink"
-        />
-      </div>
-
-      {loading && (
-        <div className="px-4 py-6 font-mono text-[11px] text-ink-4 text-center animate-pulse">CARREGANDO…</div>
-      )}
-
-      <div className="divide-y divide-hairline max-h-[460px] overflow-y-auto">
-        {!loading && visible.length === 0 && (
-          <div className="px-4 py-6 text-center font-mono text-[11px] text-ink-4">Nenhum participante encontrado.</div>
-        )}
-        {visible.map(p => {
-          const name = fullName(p)
-          const isBlocked = p.participant_status === 'blocked'
-          const isOpen = expanded === p.id
-          return (
-            <div key={p.id}>
-              <div className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <div className="font-mono text-[11px] font-bold truncate">{name}</div>
-                  <div className="font-mono text-[9px] text-ink-4 truncate">{p.dept || '—'} · {pointsByUser[p.id] ?? 0} pts</div>
-                </div>
-                {isBlocked && (
-                  <span className="font-mono text-[8px] bg-red/10 text-red px-2 py-0.5 flex-shrink-0 border border-red/30">
-                    BLOQUEADO
+        <div className="max-h-[200px] divide-y divide-hairline overflow-y-auto lg:max-h-[560px]">
+          {loading && <div className="px-4 py-6 text-center font-mono text-[11px] text-ink-4 animate-pulse">CARREGANDO…</div>}
+          {!loading && visible.length === 0 && <div className="px-4 py-6 text-center font-mono text-[11px] text-ink-4">Ninguém encontrado.</div>}
+          {visible.map(p => {
+            const sel = p.id === selectedId
+            const isBlocked = p.participant_status === 'blocked'
+            return (
+              <button key={p.id} onClick={() => setSelectedId(p.id)}
+                className={cn('flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors', sel ? 'bg-ink text-paper' : 'hover:bg-surface-hover')}>
+                <span className={cn('w-7 flex-none text-right font-display text-[15px] tabular-nums', sel ? 'text-yellow' : 'text-ink-4')}>{ranks[p.id]?.rank ?? '—'}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 truncate font-mono text-[11px] font-bold">
+                    {personName(p)}
+                    {isBlocked && <span className={cn('h-1.5 w-1.5 flex-none rounded-full', sel ? 'bg-red/80' : 'bg-red')} title="bloqueado" />}
                   </span>
-                )}
-                <div className="flex gap-1 flex-shrink-0">
-                  <button
-                    disabled={busy}
-                    onClick={() => toggleBlock(p)}
-                    className={cn(
-                      'font-mono text-[8px] border px-2 py-1 transition-colors hover:bg-yellow',
-                      isBlocked ? 'border-green/60 text-green' : 'border-red/40 text-red/80'
-                    )}
-                  >
-                    {isBlocked ? 'DESBLOQUEAR' : 'BLOQUEAR'}
-                  </button>
-                  <button
-                    disabled={busy}
-                    onClick={() => loadPreds(p.id)}
-                    className="font-mono text-[8px] border border-hairline px-2 py-1 hover:bg-surface-hover transition-colors"
-                  >
-                    {isOpen ? '✕' : 'PALPITES'}
-                  </button>
-                </div>
-              </div>
+                  <span className={cn('block truncate font-mono text-[9px]', sel ? 'text-paper/55' : 'text-ink-4')}>{p.dept || '—'}</span>
+                </span>
+                <span className="font-display text-[16px] tabular-nums">{ranks[p.id]?.pts ?? 0}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-              {isOpen && (
-                <div className="bg-paper-deep px-4 py-3 border-t border-hairline space-y-1.5">
-                  {preds.length === 0 ? (
-                    <div className="font-mono text-[10px] text-ink-4">Nenhum palpite encontrado.</div>
-                  ) : (
-                    preds.map(pred => (
-                      <div key={pred.id} className="flex items-center justify-between gap-3">
-                        <span className="font-mono text-[10px]">
-                          <span className="font-bold">{matchLabel(pred.match_code)}</span>
-                          {' '}· {pred.home_score ?? '?'}×{pred.away_score ?? '?'}
-                          {pred.points_earned != null && (
-                            <span className="text-green ml-1">+{pred.points_earned}pts</span>
-                          )}
-                        </span>
-                        <button
-                          disabled={busy}
-                          onClick={() => undoPred(pred.id)}
-                          className="font-mono text-[8px] text-red border border-red/30 px-2 py-0.5 hover:bg-red/10 transition-colors flex-shrink-0"
-                        >
-                          DESFAZER
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })}
+      {/* Detalhe */}
+      <div className="ui-panel">
+        {!selected ? (
+          <div className="flex h-full min-h-[260px] flex-col items-center justify-center gap-2 p-8 text-center">
+            <span className="font-display text-3xl text-ink-4">☰</span>
+            <p className="font-mono text-[11px] text-ink-3">Escolha um participante para ver o perfil e os palpites.</p>
+          </div>
+        ) : (
+          <ParticipantDetail
+            key={selected.id}
+            person={selected}
+            stat={ranks[selected.id]}
+            results={results}
+            isOwner={isOwner}
+            busy={busy}
+            onBlock={() => toggleBlock(selected)}
+            onRole={f => toggleRole(selected, f)}
+          />
+        )}
       </div>
     </section>
+  )
+}
+
+function ParticipantDetail({ person, stat, results, isOwner, busy, onBlock, onRole }: {
+  person: PersonRow
+  stat?: RankStat
+  results: Record<string, MatchResult>
+  isOwner: boolean
+  busy: string | null
+  onBlock: () => void
+  onRole: (field: 'is_admin' | 'is_marketing') => void
+}) {
+  const [preds, setPreds] = useState<PredRow[] | null>(null)
+  const [predQuery, setPredQuery] = useState('')
+
+  useEffect(() => {
+    if (isMockMode) { setPreds([]); return }
+    let cancelled = false
+    supabase.from('predictions').select('id,match_code,home_score,away_score,points_earned').eq('user_id', person.id)
+      .then(({ data }) => { if (!cancelled) setPreds((data ?? []) as PredRow[]) })
+    return () => { cancelled = true }
+  }, [person.id])
+
+  const initials = `${person.first_name?.[0] ?? ''}${person.last_name?.[0] ?? ''}`.toUpperCase() || person.email[0]?.toUpperCase() || '?'
+  const isBlocked = person.participant_status === 'blocked'
+
+  const pq = predQuery.trim().toLowerCase()
+  const enriched = (preds ?? [])
+    .map(p => ({ p, m: results[p.match_code] as MatchResult | undefined }))
+    .filter(({ p, m }) => {
+      if (!pq) return true
+      const teams = m && m.home_code && m.away_code ? `${m.home_code} ${m.away_code}` : ''
+      return `${matchLabel(p.match_code)} ${teams}`.toLowerCase().includes(pq)
+    })
+    .sort((a, b) => (b.m?.kickoff_utc ?? '').localeCompare(a.m?.kickoff_utc ?? ''))
+  const koRows = enriched.filter(({ m }) => m && m.stage !== 'group')
+  const groupRows = enriched.filter(({ m }) => !m || m.stage === 'group')
+
+  const teamsOf = (code: string, m?: MatchResult) =>
+    m && m.home_code && m.away_code && m.home_code !== 'TBD' && m.away_code !== 'TBD' ? `${m.home_code} × ${m.away_code}` : matchLabel(code)
+  const resultOf = (m?: MatchResult) => {
+    if (!m || m.home_score == null || m.away_score == null) return '—'
+    const base = `${m.home_score}–${m.away_score}`
+    return m.stage !== 'group' && m.winner && m.winner !== 'draw' ? `${base} · ${m.winner} passou` : base
+  }
+  const isExact = (p: PredRow, m?: MatchResult) =>
+    m && m.home_score != null && p.home_score === m.home_score && p.away_score === m.away_score
+
+  const Table = ({ rows }: { rows: typeof enriched }) => (
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-hairline">
+            <th className="px-4 py-1.5 text-left font-mono text-[8px] tracking-eyebrow text-ink-4">Jogo</th>
+            <th className="px-2 py-1.5 text-left font-mono text-[8px] tracking-eyebrow text-ink-4">Palpite</th>
+            <th className="px-2 py-1.5 text-left font-mono text-[8px] tracking-eyebrow text-ink-4">Resultado</th>
+            <th className="px-4 py-1.5 text-right font-mono text-[8px] tracking-eyebrow text-ink-4">Pts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ p, m }) => (
+            <tr key={p.id} className="border-b border-hairline last:border-0">
+              <td className="px-4 py-2 font-mono text-[12px] font-bold">{teamsOf(p.match_code, m)}</td>
+              <td className="px-2 py-2 font-mono text-[12px]">{p.home_score ?? '?'}–{p.away_score ?? '?'}</td>
+              <td className="px-2 py-2 font-mono text-[11px] text-ink-3">{resultOf(m)}</td>
+              <td className="px-4 py-2 text-right">
+                {p.points_earned == null
+                  ? <span className="font-mono text-[10px] text-ink-4">—</span>
+                  : (
+                    <span className="inline-flex items-center gap-1.5">
+                      {isExact(p, m) && <span className="bg-green px-1.5 py-0.5 font-mono text-[8px] font-bold text-white">CRAVOU</span>}
+                      <span className={cn('font-display text-[16px] tabular-nums', p.points_earned > 0 ? 'text-green' : 'text-ink-4')}>{p.points_earned}</span>
+                    </span>
+                  )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col">
+      {/* Cabeçalho */}
+      <div className="flex items-center gap-3.5 border-b-2 border-ink bg-ink p-4 text-paper">
+        <div className="grid h-12 w-12 flex-none place-items-center rounded-full font-display text-xl text-white" style={{ background: person.is_owner ? '#FFCB05' : '#C97B4A', color: person.is_owner ? '#0D0D0D' : '#fff' }}>{initials}</div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-display text-2xl leading-none">{personName(person)}</div>
+          <div className="mt-1 truncate font-mono text-[10px] text-paper/60">{person.dept || '—'} · {person.email} · {isBlocked ? 'bloqueado' : 'ativo'}</div>
+        </div>
+        <button disabled={busy === person.id + 'block'} onClick={onBlock}
+          className={cn('flex-none border-2 px-3 py-1.5 font-mono text-[10px] font-bold transition-colors',
+            isBlocked ? 'border-green bg-green/10 text-green' : 'border-paper/40 text-paper hover:bg-paper/10')}>
+          {isBlocked ? 'DESBLOQUEAR' : 'BLOQUEAR'}
+        </button>
+      </div>
+
+      {/* Estatísticas */}
+      <div className="grid grid-cols-4 border-b border-hairline">
+        {[
+          { l: 'Ranking', v: stat ? `${stat.rank}º` : '—' },
+          { l: 'Pontos', v: stat?.pts ?? 0 },
+          { l: 'Acertos', v: stat?.correct ?? 0 },
+          { l: 'Cravadas', v: stat?.exact_score ?? 0 },
+        ].map((s, i) => (
+          <div key={s.l} className={cn('px-3 py-2.5', i < 3 && 'border-r border-hairline')}>
+            <div className="font-display text-2xl leading-none tabular-nums">{s.v}</div>
+            <div className="mt-1 font-mono text-[8px] tracking-eyebrow text-ink-4">{s.l.toUpperCase()}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Papéis (somente owner) */}
+      {isOwner && !person.is_owner && (
+        <div className="flex items-center gap-2 border-b border-hairline px-4 py-2.5">
+          <span className="font-mono text-[8px] tracking-eyebrow text-ink-4">PAPÉIS</span>
+          <button disabled={busy === person.id + 'is_admin'} onClick={() => onRole('is_admin')}
+            className={cn('border-2 px-2.5 py-1 font-mono text-[9px] font-bold', person.is_admin ? 'border-red bg-red/10 text-red' : 'border-hairline text-ink-3 hover:border-ink')}>
+            {person.is_admin ? '− ADMIN' : '+ ADMIN'}
+          </button>
+          <button disabled={busy === person.id + 'is_marketing'} onClick={() => onRole('is_marketing')}
+            className={cn('border-2 px-2.5 py-1 font-mono text-[9px] font-bold', person.is_marketing ? 'border-green bg-green/10 text-green' : 'border-hairline text-ink-3 hover:border-ink')}>
+            {person.is_marketing ? '− MKT' : '+ MKT'}
+          </button>
+        </div>
+      )}
+
+      {/* Palpites */}
+      <div className="border-b border-hairline p-3">
+        <input value={predQuery} onChange={e => setPredQuery(e.target.value)} placeholder="Buscar palpite por time…"
+          className="w-full border-2 border-hairline bg-card px-3 py-1.5 font-mono text-[11px] outline-none focus:border-ink" />
+      </div>
+
+      <div className="max-h-[420px] overflow-y-auto">
+        {preds == null ? (
+          <div className="px-4 py-6 text-center font-mono text-[11px] text-ink-4 animate-pulse">CARREGANDO PALPITES…</div>
+        ) : enriched.length === 0 ? (
+          <div className="px-4 py-6 text-center font-mono text-[11px] text-ink-4">Nenhum palpite{predQuery ? ' com esse filtro' : ''}.</div>
+        ) : (
+          <>
+            {koRows.length > 0 && <>
+              <div className="bg-paper-deep px-4 py-1.5 font-mono text-[9px] tracking-eyebrow text-ink-3">MATA-MATA</div>
+              <Table rows={koRows} />
+            </>}
+            {groupRows.length > 0 && <>
+              <div className="bg-paper-deep px-4 py-1.5 font-mono text-[9px] tracking-eyebrow text-ink-3">FASE DE GRUPOS</div>
+              <Table rows={groupRows} />
+            </>}
+          </>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -1146,8 +1264,7 @@ function AdminMobile() {
 
       {activeTab === 'people' && (
         <div className="px-4 pt-3">
-          <ParticipantsPanel onToast={showToast} />
-          <AdminRolesPanel onToast={showToast} />
+          <PeoplePanel onToast={showToast} />
         </div>
       )}
 
@@ -1237,12 +1354,7 @@ function AdminDesktop() {
         <AdminTabBar active={activeTab} onChange={setActiveTab} />
 
         {activeTab === 'comms' && <NoticesPanel onToast={showToast} />}
-        {activeTab === 'people' && (
-          <div className="grid gap-5 xl:grid-cols-2">
-            <ParticipantsPanel onToast={showToast} />
-            <AdminRolesPanel onToast={showToast} />
-          </div>
-        )}
+        {activeTab === 'people' && <PeoplePanel onToast={showToast} />}
         {activeTab === 'health' && <AdminHealthPanel />}
 
         {activeTab === 'operation' && (
