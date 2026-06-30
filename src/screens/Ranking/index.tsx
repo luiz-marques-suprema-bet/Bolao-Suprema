@@ -185,10 +185,22 @@ function RankingRow({ r, large = false, onPeek }: { r: RankingEntry; large?: boo
 
 // ─── Espiada rápida: palpites finalizados de um palpiteiro ─────────────────────
 
+// match_code → slot do chaveamento (pra ler o "quem passa" do palpiteiro).
+function matchCodeToSlotId(code: string): string | null {
+  if (/^ko-r32-\d+$/.test(code)) return code.replace('ko-r32-', 'r32_')
+  if (/^ko-r16-\d+$/.test(code)) return code.replace('ko-r16-', 'r16_')
+  if (/^ko-qf-\d+$/.test(code)) return code.replace('ko-qf-', 'qf_')
+  if (/^ko-sf-\d+$/.test(code)) return code.replace('ko-sf-', 'sf_')
+  if (code === 'ko-third-1') return 'third_1'
+  if (code === 'ko-final-1') return 'final_1'
+  return null
+}
+
 function PlayerPeekModal({ entry, onClose }: { entry: RankingEntry; onClose: () => void }) {
   const navigate = useNavigate()
   const matches = useMatchesWithStatus(WC2026_MATCHES)
   const [preds, setPreds] = useState<Record<string, { h: number; a: number; pts: number | null }> | null>(null)
+  const [picks, setPicks] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (isMockMode) { setPreds({}); return }
@@ -204,6 +216,16 @@ function PlayerPeekModal({ entry, onClose }: { entry: RankingEntry; onClose: () 
           if (r.match_code) map[r.match_code] = { h: r.home_score, a: r.away_score, pts: r.points_earned ?? null }
         }
         setPreds(map)
+      })
+    void supabase
+      .from('bracket_picks')
+      .select('slot_id, picked_winner')
+      .eq('user_id', entry.userId)
+      .then(({ data }) => {
+        if (!active) return
+        const m: Record<string, string> = {}
+        for (const r of (data ?? []) as { slot_id: string; picked_winner: string }[]) m[r.slot_id] = r.picked_winner
+        setPicks(m)
       })
     return () => { active = false }
   }, [entry.userId])
@@ -241,6 +263,12 @@ function PlayerPeekModal({ entry, onClose }: { entry: RankingEntry; onClose: () 
           ) : finished.map(m => {
             const p = preds[m.id]
             const pts = p?.pts ?? 0
+            const isKo = m.stage !== 'group'
+            const adv = !isKo || !p ? null
+              : (picks[matchCodeToSlotId(m.id) ?? ''])
+                ? picks[matchCodeToSlotId(m.id) ?? '']
+                : p.h > p.a ? m.home.code : p.h < p.a ? m.away.code : null
+            const realAdv = m.winner && m.winner !== 'draw' ? m.winner : null
             return (
               <div key={m.id} className="flex items-center gap-2 px-4 py-2.5">
                 <Flag team={m.home} size={18} />
@@ -251,6 +279,13 @@ function PlayerPeekModal({ entry, onClose }: { entry: RankingEntry; onClose: () 
                 <div className="flex-1" />
                 <span className="font-mono text-[8px] text-ink-4 whitespace-nowrap hidden sm:inline">{m.homeScore}–{m.awayScore} real</span>
                 <span className="font-display text-base text-ink tabular-nums whitespace-nowrap flex-shrink-0">{p?.h}–{p?.a}</span>
+                {isKo && (
+                  <span className={cn('border px-1 py-px font-mono text-[8px] font-bold leading-none flex-shrink-0',
+                    adv == null ? 'border-hairline text-ink-4'
+                    : realAdv ? (adv === realAdv ? 'border-green/50 bg-green/10 text-green' : 'border-red/40 bg-red/5 text-red')
+                    : 'border-line-strong text-ink-2')}
+                    title="quem passa">▸{adv ?? '—'}</span>
+                )}
                 <span className={cn('font-mono text-[9px] font-bold rounded-md px-1.5 py-0.5 flex-shrink-0',
                   pts >= 10 ? 'bg-green text-white' : pts > 0 ? 'border border-hairline text-ink-2 bg-surface-2' : 'text-ink-4')}>
                   {pts > 0 ? `+${pts}` : '0'}
