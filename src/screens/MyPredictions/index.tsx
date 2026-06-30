@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Flag } from '@/components/shared/Flag'
 import { useAuthStore } from '@/stores/auth.store'
 import { usePredictionStore } from '@/stores/prediction.store'
+import { useBracketStore } from '@/stores/bracket.store'
 import { useMatchesWithStatus } from '@/hooks/useMatchWithStatus'
 import { useTabResync } from '@/hooks/useTabResync'
 import { WC2026_MATCHES, WC2026_GROUPS } from '@/data/wc2026'
@@ -37,6 +38,17 @@ function cravadaCard(m: Match, pred: Prediction, ctx: UserCardCtx): CravadaCardD
   }
 }
 
+// match_code → slot do chaveamento (pra ler o "quem passa" do usuário).
+function matchCodeToSlotId(code: string): string | null {
+  if (/^ko-r32-\d+$/.test(code)) return code.replace('ko-r32-', 'r32_')
+  if (/^ko-r16-\d+$/.test(code)) return code.replace('ko-r16-', 'r16_')
+  if (/^ko-qf-\d+$/.test(code)) return code.replace('ko-qf-', 'qf_')
+  if (/^ko-sf-\d+$/.test(code)) return code.replace('ko-sf-', 'sf_')
+  if (code === 'ko-third-1') return 'third_1'
+  if (code === 'ko-final-1') return 'final_1'
+  return null
+}
+
 // Pontos de um jogo: usa o valor do banco (autoritativo: grupos + mata-mata);
 // se ainda não veio, calcula pelo placar real (regra atual).
 function pointsOf(m: Match, pred?: Prediction): number | null {
@@ -58,16 +70,18 @@ export function MyPredictionsScreen() {
   const navigate = useNavigate()
   const me = useAuthStore(s => s.user)
   const { predictions, championPick, vicePick, scorerPick, syncFromSupabase } = usePredictionStore()
+  const syncBracket = useBracketStore(s => s.syncFromSupabase)
   const matches = useMatchesWithStatus(WC2026_MATCHES)
   const [ranking, setRanking] = useState<RankingEntry[]>([])
   const [group, setGroup] = useState<string>('all')
 
-  // Recarrega palpites (pontos) + ranking — mantém os números sempre certos.
+  // Recarrega palpites (pontos) + classificados (quem passa) + ranking.
   const reload = useCallback(() => {
     if (!me?.id) return
     void syncFromSupabase(me.id)
+    void syncBracket(me.id)
     fetchRanking(me.id).then(setRanking).catch(() => {})
-  }, [me?.id, syncFromSupabase])
+  }, [me?.id, syncFromSupabase, syncBracket])
   useEffect(() => reload(), [reload])
   useTabResync(reload)
   useEffect(() => {
@@ -260,6 +274,19 @@ function MatchRow({ match, pred, userCtx, onClick }: { match: Match; pred?: Pred
   const cravada = isCravada(match, pred)
   const pts = pointsOf(match, pred)
 
+  // "Quem passa" no mata-mata: meu pick explícito OU o vencedor do meu placar
+  // (decisivo já indica). Num empate sem pick, fica indefinido.
+  const bracketPicks = useBracketStore(s => s.picks)
+  const isKo = match.stage !== 'group'
+  const slotId = isKo ? matchCodeToSlotId(match.id) : null
+  const myAdvancer = !isKo || !pred ? null
+    : (slotId && bracketPicks[slotId])
+      ? bracketPicks[slotId]
+      : pred.homeScore > pred.awayScore ? match.home.code
+      : pred.homeScore < pred.awayScore ? match.away.code
+      : null
+  const realAdvancer = isDone && match.winner && match.winner !== 'draw' ? match.winner : null
+
   return (
     <div
       onClick={onClick}
@@ -298,6 +325,14 @@ function MatchRow({ match, pred, userCtx, onClick }: { match: Match; pred?: Pred
             <span className="font-display text-base leading-none text-ink tabular-nums flex-shrink-0 whitespace-nowrap">{pred.homeScore}–{pred.awayScore}</span>
           ) : (
             <span className="font-mono text-[9px] font-bold text-yellow flex-shrink-0 whitespace-nowrap">{isDone || isLive ? 'não palpitou' : 'PALPITAR →'}</span>
+          )}
+          {isKo && pred && (
+            <span className={cn('border px-1 py-px font-mono text-[8px] font-bold leading-none tracking-eyebrow flex-shrink-0 whitespace-nowrap',
+              myAdvancer == null ? 'border-hairline text-ink-4'
+              : realAdvancer ? (myAdvancer === realAdvancer ? 'border-green/50 bg-green/10 text-green' : 'border-red/40 bg-red/5 text-red')
+              : 'border-line-strong text-ink-2')}>
+              passa ▸ {myAdvancer ?? '—'}
+            </span>
           )}
           {isDone && pred && (
             <span className={cn(
