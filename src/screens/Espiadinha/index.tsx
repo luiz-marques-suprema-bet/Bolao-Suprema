@@ -64,6 +64,17 @@ type PredRow = {
   points_earned: number | null
 }
 
+// match_code → slot do chaveamento (pra buscar o "quem passa" em bracket_picks).
+function matchCodeToSlotId(code: string): string | null {
+  if (/^ko-r32-\d+$/.test(code)) return code.replace('ko-r32-', 'r32_')
+  if (/^ko-r16-\d+$/.test(code)) return code.replace('ko-r16-', 'r16_')
+  if (/^ko-qf-\d+$/.test(code)) return code.replace('ko-qf-', 'qf_')
+  if (/^ko-sf-\d+$/.test(code)) return code.replace('ko-sf-', 'sf_')
+  if (code === 'ko-third-1') return 'third_1'
+  if (code === 'ko-final-1') return 'final_1'
+  return null
+}
+
 // ─── data hook ────────────────────────────────────────────────────────────────
 // Carrega SÓ o esqueleto: jogos revelados + ranking (colocação). Os palpites de
 // cada jogo são buscados sob demanda quando o jogo é aberto (ver MatchCard) — é o
@@ -217,16 +228,35 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
   const [fHome, setFHome] = useState('')
   const [fAway, setFAway] = useState('')
   const [rawPreds, setRawPreds] = useState<EspiaPredRow[] | null>(null)
+  const [picks, setPicks] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
 
+  const isKo = match.stage !== 'group'
+  const slotId = isKo ? matchCodeToSlotId(match.id) : null
+  // No mata-mata, o "quem passa" REAL: o vencedor oficial (inclui pênaltis); só
+  // existe quando o jogo encerra e tem vencedor (≠ empate).
+  const realAdvancer = settled && match.winner && match.winner !== 'draw' ? match.winner : null
+
   // Carrega ao abrir; recarrega se o resultado mudar (apuração) → reflete pontos.
-  const resultKey = `${match.id}|${settled}|${match.homeScore ?? ''}|${match.awayScore ?? ''}`
+  const resultKey = `${match.id}|${settled}|${match.homeScore ?? ''}|${match.awayScore ?? ''}|${match.winner ?? ''}`
   useEffect(() => {
     if (!open || isMockMode) return
     let active = true
     setLoading(true)
     void (async () => {
-      const preds = await fetchMatchPredictions(match.id)
+      const [preds] = await Promise.all([
+        fetchMatchPredictions(match.id),
+        // "quem passa" de cada um (mata-mata): busca os palpites de classificado do slot.
+        slotId
+          ? supabase.from('bracket_picks').select('user_id, picked_winner').eq('slot_id', slotId)
+              .then(({ data }) => {
+                if (!active) return
+                const map: Record<string, string> = {}
+                for (const r of (data ?? []) as Array<{ user_id: string; picked_winner: string }>) map[r.user_id] = r.picked_winner
+                setPicks(map)
+              })
+          : Promise.resolve(),
+      ])
       if (!active) return
       setRawPreds(preds)
       setLoading(false)
@@ -234,6 +264,17 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
     return () => { active = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, resultKey])
+
+  // "Quem passa" efetivo de um palpite: o pick explícito do chaveamento OU, na
+  // falta dele, o vencedor do placar cravado (placar decisivo já indica). Empate
+  // sem pick = não definiu (null) — espelha a regra de pontuação.
+  const advancerOf = (homeScore: number, awayScore: number, userId: string): string | null => {
+    const explicit = picks[userId]
+    if (explicit) return explicit
+    if (homeScore > awayScore) return match.home.code
+    if (homeScore < awayScore) return match.away.code
+    return null
+  }
 
   const allGuesses = useMemo(
     () => (rawPreds ? buildGuesses(match, rawPreds, profiles) : []),
@@ -290,6 +331,11 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
             <span className="font-display text-2xl leading-none text-ink truncate">{match.away.code}</span>
           </div>
         </div>
+        {settled && isKo && realAdvancer && (
+          <div className="px-4 pb-1 text-center font-mono text-[9px] font-bold tracking-eyebrow text-green-deep">
+            {realAdvancer} PASSOU{match.homeScore === match.awayScore ? ' · NOS PÊNALTIS' : ''}
+          </div>
+        )}
         <div className="px-4 pb-2 text-center font-mono text-[9px] text-ink-4">
           {formatMatchDate(match)} · {formatMatchTime(match)} · {match.venue}
         </div>
@@ -376,7 +422,22 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
                         </div>
                         {g.user.dept && <div className="font-mono text-[9px] text-ink-4 truncate">{g.user.dept}</div>}
                       </div>
-                      <span className="font-display text-lg text-ink-2 tabular-nums">{g.homeScore}×{g.awayScore}</span>
+                      <div className="flex flex-shrink-0 flex-col items-end gap-0.5">
+                        <span className="font-display text-lg leading-none text-ink-2 tabular-nums">{g.homeScore}×{g.awayScore}</span>
+                        {isKo && (() => {
+                          const adv = advancerOf(g.homeScore, g.awayScore, g.user.id)
+                          const ok = realAdvancer ? adv === realAdvancer : null
+                          return (
+                            <span className={cn('border px-1 py-px font-mono text-[8px] font-bold leading-none tracking-eyebrow',
+                              adv == null ? 'border-hairline text-ink-4'
+                              : ok === true ? 'border-green/50 bg-green/10 text-green'
+                              : ok === false ? 'border-red/40 bg-red/5 text-red'
+                              : 'border-line-strong text-ink-2')}>
+                              passa ▸ {adv ?? '—'}
+                            </span>
+                          )
+                        })()}
+                      </div>
                       <HitChip kind={g.hit.kind} label={g.hit.label} />
                       {isMe && g.hit.kind === 'exact' && myCtx && (
                         <ShareCravadaButton data={{
