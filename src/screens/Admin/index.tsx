@@ -14,6 +14,8 @@ import {
   settleMatchResult,
   adminUpdateMatchStatus,
   adminSetUserRole,
+  adminUpdatePrediction,
+  adminDeletePrediction,
   fetchSystemHealth,
 } from '@/services/product'
 import type { MarketStatus, MatchStatus, MatchStage } from '@/types'
@@ -526,6 +528,7 @@ function PeoplePanel({ onToast }: { onToast: (msg: string, ok: boolean) => void 
             busy={busy}
             onBlock={() => toggleBlock(selected)}
             onRole={f => toggleRole(selected, f)}
+            onToast={onToast}
           />
         )}
       </div>
@@ -533,7 +536,7 @@ function PeoplePanel({ onToast }: { onToast: (msg: string, ok: boolean) => void 
   )
 }
 
-function ParticipantDetail({ person, stat, results, isOwner, busy, onBlock, onRole }: {
+function ParticipantDetail({ person, stat, results, isOwner, busy, onBlock, onRole, onToast }: {
   person: PersonRow
   stat?: RankStat
   results: Record<string, MatchResult>
@@ -541,17 +544,50 @@ function ParticipantDetail({ person, stat, results, isOwner, busy, onBlock, onRo
   busy: string | null
   onBlock: () => void
   onRole: (field: 'is_admin' | 'is_marketing') => void
+  onToast: (msg: string, ok: boolean) => void
 }) {
   const [preds, setPreds] = useState<PredRow[] | null>(null)
   const [predQuery, setPredQuery] = useState('')
+  const [editId, setEditId] = useState<string | null>(null)
+  const [editHome, setEditHome] = useState(0)
+  const [editAway, setEditAway] = useState(0)
+  const [confirmDel, setConfirmDel] = useState<string | null>(null)
+  const [rowBusy, setRowBusy] = useState<string | null>(null)
 
-  useEffect(() => {
+  const loadPreds = useCallback(() => {
     if (isMockMode) { setPreds([]); return }
-    let cancelled = false
     supabase.from('predictions').select('id,match_code,home_score,away_score,points_earned').eq('user_id', person.id)
-      .then(({ data }) => { if (!cancelled) setPreds((data ?? []) as PredRow[]) })
-    return () => { cancelled = true }
+      .then(({ data }) => setPreds((data ?? []) as PredRow[]))
   }, [person.id])
+
+  useEffect(() => { loadPreds() }, [loadPreds])
+
+  function startEdit(p: PredRow) {
+    setConfirmDel(null)
+    setEditId(p.id)
+    setEditHome(p.home_score ?? 0)
+    setEditAway(p.away_score ?? 0)
+  }
+
+  async function saveEdit(id: string) {
+    setRowBusy(id)
+    const res = await adminUpdatePrediction(id, editHome, editAway)
+    setRowBusy(null)
+    if (res.error) { onToast(`Erro: ${res.error}`, false); return }
+    setEditId(null)
+    onToast('✓ Palpite atualizado', true)
+    loadPreds()
+  }
+
+  async function doDelete(id: string) {
+    setRowBusy(id)
+    const res = await adminDeletePrediction(id)
+    setRowBusy(null)
+    if (res.error) { onToast(`Erro: ${res.error}`, false); return }
+    setConfirmDel(null)
+    onToast('✓ Palpite apagado', true)
+    loadPreds()
+  }
 
   const initials = `${person.first_name?.[0] ?? ''}${person.last_name?.[0] ?? ''}`.toUpperCase() || person.email[0]?.toUpperCase() || '?'
   const isBlocked = person.participant_status === 'blocked'
@@ -587,13 +623,29 @@ function ParticipantDetail({ person, stat, results, isOwner, busy, onBlock, onRo
             <th className="px-2 py-1.5 text-left font-mono text-[8px] tracking-eyebrow text-ink-4">Palpite</th>
             <th className="px-2 py-1.5 text-left font-mono text-[8px] tracking-eyebrow text-ink-4">Resultado</th>
             <th className="px-4 py-1.5 text-right font-mono text-[8px] tracking-eyebrow text-ink-4">Pts</th>
+            <th className="px-3 py-1.5 text-right font-mono text-[8px] tracking-eyebrow text-ink-4">Ações</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map(({ p, m }) => (
+          {rows.map(({ p, m }) => {
+            const editing = editId === p.id
+            const rBusy = rowBusy === p.id
+            return (
             <tr key={p.id} className="border-b border-hairline last:border-0">
               <td className="px-4 py-2 font-mono text-[12px] font-bold">{teamsOf(p.match_code, m)}</td>
-              <td className="px-2 py-2 font-mono text-[12px]">{p.home_score ?? '?'}–{p.away_score ?? '?'}</td>
+              <td className="px-2 py-2 font-mono text-[12px]">
+                {editing ? (
+                  <span className="inline-flex items-center gap-1">
+                    <input type="number" min={0} max={30} value={editHome} onChange={e => setEditHome(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-10 border border-ink bg-yellow text-center font-mono text-[12px] px-0.5 py-0.5 outline-none" />
+                    <span className="text-ink-4">–</span>
+                    <input type="number" min={0} max={30} value={editAway} onChange={e => setEditAway(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-10 border border-ink bg-yellow text-center font-mono text-[12px] px-0.5 py-0.5 outline-none" />
+                  </span>
+                ) : (
+                  <>{p.home_score ?? '?'}–{p.away_score ?? '?'}</>
+                )}
+              </td>
               <td className="px-2 py-2 font-mono text-[11px] text-ink-3">{resultOf(m)}</td>
               <td className="px-4 py-2 text-right">
                 {p.points_earned == null
@@ -605,8 +657,27 @@ function ParticipantDetail({ person, stat, results, isOwner, busy, onBlock, onRo
                     </span>
                   )}
               </td>
+              <td className="px-3 py-2 text-right whitespace-nowrap">
+                {editing ? (
+                  <span className="inline-flex gap-1">
+                    <button onClick={() => saveEdit(p.id)} disabled={rBusy} className="btn-yellow text-[8px] px-2 py-1 disabled:opacity-40">{rBusy ? '…' : 'SALVAR'}</button>
+                    <button onClick={() => setEditId(null)} disabled={rBusy} className="btn-ghost text-[8px] px-2 py-1">CANCELAR</button>
+                  </span>
+                ) : confirmDel === p.id ? (
+                  <span className="inline-flex gap-1">
+                    <button onClick={() => doDelete(p.id)} disabled={rBusy} className="bg-red text-white font-mono text-[8px] font-bold px-2 py-1 disabled:opacity-40">{rBusy ? '…' : 'CONFIRMAR'}</button>
+                    <button onClick={() => setConfirmDel(null)} disabled={rBusy} className="btn-ghost text-[8px] px-2 py-1">NÃO</button>
+                  </span>
+                ) : (
+                  <span className="inline-flex gap-1">
+                    <button onClick={() => startEdit(p)} className="btn-ghost text-[8px] px-2 py-1" title="editar o palpite">EDITAR</button>
+                    <button onClick={() => { setEditId(null); setConfirmDel(p.id) }} className="font-mono text-[8px] font-bold text-red border border-red/40 px-2 py-1 hover:bg-red/10" title="apagar o palpite">APAGAR</button>
+                  </span>
+                )}
+              </td>
             </tr>
-          ))}
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -673,11 +744,11 @@ function ParticipantDetail({ person, stat, results, isOwner, busy, onBlock, onRo
           <>
             {koRows.length > 0 && <>
               <div className="bg-paper-deep px-4 py-1.5 font-mono text-[9px] tracking-eyebrow text-ink-3">MATA-MATA</div>
-              <Table rows={koRows} />
+              {Table({ rows: koRows })}
             </>}
             {groupRows.length > 0 && <>
               <div className="bg-paper-deep px-4 py-1.5 font-mono text-[9px] tracking-eyebrow text-ink-3">FASE DE GRUPOS</div>
-              <Table rows={groupRows} />
+              {Table({ rows: groupRows })}
             </>}
           </>
         )}

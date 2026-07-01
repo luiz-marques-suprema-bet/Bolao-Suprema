@@ -121,6 +121,18 @@ export async function adminDeletePrediction(predictionId: string) {
   return ok(null)
 }
 
+export async function adminUpdatePrediction(predictionId: string, homeScore: number, awayScore: number) {
+  const blocked = requireSupabase()
+  if (blocked) return fail(blocked)
+  const { error } = await supabase.rpc('admin_update_prediction', {
+    p_prediction_id: predictionId,
+    p_home_score: homeScore,
+    p_away_score: awayScore,
+  })
+  if (error) return fail(error.message)
+  return ok(null)
+}
+
 export async function updateParticipantStatus(userId: string, status: ParticipantStatus) {
   const blocked = requireSupabase()
   if (blocked) return fail<AppUser>(blocked)
