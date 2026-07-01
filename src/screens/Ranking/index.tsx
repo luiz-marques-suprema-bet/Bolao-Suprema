@@ -417,6 +417,11 @@ function ScoringRulesBox({ rules: _rules }: { rules: ScoringRule[] }) {
 const GROUP_HIT: Record<number, string> = { 10: 'placar exato', 7: 'resultado + gols do vencedor', 5: 'acertou o resultado', 1: 'gols de uma equipe', 0: 'não pontuou' }
 const KO_HIT: Record<number, string> = { 14: 'placar exato + classificado', 12: 'placar exato', 8: 'resultado + placar de um time', 5: 'acertou o resultado', 2: 'só o classificado', 0: 'não pontuou' }
 
+// Kickoff por match_code — pra ordenar o breakdown do jogo mais recente pro mais antigo.
+const KICKOFF_BY_CODE: Record<string, string> = Object.fromEntries(
+  WC2026_MATCHES.map(m => [m.id, m.kickoffUtc]),
+)
+
 function breakdownDetail(item: RankingBreakdown): { line: string; hit: string } | null {
   if (item.sourceType !== 'match') return null
   const d = item.details as Record<string, unknown>
@@ -440,7 +445,9 @@ function BreakdownBox({ items }: { items: RankingBreakdown[] }) {
         </p>
       ) : (
         <div className="space-y-1.5 max-h-80 overflow-auto pr-1">
-          {items.map(item => {
+          {[...items]
+            .sort((a, b) => (KICKOFF_BY_CODE[b.sourceId] ?? '').localeCompare(KICKOFF_BY_CODE[a.sourceId] ?? ''))
+            .map(item => {
             const det = breakdownDetail(item)
             const zero = item.points === 0
             return (
