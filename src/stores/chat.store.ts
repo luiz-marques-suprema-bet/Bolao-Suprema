@@ -749,9 +749,16 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       }),
     }))
 
+    // DELETE é idempotente (remover algo inexistente é no-op). No ADD usamos UPSERT
+    // com ignoreDuplicates (INSERT ... ON CONFLICT DO NOTHING): se o estado local
+    // estiver defasado (chat carrega só as recentes, ou double-click), reagir de novo
+    // vira no-op em vez de violar a PK (message_id,user_id,emoji) e sumir a reação.
     const request = exists
       ? supabase.from('chat_message_reactions').delete().eq('message_id', messageId).eq('user_id', userId).eq('emoji', emoji)
-      : supabase.from('chat_message_reactions').insert({ message_id: messageId, user_id: userId, emoji })
+      : supabase.from('chat_message_reactions').upsert(
+          { message_id: messageId, user_id: userId, emoji },
+          { onConflict: 'message_id,user_id,emoji', ignoreDuplicates: true },
+        )
     const { error } = await request
 
     if (error) {
