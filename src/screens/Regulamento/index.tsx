@@ -30,13 +30,14 @@ const GROUP_RULES = [
   { pts: 1,  label: 'Gols de uma equipe acertados', detail: 'ex: colocou 1×1 e foi 2×1',            accent: 'bg-paper-deep' },
 ]
 
-// Mata-mata: placar (SÓ tempo regulamentar) + bônus ADITIVO de 2 do classificado.
-// A prorrogação não conta pro placar; só define quem passa (o +2). Máximo 14.
+// Mata-mata (regras 5.2 oficiais). O placar conta só o tempo regulamentar; o +2 do
+// classificado só sai quando o jogo EMPATA nos 90 min (vai p/ pênaltis). Máximo: 12
+// num jogo decidido no tempo normal, 14 num que foi p/ pênaltis.
 const KO_RULES = [
-  { pts: 12,   label: 'Placar exato',                 detail: 'cravou o placar do tempo normal (90 min)',       accent: 'bg-green' },
-  { pts: 8,    label: 'Resultado + placar de um time', detail: 'o resultado E o placar de um dos times',        accent: 'bg-yellow' },
-  { pts: 5,    label: 'Resultado certo',               detail: 'acertou vitória, empate ou derrota',            accent: 'bg-yellow/60' },
-  { pts: '+2', label: 'Classificado (bônus)',          detail: 'soma +2 em qualquer jogo se acertar quem passa (incl. prorrogação/pênaltis)', accent: 'bg-paper-deep' },
+  { pts: 12, label: 'Acerto do placar exato (apenas tempo regulamentar)',        detail: 'jogo decidido nos 90 min vale no máximo 12 — a prorrogação não conta pro placar', accent: 'bg-green' },
+  { pts: 8,  label: 'Acerto do resultado com score de um time',                  detail: 'o resultado E o placar de um dos times',          accent: 'bg-yellow' },
+  { pts: 5,  label: 'Acerto do resultado apenas',                                detail: 'acertou vitória, empate ou derrota',              accent: 'bg-yellow/60' },
+  { pts: 2,  label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', detail: 'bônus quando o jogo empata nos 90 min e você acerta quem passa (ex: empate cravado + classificado = 14)', accent: 'bg-paper-deep' },
 ]
 
 const GENERAL_RULES = [
@@ -163,9 +164,9 @@ export function RegulamentoScreen() {
         <section className="grid md:grid-cols-2 gap-4">
           <InfoCard title="MATA-MATA" accent="border-l-4 border-l-green" items={[
             'O placar e o resultado (12 / 8 / 5) contam SÓ o tempo regulamentar (90 min).',
-            'Gol na prorrogação NÃO muda o placar — só define quem passa.',
-            'Acertar quem passa soma +2 em qualquer jogo (inclui prorrogação e pênaltis).',
-            'Placar exato + acertou quem passa = 14 (máximo).',
+            'Jogo decidido nos 90 min vale no máximo 12 — a prorrogação não conta pro placar.',
+            'Se o jogo EMPATA e vai pros pênaltis, acertar quem passa soma +2 (incl. prorrogação/pênaltis).',
+            'Empate + acertou quem passa = até 14. Só acertou quem passa (num empate) = 2.',
           ]} />
           <InfoCard title="CANCELAMENTO" accent="border-l-4 border-l-red/60" items={[
             'Em caso de cancelamento, a organização pode anular a rodada ou considerar o resultado oficial.',

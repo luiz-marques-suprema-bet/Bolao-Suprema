@@ -8,18 +8,19 @@ import type { MatchStage } from '@/types'
 //   Resultado correto (V/E/D)                 →  5 pts
 //   Gols de uma equipe correto                →  1 pt
 //
-// Mata-mata (regras 5.2 oficiais) — PLACAR (só tempo regulamentar) + BÔNUS aditivo:
+// Mata-mata (regras 5.2 oficiais) — PLACAR (só tempo regulamentar) + BÔNUS do empate:
 //   Placar exato (90 min)                     → 12 pts
 //   Resultado + placar de um time             →  8 pts
 //   Resultado correto (V/E/D)                 →  5 pts
 //   Nada                                      →  0 pts
-//   + Classificado / quem passa (aditivo)     → +2 pts (incl. prorrogação/pênaltis)
-//   → total = placar + bônus, máximo 14 pts.
+//   + Classificado, SÓ se o jogo EMPATOU nos  → +2 pts (incl. prorrogação/pênaltis)
+//     90 min (foi p/ pênaltis) e acertou quem passa
+//   → jogo decidido no tempo normal: máx 12. Jogo que empatou: máx 14.
 //
 // O placar/resultado contam SÓ o tempo regulamentar (90 min) — gol na prorrogação
-// NÃO muda o placar. A prorrogação/pênaltis só definem o classificado (o +2). O +2
-// é ADITIVO e vale em qualquer jogo (não é piso nem teto). "Placar de um time":
-// basta acertar os gols de um dos times junto com o resultado.
+// NÃO muda o placar. O +2 do classificado só existe quando o jogo EMPATA no tempo
+// normal (aí a prorrogação/pênaltis decidem quem passa); jogo decidido nos 90 min
+// não gera bônus. "Placar de um time": os gols de um dos times junto com o resultado.
 //
 // Grupos — "gols do vencedor" (+7): exige o resultado E os gols do time VENCEDOR;
 // só os gols do perdedor (com resultado certo) vale 5. Em empate não há vencedor.
@@ -79,10 +80,11 @@ export function calculatePoints(
 }
 
 /**
- * Mata-mata (regras 5.2 oficiais) — total = PLACAR + BÔNUS aditivo do classificado.
+ * Mata-mata (regras 5.2 oficiais) — total = PLACAR + BÔNUS do empate.
  * O placar/resultado (12/8/5) contam SÓ o tempo regulamentar (`result` = placar dos
- * 90 min); a prorrogação não muda o placar. O bônus de +2 é aditivo e vale em
- * qualquer jogo quando se acerta quem passa (incl. prorrogação/pênaltis). Máximo 14.
+ * 90 min); a prorrogação não muda o placar. O bônus de +2 só sai quando o jogo
+ * EMPATA no tempo normal (foi p/ pênaltis) e você acerta quem passa — jogo decidido
+ * nos 90 min vale no máximo 12; jogo que empatou, no máximo 14.
  * `predictedAdvancer` = quem o usuário acha que passa (home/away).
  * `realAdvancer` = quem passou de verdade (pode ter sido nos pênaltis).
  */
@@ -102,8 +104,10 @@ export function calculateKoPoints(
   else if (correctResult && oneTeamGoals) placar = 8   // resultado + placar de um time
   else if (correctResult) placar = 5                   // resultado
 
-  // Bônus ADITIVO: acertou o classificado (incl. prorrogação/pênaltis).
+  // Bônus de +2 SÓ quando o jogo EMPATOU no tempo regulamentar (foi p/ pênaltis/
+  // prorrogação) e você acertou quem passa. Jogo decidido nos 90 min: máx 12.
+  const drawInRegulation = result.homeScore === result.awayScore
   const advancerCorrect =
     predictedAdvancer !== null && realAdvancer !== null && predictedAdvancer === realAdvancer
-  return placar + (advancerCorrect ? 2 : 0)
+  return placar + (drawInRegulation && advancerCorrect ? 2 : 0)
 }

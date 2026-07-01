@@ -1031,12 +1031,13 @@ const KO_STAGE_LABELS: Record<string, string> = {
 }
 const KO_STAGE_ORDER = ['round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final']
 
-// Mata-mata: placar (SÓ tempo regulamentar) + bônus ADITIVO de 2 do classificado (máx 14).
+// Mata-mata: placar (SÓ tempo regulamentar). O +2 do classificado só sai quando o
+// jogo empata nos 90 min (pênaltis). Decidido no tempo normal: máx 12; empate: máx 14.
 const KO_POINTS_GUIDE = [
-  { pts: '+12', label: 'Placar exato (tempo normal, 90 min)' },
-  { pts: '+8',  label: 'Resultado + placar de um time' },
-  { pts: '+5',  label: 'Resultado certo (V/E/D)' },
-  { pts: '+2',  label: 'Acertou quem passa (bônus, incl. pênaltis)' },
+  { pts: '+12', label: 'Placar exato (apenas tempo regulamentar)' },
+  { pts: '+8',  label: 'Resultado com score de um time' },
+  { pts: '+5',  label: 'Resultado apenas' },
+  { pts: '+2',  label: 'Classificado — bônus só no empate (pênaltis)' },
 ]
 
 function KnockoutTab() {
