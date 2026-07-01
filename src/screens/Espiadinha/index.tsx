@@ -195,7 +195,9 @@ function TierBadge({ tier, small = false }: { tier: EspiaTier; small?: boolean }
   )
 }
 
-function HitChip({ kind, label }: { kind: string; label: string }) {
+function HitChip({ kind, label, points }: { kind: string; label: string; points?: number | null }) {
+  // Na cravada, mostra também quantos pontos (ex: "CRAVOU +12" / "+14").
+  const text = kind === 'exact' && points != null ? `CRAVOU +${points}` : label
   return (
     <span className={cn(
       'inline-flex items-center justify-center rounded-md font-mono text-[9px] font-bold tracking-eyebrow uppercase px-1.5 py-0.5 min-w-[44px]',
@@ -204,7 +206,7 @@ function HitChip({ kind, label }: { kind: string; label: string }) {
       kind === 'miss'    && 'text-ink-4',
       kind === 'pending' && 'text-ink-3 border border-dashed border-hairline',
     )}>
-      {label}
+      {text}
     </span>
   )
 }
@@ -215,13 +217,14 @@ function StatusBadge({ settled }: { settled: boolean }) {
     : <span className="font-mono text-[9px] font-bold tracking-eyebrow text-red">EM ANDAMENTO</span>
 }
 
-function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
+function MatchCard({ match, settled, profiles, meId, query, myCtx, rankByUser }: {
   match: Match
   settled: boolean
   profiles: EspiaProfile[]
   meId?: string
   query: string
   myCtx?: ShareCtx
+  rankByUser: Map<string, number>
 }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -415,6 +418,9 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
                         isMe && 'bg-yellow/15',
                       )}
                     >
+                      <span className="font-mono text-[10px] font-bold text-ink-4 w-7 text-center flex-shrink-0 tabular-nums" title="posição no ranking">
+                        {rankByUser.get(g.user.id) ? `${rankByUser.get(g.user.id)}º` : '—'}
+                      </span>
                       <Avatar initials={g.user.initials} color={g.user.color} src={g.user.avatarUrl} size={26} />
                       <div className="min-w-0 flex-1">
                         <div className="font-mono text-[11px] font-bold text-ink truncate">
@@ -438,7 +444,7 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx }: {
                           )
                         })()}
                       </div>
-                      <HitChip kind={g.hit.kind} label={g.hit.label} />
+                      <HitChip kind={g.hit.kind} label={g.hit.label} points={g.hit.points} />
                       {isMe && g.hit.kind === 'exact' && myCtx && (
                         <ShareCravadaButton data={{
                           home: { code: match.home.code, flag: match.home.flag, color: match.home.color },
@@ -576,6 +582,12 @@ export function EspiadinhaScreen() {
     return allStandings.filter(s => norm(s.user.name).includes(norm(query)))
   }, [allStandings, query])
 
+  // Posição no ranking geral por usuário — mostrada na lista de palpites de cada jogo.
+  const rankByUser = useMemo(
+    () => new Map(allStandings.map(s => [s.user.id, s.rank])),
+    [allStandings],
+  )
+
   const myCtx = useMemo<ShareCtx | undefined>(() => {
     if (!me) return undefined
     const st = allStandings.find(s => s.user.id === me.id)
@@ -662,7 +674,7 @@ export function EspiadinhaScreen() {
               <div className="order-2 lg:order-1 space-y-4 min-w-0">
                 {filteredMatches.length > 0 ? (
                   filteredMatches.map(rm => (
-                    <MatchCard key={rm.match.id} match={rm.match} settled={rm.settled} profiles={profiles} meId={me?.id} query={query} myCtx={myCtx} />
+                    <MatchCard key={rm.match.id} match={rm.match} settled={rm.settled} profiles={profiles} meId={me?.id} query={query} myCtx={myCtx} rankByUser={rankByUser} />
                   ))
                 ) : (
                   <div className="ui-card p-8 text-center">

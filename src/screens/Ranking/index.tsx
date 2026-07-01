@@ -413,25 +413,49 @@ function ScoringRulesBox({ rules: _rules }: { rules: ScoringRule[] }) {
   )
 }
 
+// Como cada faixa de pontos é chamada (pra explicar o "porquê" de cada linha).
+const GROUP_HIT: Record<number, string> = { 10: 'placar exato', 7: 'resultado + gols do vencedor', 5: 'acertou o resultado', 1: 'gols de uma equipe', 0: 'não pontuou' }
+const KO_HIT: Record<number, string> = { 14: 'placar exato + classificado', 12: 'placar exato', 8: 'resultado + placar de um time', 5: 'acertou o resultado', 2: 'só o classificado', 0: 'não pontuou' }
+
+function breakdownDetail(item: RankingBreakdown): { line: string; hit: string } | null {
+  if (item.sourceType !== 'match') return null
+  const d = item.details as Record<string, unknown>
+  if (d.home_score == null || d.official_home_score == null) return null
+  const ph = Number(d.home_score), pa = Number(d.away_score)
+  const rh = Number(d.official_home_score), ra = Number(d.official_away_score)
+  const isGroup = String(d.stage ?? '') === 'group'
+  const winner = d.winner ? String(d.winner) : null
+  let line = `seu ${ph}×${pa} · real ${rh}×${ra}`
+  if (!isGroup && winner && winner.toLowerCase() !== 'draw') line += ` · ${winner} passou`
+  return { line, hit: (isGroup ? GROUP_HIT : KO_HIT)[item.points] ?? '' }
+}
+
 function BreakdownBox({ items }: { items: RankingBreakdown[] }) {
   return (
     <div className="ui-card p-4">
-      <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">COMO SUA PONTUACAO FOI CALCULADA</p>
+      <p className="font-mono text-[10px] tracking-eyebrow text-ink-3 mb-3">COMO SUA PONTUAÇÃO FOI CALCULADA</p>
       {items.length === 0 ? (
         <p className="font-mono text-[11px] text-ink-3 leading-relaxed">
-          Ainda nao ha pontos apurados para detalhar. Quando um resultado for registrado, cada origem de ponto aparece aqui.
+          Ainda não há pontos apurados para detalhar. Quando um resultado for registrado, cada origem de ponto aparece aqui.
         </p>
       ) : (
-        <div className="space-y-2 max-h-64 overflow-auto">
-          {items.slice(0, 12).map(item => (
-            <div key={item.id} className="flex items-start justify-between gap-3 border-b border-hairline pb-2">
-              <div>
-                <div className="font-mono text-[10px] font-bold">{item.label}</div>
-                <div className="font-mono text-[8px] text-ink-4">{item.sourceType} · {item.sourceId}</div>
+        <div className="space-y-1.5 max-h-80 overflow-auto pr-1">
+          {items.map(item => {
+            const det = breakdownDetail(item)
+            const zero = item.points === 0
+            return (
+              <div key={item.id} className="flex items-center justify-between gap-3 border-b border-hairline pb-1.5">
+                <div className="min-w-0">
+                  <div className="font-mono text-[11px] font-bold truncate">{item.label}</div>
+                  <div className="font-mono text-[9px] text-ink-4 truncate">
+                    {det ? det.line : (item.sourceType === 'general' ? 'aposta especial' : item.sourceId)}
+                  </div>
+                  {det?.hit && <div className={cn('font-mono text-[8px] tracking-eyebrow uppercase', zero ? 'text-ink-4' : 'text-green-deep')}>{det.hit}</div>}
+                </div>
+                <span className={cn('font-display text-xl flex-shrink-0', zero ? 'text-ink-4' : 'text-green')}>{zero ? '0' : `+${item.points}`}</span>
               </div>
-              <span className="font-display text-xl text-green">+{item.points}</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
