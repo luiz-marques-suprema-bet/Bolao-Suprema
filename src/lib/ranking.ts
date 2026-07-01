@@ -121,10 +121,12 @@ async function fetchRankingFromPredictions(myUserId?: string): Promise<RankingEn
     const p = row.points_earned ?? 0
     pointsMap[row.user_id] = (pointsMap[row.user_id] ?? 0) + p
     const isGroup = STAGE_BY_CODE[row.match_code] === 'group'
-    const exactPts = isGroup ? GROUP_EXACT : KO_EXACT
     const resultPts = isGroup ? GROUP_RESULT : KO_RESULT
+    // Cravada: grupo = exatamente 10; mata-mata = placar cravado (>=12, com ou sem
+    // o bônus de +2 do classificado, que leva a 14).
+    const isExactHit = isGroup ? p === GROUP_EXACT : p >= KO_EXACT
     if (p >= resultPts) correctMap[row.user_id] = (correctMap[row.user_id] ?? 0) + 1
-    if (p === exactPts)  exactMap[row.user_id]   = (exactMap[row.user_id]   ?? 0) + 1
+    if (isExactHit)      exactMap[row.user_id]   = (exactMap[row.user_id]   ?? 0) + 1
   }
 
   const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values())

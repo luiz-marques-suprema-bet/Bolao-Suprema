@@ -188,8 +188,8 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
   const existing = predictions[match.id]
   const draft = drafts[match.id]
 
-  // Mata-mata: palpite de "quem avança" (inclui prorrogação e pênaltis). Vale o
-  // piso de 2 pts quando erra o placar; o placar/resultado pontuam à parte.
+  // Mata-mata: palpite de "quem avança" (inclui prorrogação e pênaltis). Vale um
+  // bônus ADITIVO de +2 (soma ao placar/resultado, que contam só o tempo normal).
   // Guardado em bracket_picks.
   const isKnockout = match.stage !== 'group'
   const slotId = isKnockout ? matchCodeToSlotId(match.id) : null
@@ -310,10 +310,10 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
               <p className="font-mono text-[9px] text-ink-3 mt-2">decidido pelo placar — sem empate, não vai a pênaltis.</p>
             </div>
           ) : (
-            // Empate no palpite → escolher quem passa nos pênaltis (é o que vale).
+            // Empate no palpite → escolher quem passa nos pênaltis (bônus de +2).
             <>
               <p className="font-mono text-[10px] tracking-eyebrow text-ink text-center font-bold">EMPATE — QUEM PASSA NOS PÊNALTIS?</p>
-              <p className="font-mono text-[9px] text-ink-2 text-center mb-3">obrigatório · é o que vale no mata-mata</p>
+              <p className="font-mono text-[9px] text-ink-2 text-center mb-3">obrigatório · vale +2 (quem passa)</p>
               <div className="flex gap-2 max-w-[360px] mx-auto">
                 {[match.home, match.away].map(team => {
                   const selected = advancerPick === team.code
@@ -1031,12 +1031,12 @@ const KO_STAGE_LABELS: Record<string, string> = {
 }
 const KO_STAGE_ORDER = ['round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final']
 
-// Mata-mata: o placar/resultado valem por si; o classificado é só o piso de 2.
+// Mata-mata: placar (SÓ tempo regulamentar) + bônus ADITIVO de 2 do classificado (máx 14).
 const KO_POINTS_GUIDE = [
-  { pts: '+12', label: 'Placar exato (conta a prorrogação)' },
+  { pts: '+12', label: 'Placar exato (tempo normal, 90 min)' },
   { pts: '+8',  label: 'Resultado + placar de um time' },
   { pts: '+5',  label: 'Resultado certo (V/E/D)' },
-  { pts: '+2',  label: 'Só acertou o classificado (incl. pênaltis)' },
+  { pts: '+2',  label: 'Acertou quem passa (bônus, incl. pênaltis)' },
 ]
 
 function KnockoutTab() {

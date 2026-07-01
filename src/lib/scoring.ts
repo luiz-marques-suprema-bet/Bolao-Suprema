@@ -8,16 +8,18 @@ import type { MatchStage } from '@/types'
 //   Resultado correto (V/E/D)                 →  5 pts
 //   Gols de uma equipe correto                →  1 pt
 //
-// Mata-mata (regras 5.2) — o placar/resultado valem POR SI; o classificado é piso:
-//   Placar exato (conta prorrogação)          → 12 pts
+// Mata-mata (regras 5.2 oficiais) — PLACAR (só tempo regulamentar) + BÔNUS aditivo:
+//   Placar exato (90 min)                     → 12 pts
 //   Resultado + placar de um time             →  8 pts
 //   Resultado correto (V/E/D)                 →  5 pts
-//   Só acertou o classificado (incl. pênaltis)→  2 pts
 //   Nada                                      →  0 pts
+//   + Classificado / quem passa (aditivo)     → +2 pts (incl. prorrogação/pênaltis)
+//   → total = placar + bônus, máximo 14 pts.
 //
-// O placar exato usa o placar FINAL (que já inclui prorrogação). Os pênaltis só
-// definem o classificado (o piso de 2). "Placar de um time": basta acertar os
-// gols de um dos times junto com o resultado.
+// O placar/resultado contam SÓ o tempo regulamentar (90 min) — gol na prorrogação
+// NÃO muda o placar. A prorrogação/pênaltis só definem o classificado (o +2). O +2
+// é ADITIVO e vale em qualquer jogo (não é piso nem teto). "Placar de um time":
+// basta acertar os gols de um dos times junto com o resultado.
 //
 // Grupos — "gols do vencedor" (+7): exige o resultado E os gols do time VENCEDOR;
 // só os gols do perdedor (com resultado certo) vale 5. Em empate não há vencedor.
@@ -68,18 +70,19 @@ export function calculatePoints(
     return 0
   }
 
-  // Mata-mata
+  // Mata-mata — SÓ o placar (tempo regulamentar). O bônus aditivo de +2 do
+  // classificado é somado por calculateKoPoints, que conhece o "quem passa".
   if (exactMatch) return 12
-  if (correctOutcome && winnerGoalsCorrect) return 8
+  if (correctOutcome && oneTeamCorrect) return 8   // resultado + placar de um time
   if (correctOutcome) return 5
-  // Para mata-mata, 2 pts se acertou o classificado (mesmo lógica do resultado)
-  // Isso é verificado na camada acima com o winner real
   return 0
 }
 
 /**
- * Mata-mata (regras 5.2) — placar/resultado valem por si (12/8/5); o classificado
- * é só o piso de 2 pts. O placar exato usa o placar FINAL (inclui prorrogação).
+ * Mata-mata (regras 5.2 oficiais) — total = PLACAR + BÔNUS aditivo do classificado.
+ * O placar/resultado (12/8/5) contam SÓ o tempo regulamentar (`result` = placar dos
+ * 90 min); a prorrogação não muda o placar. O bônus de +2 é aditivo e vale em
+ * qualquer jogo quando se acerta quem passa (incl. prorrogação/pênaltis). Máximo 14.
  * `predictedAdvancer` = quem o usuário acha que passa (home/away).
  * `realAdvancer` = quem passou de verdade (pode ter sido nos pênaltis).
  */
@@ -89,15 +92,18 @@ export function calculateKoPoints(
   predictedAdvancer: 'home' | 'away' | null,
   realAdvancer: 'home' | 'away' | null
 ): number {
-  // Regras 5.2: o placar/resultado valem POR SI (não dependem do classificado).
-  // O classificado (inclui prorrogação/pênaltis) é só o piso de 2 pts.
   const exactMatch = prediction.homeScore === result.homeScore && prediction.awayScore === result.awayScore
-  if (exactMatch) return 12                          // placar exato (conta prorrogação)
   const correctResult = outcome(prediction.homeScore, prediction.awayScore) === outcome(result.homeScore, result.awayScore)
   const oneTeamGoals = prediction.homeScore === result.homeScore || prediction.awayScore === result.awayScore
-  if (correctResult && oneTeamGoals) return 8        // resultado + placar de um time
-  if (correctResult) return 5                        // resultado
-  const advancerCorrect = predictedAdvancer !== null && realAdvancer !== null && predictedAdvancer === realAdvancer
-  if (advancerCorrect) return 2                       // só acertou o classificado
-  return 0
+
+  // Placar sobre o tempo regulamentar (12 / 8 / 5 / 0).
+  let placar = 0
+  if (exactMatch) placar = 12                          // placar exato (90 min)
+  else if (correctResult && oneTeamGoals) placar = 8   // resultado + placar de um time
+  else if (correctResult) placar = 5                   // resultado
+
+  // Bônus ADITIVO: acertou o classificado (incl. prorrogação/pênaltis).
+  const advancerCorrect =
+    predictedAdvancer !== null && realAdvancer !== null && predictedAdvancer === realAdvancer
+  return placar + (advancerCorrect ? 2 : 0)
 }

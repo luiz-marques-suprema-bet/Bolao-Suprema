@@ -261,6 +261,11 @@ function MatchRowAdmin({
 
       {editResult && (
         <div className="px-4 pb-3 pt-1 bg-paper-deep border-t border-hairline space-y-2.5">
+          {isKnockout && (
+            <div className="font-mono text-[9px] leading-snug text-ink-3 border-l-2 border-green/60 pl-2">
+              <strong className="text-ink-2">PLACAR DO TEMPO NORMAL (90 min).</strong> A prorrogação NÃO conta pro placar — se um jogo for pra prorrogação/pênaltis, digite o placar dos 90 min e escolha quem avançou abaixo.
+            </div>
+          )}
           <div className="flex items-end gap-3 flex-wrap">
             <div className="text-center">
               <div className="font-mono text-[8px] tracking-eyebrow text-ink-4 mb-1">CASA</div>

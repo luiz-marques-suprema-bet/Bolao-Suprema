@@ -1215,7 +1215,7 @@ function QuickPickModal({ match, onClose }: { match: Match; onClose: () => void 
               ) : (
                 <>
                   <p className="text-center font-mono text-[9px] font-bold tracking-eyebrow text-ink">EMPATE — QUEM PASSA NOS PÊNALTIS?</p>
-                  <p className="mb-3 text-center font-mono text-[8px] text-ink-3">obrigatório · é o que vale no mata-mata</p>
+                  <p className="mb-3 text-center font-mono text-[8px] text-ink-3">obrigatório · vale +2 (quem passa)</p>
                   <div className="flex gap-2">
                     {[match.home, match.away].map(team => {
                       const selected = advancerPick === team.code

@@ -17,13 +17,21 @@ import { isPlaceholderMatch } from '@/lib/matchGuards'
 
 const pointsFor = (id: string) => POINT_RULES.find(r => r.id === id)?.points ?? 0
 const GROUP_EXACT = pointsFor('group_exact') // 10
-const KO_EXACT = pointsFor('ko_exact')       // 12
+const KO_EXACT = pointsFor('ko_exact')       // 12 — cravou o placar (tempo normal)
+const KO_MAX = KO_EXACT + pointsFor('ko_qualified') // 14 — placar + bônus do classificado
 
 export const STAGE_BY_CODE: Record<string, string> = Object.fromEntries(
   WC2026_MATCHES.map(m => [m.id, m.stage]),
 )
 
+// Pontuação MÁXIMA da fase (denominador da acurácia): grupo 10, mata-mata 14.
 export function maxPointsFor(stage: string): number {
+  return stage === 'group' ? GROUP_EXACT : KO_MAX
+}
+
+// Limiar de "CRAVOU" = cravou o placar (grupo 10, mata-mata 12). No mata-mata
+// isso é o placar exato SEM depender do bônus de +2 do classificado.
+function cravadaThreshold(stage: string): number {
   return stage === 'group' ? GROUP_EXACT : KO_EXACT
 }
 
@@ -75,9 +83,8 @@ export interface Hit {
 
 export function hitFor(points: number | null, stage: string, settled: boolean): Hit {
   if (!settled) return { kind: 'pending', label: 'no jogo', points: null }
-  const max = maxPointsFor(stage)
   const p = points ?? 0
-  if (p >= max) return { kind: 'exact', label: 'CRAVOU', points: p }
+  if (p >= cravadaThreshold(stage)) return { kind: 'exact', label: 'CRAVOU', points: p }
   if (p > 0)    return { kind: 'partial', label: `+${p}`, points: p }
   return { kind: 'miss', label: 'errou', points: 0 }
 }
