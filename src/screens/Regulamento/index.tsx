@@ -30,14 +30,12 @@ const GROUP_RULES = [
   { pts: 1,  label: 'Gols de uma equipe acertados', detail: 'ex: colocou 1×1 e foi 2×1',            accent: 'bg-paper-deep' },
 ]
 
-// Mata-mata: quem passa manda. Acertar o classificado destrava os pontos;
-// o placar é bônus em cima dele.
+// Mata-mata: o placar/resultado valem por si; o classificado é só o piso de 2.
 const KO_RULES = [
-  { pts: 12, label: 'CRAVADA: placar exato + quem passa', detail: 'o placar certinho E o classificado certo', accent: 'bg-green' },
-  { pts: 8,  label: 'Resultado + gols do vencedor',       detail: 'com o classificado certo',                 accent: 'bg-yellow' },
-  { pts: 5,  label: 'Resultado certo',                    detail: 'com o classificado certo',                 accent: 'bg-yellow/60' },
-  { pts: 3,  label: 'Só acertou quem passa',              detail: 'errou o placar, mas cravou o classificado', accent: 'bg-paper-deep' },
-  { pts: 2,  label: 'Cravou o placar, errou quem passa',  detail: 'consolação — acertou só o placar',          accent: 'bg-paper-deep' },
+  { pts: 12, label: 'Placar exato',                  detail: 'cravou o placar (conta a prorrogação)',  accent: 'bg-green' },
+  { pts: 8,  label: 'Resultado + placar de um time',  detail: 'o resultado E o placar de um dos times', accent: 'bg-yellow' },
+  { pts: 5,  label: 'Resultado certo',                detail: 'acertou vitória, empate ou derrota',     accent: 'bg-yellow/60' },
+  { pts: 2,  label: 'Só acertou o classificado',      detail: 'errou o placar, mas acertou quem passa', accent: 'bg-paper-deep' },
 ]
 
 const GENERAL_RULES = [
@@ -162,9 +160,10 @@ export function RegulamentoScreen() {
 
         {/* Mata-mata + Cancelamento */}
         <section className="grid md:grid-cols-2 gap-4">
-          <InfoCard title="MATA-MATA: QUEM PASSA MANDA" accent="border-l-4 border-l-green" items={[
-            'Acertar quem se classifica é o que vale — o placar é bônus em cima disso.',
-            'A cravada (12 pts) só conta se você também acertar quem avança.',
+          <InfoCard title="MATA-MATA" accent="border-l-4 border-l-green" items={[
+            'O placar e o resultado valem por si (12 / 8 / 5) — não dependem de quem passa.',
+            'Placar exato = 12 e conta a prorrogação; os pênaltis só decidem quem se classifica.',
+            'Errou o placar mas acertou quem passa? Ganha 2 (inclui prorrogação e pênaltis).',
           ]} />
           <InfoCard title="CANCELAMENTO" accent="border-l-4 border-l-red/60" items={[
             'Em caso de cancelamento, a organização pode anular a rodada ou considerar o resultado oficial.',

@@ -388,10 +388,10 @@ export const POINT_RULES: PointRule[] = [
   { id: 'group_result',   label: 'Acerto do resultado',        description: 'ex: colocou 2×1 e foi 1×0 (ganhou)',      points:  5, icon: '○' },
   { id: 'group_goals1',   label: 'Gols de uma equipe',         description: 'ex: colocou 1×1 e foi 2×1',              points:  1, icon: '·' },
   // Mata-mata
-  { id: 'ko_exact',       label: 'Placar exato (mata-mata)',   description: 'placar no tempo regulamentar',            points: 12, icon: '★' },
-  { id: 'ko_score1',      label: 'Resultado + gols (mata-mata)',description: 'resultado certo + gols do vencedor',    points:  8, icon: '✓' },
-  { id: 'ko_result',      label: 'Resultado (mata-mata)',      description: 'acertou o vencedor no regulamentar',      points:  5, icon: '○' },
-  { id: 'ko_qualified',   label: 'Acerto do classificado',     description: 'incluindo prorrogação e pênaltis',        points:  2, icon: '→' },
+  { id: 'ko_exact',       label: 'Placar exato (mata-mata)',        description: 'cravou o placar (conta a prorrogação)',   points: 12, icon: '★' },
+  { id: 'ko_score1',      label: 'Resultado + placar de um time',   description: 'o resultado E o placar de um dos times',  points:  8, icon: '✓' },
+  { id: 'ko_result',      label: 'Resultado (mata-mata)',           description: 'acertou o resultado (V/E/D)',             points:  5, icon: '○' },
+  { id: 'ko_qualified',   label: 'Acerto do classificado',          description: 'incluindo prorrogação e pênaltis',        points:  2, icon: '→' },
   // Longo prazo
   { id: 'champion',       label: 'Campeão',                    description: 'seleção campeã do mundo',                 points: 25, icon: '◆' },
   { id: 'vice',           label: 'Vice-campeão',               description: 'seleção vice-campeã',                     points: 15, icon: '▽' },

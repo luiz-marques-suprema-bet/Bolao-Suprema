@@ -188,8 +188,9 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
   const existing = predictions[match.id]
   const draft = drafts[match.id]
 
-  // Mata-mata: palpite de "quem avança" — é o que destrava os pontos (quem passa
-  // manda); inclui prorrogação e pênaltis. Guardado em bracket_picks.
+  // Mata-mata: palpite de "quem avança" (inclui prorrogação e pênaltis). Vale o
+  // piso de 2 pts quando erra o placar; o placar/resultado pontuam à parte.
+  // Guardado em bracket_picks.
   const isKnockout = match.stage !== 'group'
   const slotId = isKnockout ? matchCodeToSlotId(match.id) : null
   const advancerPick = useBracketStore(s => (slotId ? s.picks[slotId] : undefined))
@@ -1030,13 +1031,12 @@ const KO_STAGE_LABELS: Record<string, string> = {
 }
 const KO_STAGE_ORDER = ['round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final']
 
-// Mata-mata: quem passa manda. Acertar o classificado destrava os pontos.
+// Mata-mata: o placar/resultado valem por si; o classificado é só o piso de 2.
 const KO_POINTS_GUIDE = [
-  { pts: '+12', label: 'CRAVADA: placar exato (90′) + acertou quem passa' },
-  { pts: '+8',  label: 'Resultado + gols do vencedor + quem passa' },
-  { pts: '+5',  label: 'Resultado certo (90′) + quem passa' },
-  { pts: '+3',  label: 'Só acertou quem passa (errou o placar)' },
-  { pts: '+2',  label: 'Cravou o placar, mas errou quem passa' },
+  { pts: '+12', label: 'Placar exato (conta a prorrogação)' },
+  { pts: '+8',  label: 'Resultado + placar de um time' },
+  { pts: '+5',  label: 'Resultado certo (V/E/D)' },
+  { pts: '+2',  label: 'Só acertou o classificado (incl. pênaltis)' },
 ]
 
 function KnockoutTab() {

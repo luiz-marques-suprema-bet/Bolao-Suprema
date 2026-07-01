@@ -8,20 +8,19 @@ import type { MatchStage } from '@/types'
 //   Resultado correto (V/E/D)                 →  5 pts
 //   Gols de uma equipe correto                →  1 pt
 //
-// Mata-mata — "quem passa manda" (acertar o CLASSIFICADO é obrigatório; o
-// placar do tempo regulamentar é bônus em cima dele):
-//   ACERTOU quem passa:
-//     Placar exato (90')              → 12 pts  (CRAVADA)
-//     Resultado + gols do vencedor    →  8 pts
-//     Resultado certo (90')           →  5 pts
-//     Só acertou quem passa           →  3 pts
-//   ERROU quem passa:
-//     Cravou o placar (90')           →  2 pts  (consolação)
-//     resto                           →  0 pts
+// Mata-mata (regras 5.2) — o placar/resultado valem POR SI; o classificado é piso:
+//   Placar exato (conta prorrogação)          → 12 pts
+//   Resultado + placar de um time             →  8 pts
+//   Resultado correto (V/E/D)                 →  5 pts
+//   Só acertou o classificado (incl. pênaltis)→  2 pts
+//   Nada                                      →  0 pts
 //
-// "Gols do vencedor": o +7/+8 exige acertar o resultado E o número de gols do
-// time VENCEDOR. Acertar só os gols do perdedor (com o resultado certo) vale 5,
-// não 7. Em empate não há vencedor, então o teto com resultado certo é 5.
+// O placar exato usa o placar FINAL (que já inclui prorrogação). Os pênaltis só
+// definem o classificado (o piso de 2). "Placar de um time": basta acertar os
+// gols de um dos times junto com o resultado.
+//
+// Grupos — "gols do vencedor" (+7): exige o resultado E os gols do time VENCEDOR;
+// só os gols do perdedor (com resultado certo) vale 5. Em empate não há vencedor.
 //
 // Apostas gerais (calculadas separadamente na tabela users):
 //   Campeão                                   → 25 pts
@@ -79,8 +78,8 @@ export function calculatePoints(
 }
 
 /**
- * Mata-mata — "quem passa manda". Acertar o classificado é o que destrava os
- * pontos; o placar do tempo regulamentar é bônus em cima.
+ * Mata-mata (regras 5.2) — placar/resultado valem por si (12/8/5); o classificado
+ * é só o piso de 2 pts. O placar exato usa o placar FINAL (inclui prorrogação).
  * `predictedAdvancer` = quem o usuário acha que passa (home/away).
  * `realAdvancer` = quem passou de verdade (pode ter sido nos pênaltis).
  */
@@ -90,20 +89,15 @@ export function calculateKoPoints(
   predictedAdvancer: 'home' | 'away' | null,
   realAdvancer: 'home' | 'away' | null
 ): number {
+  // Regras 5.2: o placar/resultado valem POR SI (não dependem do classificado).
+  // O classificado (inclui prorrogação/pênaltis) é só o piso de 2 pts.
   const exactMatch = prediction.homeScore === result.homeScore && prediction.awayScore === result.awayScore
-  const correctRegTime = outcome(prediction.homeScore, prediction.awayScore) === outcome(result.homeScore, result.awayScore)
-  const winnerGoalsCorrect =
-    (result.homeScore > result.awayScore && prediction.homeScore === result.homeScore) ||
-    (result.awayScore > result.homeScore && prediction.awayScore === result.awayScore)
+  if (exactMatch) return 12                          // placar exato (conta prorrogação)
+  const correctResult = outcome(prediction.homeScore, prediction.awayScore) === outcome(result.homeScore, result.awayScore)
+  const oneTeamGoals = prediction.homeScore === result.homeScore || prediction.awayScore === result.awayScore
+  if (correctResult && oneTeamGoals) return 8        // resultado + placar de um time
+  if (correctResult) return 5                        // resultado
   const advancerCorrect = predictedAdvancer !== null && realAdvancer !== null && predictedAdvancer === realAdvancer
-
-  if (advancerCorrect) {
-    if (exactMatch) return 12              // CRAVADA: placar exato + quem passa
-    if (correctRegTime && winnerGoalsCorrect) return 8
-    if (correctRegTime) return 5
-    return 3                               // só acertou quem passa
-  }
-  // Errou quem passa: só a consolação por cravar o placar do tempo normal.
-  if (exactMatch) return 2
+  if (advancerCorrect) return 2                       // só acertou o classificado
   return 0
 }
