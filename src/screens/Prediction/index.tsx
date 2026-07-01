@@ -313,7 +313,7 @@ function MatchRow({ match, onConfirmed }: { match: Match; onConfirmed?: () => vo
             // Empate no palpite → escolher quem passa nos pênaltis (bônus de +2).
             <>
               <p className="font-mono text-[10px] tracking-eyebrow text-ink text-center font-bold">EMPATE — QUEM PASSA NOS PÊNALTIS?</p>
-              <p className="font-mono text-[9px] text-ink-2 text-center mb-3">obrigatório · vale +2 (quem passa)</p>
+              <p className="font-mono text-[9px] text-ink-2 text-center mb-3">obrigatório · +2 de bônus se cravar o placar</p>
               <div className="flex gap-2 max-w-[360px] mx-auto">
                 {[match.home, match.away].map(team => {
                   const selected = advancerPick === team.code
@@ -1031,13 +1031,13 @@ const KO_STAGE_LABELS: Record<string, string> = {
 }
 const KO_STAGE_ORDER = ['round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final']
 
-// Mata-mata: placar (SÓ tempo regulamentar). O +2 do classificado só sai quando o
-// jogo empata nos 90 min (pênaltis). Decidido no tempo normal: máx 12; empate: máx 14.
+// Mata-mata: ESCADA (uma faixa só). O +2 é bônus por acertar quem se classifica e
+// só soma no placar exato de um empate (12 → 14). "Resultado apenas" não soma.
 const KO_POINTS_GUIDE = [
-  { pts: '+12', label: 'Placar exato (apenas tempo regulamentar)' },
+  { pts: '+12', label: 'Placar exato (tempo normal) · empate + quem passa = 14' },
   { pts: '+8',  label: 'Resultado com score de um time' },
-  { pts: '+5',  label: 'Resultado apenas' },
-  { pts: '+2',  label: 'Classificado (empate): soma ao placar · 2 se errou o placar' },
+  { pts: '+5',  label: 'Resultado apenas (não soma o classificado)' },
+  { pts: '+2',  label: 'Só o classificado (num empate/pênaltis)' },
 ]
 
 function KnockoutTab() {

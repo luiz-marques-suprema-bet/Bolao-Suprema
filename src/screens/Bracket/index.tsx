@@ -126,7 +126,7 @@ export function BracketScreen() {
         </header>
         <div className="mb-4 border-l-2 border-green bg-green/5 px-3 py-1.5 inline-block">
           <span className="font-mono text-[9px] text-ink-2 leading-snug">
-            Toque numa fase pra filtrar · num jogo aberto pra palpitar · <strong>cravar o placar vale 12 (só tempo normal); +2 se empatar e acertar quem passa</strong>.
+            Toque numa fase pra filtrar · num jogo aberto pra palpitar · <strong>cravar o placar vale 12 (só tempo normal); 14 se cravar um empate e acertar quem se classifica</strong>.
           </span>
         </div>
 

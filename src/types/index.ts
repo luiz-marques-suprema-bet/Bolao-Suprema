@@ -387,12 +387,12 @@ export const POINT_RULES: PointRule[] = [
   { id: 'group_score1',   label: 'Resultado + gols do vencedor', description: 'ex: colocou 3×0 e foi 3×1',            points:  7, icon: '✓' },
   { id: 'group_result',   label: 'Acerto do resultado',        description: 'ex: colocou 2×1 e foi 1×0 (ganhou)',      points:  5, icon: '○' },
   { id: 'group_goals1',   label: 'Gols de uma equipe',         description: 'ex: colocou 1×1 e foi 2×1',              points:  1, icon: '·' },
-  // Mata-mata (placar SÓ tempo regulamentar; +2 do classificado só quando o jogo
-  // empata nos 90 min — decidido no tempo normal máx 12, empate máx 14)
-  { id: 'ko_exact',       label: 'Acerto do placar exato (apenas tempo regulamentar)', description: 'cravou o placar dos 90 min (a prorrogação não conta)', points: 12, icon: '★' },
+  // Mata-mata — ESCADA (uma faixa só). Placar só tempo regulamentar. O +2 é bônus
+  // por acertar quem se classifica e só soma no placar exato de um empate (12→14).
+  { id: 'ko_exact',       label: 'Acerto do placar exato (apenas tempo regulamentar)', description: 'cravou o placar dos 90 min; num empate, cravar + acertar quem se classifica = 14 (bônus +2)', points: 12, icon: '★' },
   { id: 'ko_score1',      label: 'Acerto do resultado com score de um time',   description: 'o resultado E o placar de um dos times',  points:  8, icon: '✓' },
-  { id: 'ko_result',      label: 'Acerto do resultado apenas',                 description: 'acertou o resultado (V/E/D)',             points:  5, icon: '○' },
-  { id: 'ko_qualified',   label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', description: 'num empate: +2 somado ao placar (cravou o empate = 14); acertou SÓ o classificado (errou o placar) = 2', points:  2, icon: '→' },
+  { id: 'ko_result',      label: 'Acerto do resultado apenas',                 description: 'acertou só o resultado (V/E/D) — o classificado não soma aqui', points:  5, icon: '○' },
+  { id: 'ko_qualified',   label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', description: 'errou o placar/resultado, mas num empate acertou quem se classifica; o +2 é bônus e só soma no placar exato do empate', points:  2, icon: '→' },
   // Longo prazo
   { id: 'champion',       label: 'Campeão',                    description: 'seleção campeã do mundo',                 points: 25, icon: '◆' },
   { id: 'vice',           label: 'Vice-campeão',               description: 'seleção vice-campeã',                     points: 15, icon: '▽' },

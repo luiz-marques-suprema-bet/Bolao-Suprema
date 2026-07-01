@@ -30,14 +30,14 @@ const GROUP_RULES = [
   { pts: 1,  label: 'Gols de uma equipe acertados', detail: 'ex: colocou 1×1 e foi 2×1',            accent: 'bg-paper-deep' },
 ]
 
-// Mata-mata (regras 5.2 oficiais). O placar conta só o tempo regulamentar; o +2 do
-// classificado só sai quando o jogo EMPATA nos 90 min (vai p/ pênaltis). Máximo: 12
-// num jogo decidido no tempo normal, 14 num que foi p/ pênaltis.
+// Mata-mata (regras 5.2 oficiais). ESCADA: cada palpite cai em UMA faixa (não soma).
+// O placar conta só o tempo regulamentar. O +2 é um BÔNUS por acertar quem se
+// classifica e só soma no placar exato de um empate (12 → 14).
 const KO_RULES = [
-  { pts: 12, label: 'Acerto do placar exato (apenas tempo regulamentar)',        detail: 'jogo decidido nos 90 min vale no máximo 12 — a prorrogação não conta pro placar', accent: 'bg-green' },
+  { pts: 12, label: 'Acerto do placar exato (apenas tempo regulamentar)',        detail: 'decidido nos 90 min vale 12; num empate (pênaltis), cravar o placar + acertar quem se classifica = 14 (bônus +2)', accent: 'bg-green' },
   { pts: 8,  label: 'Acerto do resultado com score de um time',                  detail: 'o resultado E o placar de um dos times',          accent: 'bg-yellow' },
-  { pts: 5,    label: 'Acerto do resultado apenas',                                detail: 'acertou vitória, empate ou derrota',              accent: 'bg-yellow/60' },
-  { pts: '+2', label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', detail: 'só vale num jogo que empatou (pênaltis). SOMA ao placar: cravou o empate (12) + classificado = 14. Acertou SÓ o classificado, errando o placar = 2.', accent: 'bg-paper-deep' },
+  { pts: 5,  label: 'Acerto do resultado apenas',                                detail: 'acertou só o resultado (V/E/D) — o classificado não soma aqui', accent: 'bg-yellow/60' },
+  { pts: 2,  label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', detail: 'errou o placar e o resultado, mas num empate (pênaltis) acertou quem se classifica', accent: 'bg-paper-deep' },
 ]
 
 const GENERAL_RULES = [
@@ -164,9 +164,9 @@ export function RegulamentoScreen() {
         <section className="grid md:grid-cols-2 gap-4">
           <InfoCard title="MATA-MATA" accent="border-l-4 border-l-green" items={[
             'O placar e o resultado (12 / 8 / 5) contam SÓ o tempo regulamentar (90 min).',
-            'Jogo decidido nos 90 min vale no máximo 12 — a prorrogação não conta pro placar.',
-            'Num jogo que EMPATA (pênaltis), acertar quem passa SOMA +2 ao seu placar.',
-            'Cravou o empate (12) + acertou quem passa = 14. Acertou SÓ o classificado (errou o placar) = 2. São coisas diferentes.',
+            'É uma ESCADA: cada palpite vale UMA faixa, não soma entre elas (acertar só o resultado do empate = 5, não 5+2).',
+            'O +2 é um BÔNUS por acertar quem se classifica — só soma no placar exato de um empate (12 → 14).',
+            'Acertou SÓ o classificado (errou o placar e o resultado), num empate = 2.',
           ]} />
           <InfoCard title="CANCELAMENTO" accent="border-l-4 border-l-red/60" items={[
             'Em caso de cancelamento, a organização pode anular a rodada ou considerar o resultado oficial.',

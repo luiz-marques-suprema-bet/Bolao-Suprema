@@ -22,7 +22,7 @@ const slides = [
     stamp: '+ PONTOS',
     head: ['PALPITA,', 'PONTUA,', 'DOMINA'],
     kicker: 'Cada jogo vale — fase de grupos e mata-mata',
-    body: 'Placar exato: +10 pts. Resultado + gols do vencedor: +7 pts. Só o resultado: +5 pts. No mata-mata o placar exato (só tempo regulamentar) vale +12; se o jogo empata e você acerta quem passa, +2. Campeão certo: +25 pts.',
+    body: 'Placar exato: +10 pts. Resultado + gols do vencedor: +7 pts. Só o resultado: +5 pts. No mata-mata o placar exato (só tempo regulamentar) vale +12 — e chega a 14 se for um empate e você cravar o placar + acertar quem se classifica. Campeão certo: +25 pts.',
   },
   {
     eyebrow: '03 · BORA',
