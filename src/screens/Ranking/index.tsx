@@ -370,7 +370,7 @@ const SCORING_SECTIONS = [
       { pts: 12, label: 'Acerto do placar exato (apenas tempo regulamentar)', tip: 'Cravou o placar dos 90 min (a prorrogação NÃO conta). Num empate que foi pros pênaltis, se você TAMBÉM acertar quem se classifica, ganha +2 de bônus → 14.' },
       { pts: 8,  label: 'Acerto do resultado com score de um time', tip: 'Acertou o resultado (V/E/D) E o placar de um dos times, no tempo normal.' },
       { pts: 5, label: 'Acerto do resultado apenas', tip: 'Acertou só o resultado (ex: empate). O classificado NÃO soma aqui — é 5, não é 5+2.' },
-      { pts: 2, label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', tip: 'Errou o placar E o resultado, mas num empate (pênaltis) acertou quem se classifica. O +2 é bônus e só soma quando você crava o placar do empate (→ 14).' },
+      { pts: 2, label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', tip: 'Você acertou SÓ quem se classifica: errou o placar e o resultado, mas num empate (pênaltis) cravou quem passa.' },
     ],
   },
   {
