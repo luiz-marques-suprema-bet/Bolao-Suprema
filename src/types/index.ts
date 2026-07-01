@@ -392,7 +392,7 @@ export const POINT_RULES: PointRule[] = [
   { id: 'ko_exact',       label: 'Acerto do placar exato (apenas tempo regulamentar)', description: 'cravou o placar dos 90 min (a prorrogação não conta)', points: 12, icon: '★' },
   { id: 'ko_score1',      label: 'Acerto do resultado com score de um time',   description: 'o resultado E o placar de um dos times',  points:  8, icon: '✓' },
   { id: 'ko_result',      label: 'Acerto do resultado apenas',                 description: 'acertou o resultado (V/E/D)',             points:  5, icon: '○' },
-  { id: 'ko_qualified',   label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', description: 'bônus de +2 quando o jogo empata nos 90 min e acerta quem passa', points:  2, icon: '→' },
+  { id: 'ko_qualified',   label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', description: 'num empate: +2 somado ao placar (cravou o empate = 14); acertou SÓ o classificado (errou o placar) = 2', points:  2, icon: '→' },
   // Longo prazo
   { id: 'champion',       label: 'Campeão',                    description: 'seleção campeã do mundo',                 points: 25, icon: '◆' },
   { id: 'vice',           label: 'Vice-campeão',               description: 'seleção vice-campeã',                     points: 15, icon: '▽' },

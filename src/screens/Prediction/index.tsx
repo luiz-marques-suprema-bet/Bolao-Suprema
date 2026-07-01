@@ -1037,7 +1037,7 @@ const KO_POINTS_GUIDE = [
   { pts: '+12', label: 'Placar exato (apenas tempo regulamentar)' },
   { pts: '+8',  label: 'Resultado com score de um time' },
   { pts: '+5',  label: 'Resultado apenas' },
-  { pts: '+2',  label: 'Classificado — bônus só no empate (pênaltis)' },
+  { pts: '+2',  label: 'Classificado (empate): soma ao placar · 2 se errou o placar' },
 ]
 
 function KnockoutTab() {

@@ -369,8 +369,8 @@ const SCORING_SECTIONS = [
     rules: [
       { pts: 12, label: 'Acerto do placar exato (apenas tempo regulamentar)', tip: 'Cravou o placar dos 90 min. Jogo decidido no tempo normal vale no máximo 12 — a prorrogação NÃO conta pro placar.' },
       { pts: 8,  label: 'Acerto do resultado com score de um time', tip: 'Acertou o resultado (V/E/D) E o placar de um dos times, no tempo normal.' },
-      { pts: 5,  label: 'Acerto do resultado apenas', tip: 'Acertou o resultado — vitória, empate ou derrota (tempo normal).' },
-      { pts: 2,  label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', tip: 'Bônus quando o jogo EMPATA nos 90 min (vai pros pênaltis) e você acerta quem passa. Ex: empate cravado + classificado = 14.' },
+      { pts: 5,    label: 'Acerto do resultado apenas', tip: 'Acertou o resultado — vitória, empate ou derrota (tempo normal).' },
+      { pts: '+2', label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', tip: 'Só num jogo que empatou (pênaltis). SOMA ao placar: cravou o empate (12) + classificado = 14. Se acertou SÓ o classificado (errou o placar), são 2 pontos. São coisas diferentes.' },
     ],
   },
   {

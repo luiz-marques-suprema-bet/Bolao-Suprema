@@ -36,8 +36,8 @@ const GROUP_RULES = [
 const KO_RULES = [
   { pts: 12, label: 'Acerto do placar exato (apenas tempo regulamentar)',        detail: 'jogo decidido nos 90 min vale no máximo 12 — a prorrogação não conta pro placar', accent: 'bg-green' },
   { pts: 8,  label: 'Acerto do resultado com score de um time',                  detail: 'o resultado E o placar de um dos times',          accent: 'bg-yellow' },
-  { pts: 5,  label: 'Acerto do resultado apenas',                                detail: 'acertou vitória, empate ou derrota',              accent: 'bg-yellow/60' },
-  { pts: 2,  label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', detail: 'bônus quando o jogo empata nos 90 min e você acerta quem passa (ex: empate cravado + classificado = 14)', accent: 'bg-paper-deep' },
+  { pts: 5,    label: 'Acerto do resultado apenas',                                detail: 'acertou vitória, empate ou derrota',              accent: 'bg-yellow/60' },
+  { pts: '+2', label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', detail: 'só vale num jogo que empatou (pênaltis). SOMA ao placar: cravou o empate (12) + classificado = 14. Acertou SÓ o classificado, errando o placar = 2.', accent: 'bg-paper-deep' },
 ]
 
 const GENERAL_RULES = [
@@ -165,8 +165,8 @@ export function RegulamentoScreen() {
           <InfoCard title="MATA-MATA" accent="border-l-4 border-l-green" items={[
             'O placar e o resultado (12 / 8 / 5) contam SÓ o tempo regulamentar (90 min).',
             'Jogo decidido nos 90 min vale no máximo 12 — a prorrogação não conta pro placar.',
-            'Se o jogo EMPATA e vai pros pênaltis, acertar quem passa soma +2 (incl. prorrogação/pênaltis).',
-            'Empate + acertou quem passa = até 14. Só acertou quem passa (num empate) = 2.',
+            'Num jogo que EMPATA (pênaltis), acertar quem passa SOMA +2 ao seu placar.',
+            'Cravou o empate (12) + acertou quem passa = 14. Acertou SÓ o classificado (errou o placar) = 2. São coisas diferentes.',
           ]} />
           <InfoCard title="CANCELAMENTO" accent="border-l-4 border-l-red/60" items={[
             'Em caso de cancelamento, a organização pode anular a rodada ou considerar o resultado oficial.',
