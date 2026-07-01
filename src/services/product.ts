@@ -76,7 +76,7 @@ export async function settleMatchResult(matchCode: string, homeScore: number, aw
 export async function adminUpdateMatchStatus(
   matchCode: string,
   status: string,
-  opts?: { homeScore?: number; awayScore?: number; liveMinute?: string; winner?: string; lockReason?: string }
+  opts?: { homeScore?: number; awayScore?: number; liveMinute?: string; winner?: string; lockReason?: string; decidedBy?: string }
 ) {
   const blocked = requireSupabase()
   if (blocked) return fail(blocked)
@@ -88,6 +88,7 @@ export async function adminUpdateMatchStatus(
     p_live_minute: opts?.liveMinute ?? null,
     p_winner:      opts?.winner     ?? null,
     p_lock_reason: opts?.lockReason ?? null,
+    p_decided_by:  opts?.decidedBy  ?? null,
   })
   if (error) return fail(error.message)
   return ok(null)

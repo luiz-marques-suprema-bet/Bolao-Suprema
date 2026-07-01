@@ -22,6 +22,7 @@ function merge(m: Match, override: MatchStatusOverride): Match {
     awayScore:   override.awayScore,
     liveMinute:  override.liveMinute ?? undefined,
     winner:      override.winner ?? undefined,
+    decidedBy:   (override.decidedBy as Match['decidedBy']) ?? undefined,
     lockedAt:    override.lockedAt ?? null,
     lockedBy:    override.lockedBy ?? null,
     lockReason:  override.lockReason ?? null,

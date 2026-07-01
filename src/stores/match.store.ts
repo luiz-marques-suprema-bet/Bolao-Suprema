@@ -14,6 +14,7 @@ interface MatchRow {
   away_score: number | null
   live_minute: string | null
   winner: string | null
+  decided_by: string | null
   locked_at: string | null
   locked_by: string | null
   lock_reason: string | null
@@ -25,7 +26,7 @@ interface MatchRow {
 }
 
 const MATCH_SELECT =
-  'match_code, status, market_status, home_code, away_code, home_score, away_score, live_minute, winner, locked_at, locked_by, lock_reason, unlocked_at, settled_at, kickoff_utc, match_date, match_time'
+  'match_code, status, market_status, home_code, away_code, home_score, away_score, live_minute, winner, decided_by, locked_at, locked_by, lock_reason, unlocked_at, settled_at, kickoff_utc, match_date, match_time'
 
 function mapMatchRow(row: MatchRow): MatchStatusOverride {
   return {
@@ -38,6 +39,7 @@ function mapMatchRow(row: MatchRow): MatchStatusOverride {
     awayScore:    row.away_score ?? null,
     liveMinute:   row.live_minute ?? null,
     winner:       row.winner ?? null,
+    decidedBy:    row.decided_by ?? null,
     lockedAt:     row.locked_at ?? null,
     lockedBy:     row.locked_by ?? null,
     lockReason:   row.lock_reason ?? null,

@@ -58,6 +58,7 @@ export interface MatchStatusOverride {
   awayScore: number | null
   liveMinute?: string | null
   winner?: string | null
+  decidedBy?: string | null  // 'regulation' | 'extra_time' | 'penalties' — como o classificado avançou
   lockedAt?: string | null
   lockedBy?: string | null
   lockReason?: string | null
@@ -93,6 +94,7 @@ export interface Match {
   marketStatus?: MarketStatus | null
   liveMinute?: string // e.g. "68'"
   winner?: TeamCode | 'draw'
+  decidedBy?: 'regulation' | 'extra_time' | 'penalties' | null
   lockedAt?: string | null
   lockedBy?: string | null
   lockReason?: string | null

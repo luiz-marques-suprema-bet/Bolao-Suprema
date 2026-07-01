@@ -336,7 +336,8 @@ function MatchCard({ match, settled, profiles, meId, query, myCtx, rankByUser }:
         </div>
         {settled && isKo && realAdvancer && (
           <div className="px-4 pb-1 text-center font-mono text-[9px] font-bold tracking-eyebrow text-green-deep">
-            {realAdvancer} PASSOU{match.homeScore === match.awayScore ? ' · NOS PÊNALTIS' : ''}
+            {realAdvancer} PASSOU{match.decidedBy === 'extra_time' ? ' · NA PRORROGAÇÃO'
+              : (match.decidedBy === 'penalties' || match.homeScore === match.awayScore) ? ' · NOS PÊNALTIS' : ''}
           </div>
         )}
         <div className="px-4 pb-2 text-center font-mono text-[9px] text-ink-4">

@@ -202,12 +202,11 @@ Deno.serve(async (req) => {
 
       const phase = phaseOf(ev.strStatus)
 
-      // Um jogo JA encerrado nunca volta pra "ao vivo"/"agendado". Se ja temos
-      // finished e a fonte ainda mostra ao vivo (lag comum: a fonte demora a
-      // marcar FT) ou agendado, ignoramos — assim o cron NUNCA desfaz um
-      // encerramento (manual do admin ou automatico). Correcao de placar com a
-      // fonte tambem encerrada (phase==='finished') continua passando abaixo.
-      if (current.status === 'finished' && phase !== 'finished') continue
+      // Um jogo JA encerrado e AUTORIDADE do admin: o cron NUNCA reescreve o placar
+      // de um jogo finished. A fonte free traz o placar FINAL (com prorrogacao) — ex:
+      // BEL 2x2 SEN nos 90min viraria 3x2 na fonte e sobrescreveria o placar do tempo
+      // regulamentar apurado. Uma vez finished, so o admin altera (placar + como passou).
+      if (current.status === 'finished') continue
 
       // (A) Sincroniza o HORARIO de inicio com a fonte (jogos NAO encerrados).
       // Garante que o horario exibido e o fechamento da aposta batam com quando
@@ -235,14 +234,15 @@ Deno.serve(async (req) => {
       const providerHasScore = h != null && a != null
       if (!providerHasScore) continue // sem placar real, nao toca
 
-      // No mata-mata, empate no tempo regulamentar = decidido em prorrogacao/
-      // penaltis. A fonte free nao entrega o vencedor dos penaltis, e gravar
-      // winner='draw' quebraria o "+2 quem avanca" e o avanco da chave. Entao NAO
-      // finalizamos esses casos automaticamente — ficam pro admin confirmar o
-      // classificado na mao (rede de seguranca combinada).
+      // Mata-mata: NUNCA finalizamos automaticamente. O placar da fonte free vem com
+      // prorrogacao embutida (ex: 2x2 nos 90min -> 3x2 final) e nao distingue penaltis
+      // de prorrogacao — o que quebraria o placar do tempo regulamentar e o "+2 quem
+      // passa". O jogo comeca e atualiza AO VIVO normalmente (phase='live' abaixo);
+      // o FECHO do KO e manual (admin poe o placar dos 90min + como passou: penaltis,
+      // prorrogacao ou tempo normal). Grupos continuam finalizando sozinhos.
       const isKnockout = (current.stage ?? 'group') !== 'group'
-      if (phase === 'finished' && isKnockout && h === a) {
-        planned.push({ match_code: current.match_code, ko_penaltis: `${h}x${a} — mata-mata empatado: confirmar classificado manualmente` })
+      if (phase === 'finished' && isKnockout) {
+        planned.push({ match_code: current.match_code, ko_manual: `${h}x${a} — mata-mata: fechar manualmente (placar 90min + como passou)` })
         continue
       }
 

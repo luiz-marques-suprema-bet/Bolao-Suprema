@@ -86,7 +86,7 @@ async function fetchKpis(): Promise<KpiData> {
 async function updateMatchStatus(
   matchCode: string,
   status: MatchStatus,
-  extra?: { homeScore?: number; awayScore?: number; liveMinute?: string; winner?: string; lockReason?: string }
+  extra?: { homeScore?: number; awayScore?: number; liveMinute?: string; winner?: string; lockReason?: string; decidedBy?: string }
 ) {
   const result = await adminUpdateMatchStatus(matchCode, status, extra)
   return result.error ? new Error(result.error) : null
@@ -161,6 +161,7 @@ function MatchRowAdmin({
   const [homeGoals, setHomeGoals] = useState(currentHomeScore ?? 0)
   const [awayGoals, setAwayGoals] = useState(currentAwayScore ?? 0)
   const [winnerPick, setWinnerPick] = useState<string | null>(null)
+  const [method, setMethod] = useState<'penalties' | 'extra_time' | null>(null)
 
   const homeTeam = TEAMS[homeCode]
   const awayTeam = TEAMS[awayCode]
@@ -184,21 +185,22 @@ function MatchRowAdmin({
 
   async function handleSetResult() {
     if (isMockMode) { onAction('Mock mode: resultado não persiste', false); return }
-    if (needsWinner && !winnerPick) {
-      onAction('Empate no mata-mata: escolha quem avançou (pênaltis).', false)
+    if (needsWinner && (!winnerPick || !method)) {
+      onAction('Empate no tempo normal: escolha quem avançou E se foi pênaltis ou prorrogação.', false)
       return
     }
     setBusy(true)
-    // Mata-mata empatado: settle_match_result gravaria winner='draw' (não avança a
-    // chave nem pontua o "quem passa"). Usamos admin_update_match_status com o
-    // vencedor explícito → triggers apuram + a próxima fase preenche sozinha.
-    if (needsWinner && winnerPick) {
-      const err = await updateMatchStatus(matchCode, 'finished', { homeScore: homeGoals, awayScore: awayGoals, winner: winnerPick })
+    // Mata-mata empatado no tempo normal: settle_match_result gravaria winner='draw'
+    // (não avança a chave nem pontua o "quem passa"). Usamos admin_update_match_status
+    // com o vencedor + método (decided_by) → triggers apuram (o +2 só sai nos pênaltis)
+    // + a próxima fase preenche sozinha.
+    if (needsWinner && winnerPick && method) {
+      const err = await updateMatchStatus(matchCode, 'finished', { homeScore: homeGoals, awayScore: awayGoals, winner: winnerPick, decidedBy: method })
       if (err) {
         onAction(`Erro: ${err.message}`, false)
       } else {
         applyOverride({ matchCode, status: 'finished', marketStatus: 'settled', homeScore: homeGoals, awayScore: awayGoals })
-        onAction(`✓ ${matchCode}: ${winnerPick} avançou (pênaltis) · palpites apurados`, true)
+        onAction(`✓ ${matchCode}: ${winnerPick} avançou (${method === 'penalties' ? 'pênaltis' : 'prorrogação'}) · palpites apurados`, true)
         setEditResult(false)
       }
       setBusy(false)
@@ -275,7 +277,7 @@ function MatchRowAdmin({
                 <Flag team={homeTeam} size={16} />
                 <span className="font-mono text-[11px] font-bold">{homeCode}</span>
                 <input type="number" min={0} max={30} value={homeGoals}
-                  onChange={e => { setHomeGoals(Math.max(0, parseInt(e.target.value) || 0)); setWinnerPick(null) }}
+                  onChange={e => { setHomeGoals(Math.max(0, parseInt(e.target.value) || 0)); setWinnerPick(null); setMethod(null) }}
                   className="w-12 border-2 border-ink text-center font-mono text-[15px] font-bold px-1 py-1 bg-yellow outline-none" />
               </div>
             </div>
@@ -284,7 +286,7 @@ function MatchRowAdmin({
               <div className="font-mono text-[8px] tracking-eyebrow text-ink-4 mb-1">FORA</div>
               <div className="flex items-center gap-1.5">
                 <input type="number" min={0} max={30} value={awayGoals}
-                  onChange={e => { setAwayGoals(Math.max(0, parseInt(e.target.value) || 0)); setWinnerPick(null) }}
+                  onChange={e => { setAwayGoals(Math.max(0, parseInt(e.target.value) || 0)); setWinnerPick(null); setMethod(null) }}
                   className="w-12 border-2 border-ink text-center font-mono text-[15px] font-bold px-1 py-1 bg-yellow outline-none" />
                 <span className="font-mono text-[11px] font-bold">{awayCode}</span>
                 <Flag team={awayTeam} size={16} />
@@ -293,23 +295,40 @@ function MatchRowAdmin({
           </div>
 
           {needsWinner && (
-            <div className="border-2 border-yellow/70 bg-yellow/10 px-3 py-2">
-              <div className="font-mono text-[9px] tracking-eyebrow text-ink-2 mb-1.5">EMPATE NO MATA-MATA — QUEM AVANÇOU? (pênaltis/prorrogação)</div>
-              <div className="flex gap-2 flex-wrap">
-                {[homeCode, awayCode].map(code => (
-                  <button key={code} type="button" onClick={() => setWinnerPick(code)}
-                    className={cn('flex items-center gap-1.5 border-2 px-3 py-1 font-mono text-[11px] font-bold transition-colors',
-                      winnerPick === code ? 'bg-ink border-ink text-paper' : 'border-ink/30 text-ink-3 hover:border-ink')}>
-                    <Flag team={TEAMS[code]} size={16} /> {code} avança
+            <div className="border-2 border-yellow/70 bg-yellow/10 px-3 py-2 space-y-2">
+              <div>
+                <div className="font-mono text-[9px] tracking-eyebrow text-ink-2 mb-1.5">EMPATE NO TEMPO NORMAL — QUEM AVANÇOU?</div>
+                <div className="flex gap-2 flex-wrap">
+                  {[homeCode, awayCode].map(code => (
+                    <button key={code} type="button" onClick={() => setWinnerPick(code)}
+                      className={cn('flex items-center gap-1.5 border-2 px-3 py-1 font-mono text-[11px] font-bold transition-colors',
+                        winnerPick === code ? 'bg-ink border-ink text-paper' : 'border-ink/30 text-ink-3 hover:border-ink')}>
+                      <Flag team={TEAMS[code]} size={16} /> {code} avança
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="font-mono text-[9px] tracking-eyebrow text-ink-2 mb-1.5">COMO SE CLASSIFICOU? <span className="text-ink-4 normal-case tracking-normal">(pênaltis dá +2 pra quem acertou; prorrogação não)</span></div>
+                <div className="flex gap-2 flex-wrap">
+                  <button type="button" onClick={() => setMethod('penalties')}
+                    className={cn('border-2 px-3 py-1 font-mono text-[11px] font-bold transition-colors',
+                      method === 'penalties' ? 'bg-ink border-ink text-paper' : 'border-ink/30 text-ink-3 hover:border-ink')}>
+                    PÊNALTIS
                   </button>
-                ))}
+                  <button type="button" onClick={() => setMethod('extra_time')}
+                    className={cn('border-2 px-3 py-1 font-mono text-[11px] font-bold transition-colors',
+                      method === 'extra_time' ? 'bg-ink border-ink text-paper' : 'border-ink/30 text-ink-3 hover:border-ink')}>
+                    PRORROGAÇÃO
+                  </button>
+                </div>
               </div>
             </div>
           )}
 
           <div className="flex items-center gap-2">
             <button onClick={() => setEditResult(false)} className="btn-ghost text-[9px] px-2 py-1">CANCELAR</button>
-            <button onClick={handleSetResult} disabled={busy || (needsWinner && !winnerPick)}
+            <button onClick={handleSetResult} disabled={busy || (needsWinner && (!winnerPick || !method))}
               className="btn-yellow text-[9px] px-3 py-1 disabled:opacity-40 ml-auto">
               {needsWinner ? 'CONFIRMAR AVANÇO + PONTUAR →' : 'CONFIRMAR + PONTUAR →'}
             </button>
