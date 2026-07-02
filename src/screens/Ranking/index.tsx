@@ -354,7 +354,11 @@ function RankingLoading() {
   )
 }
 
-const SCORING_SECTIONS = [
+const SCORING_SECTIONS: {
+  label: string
+  rules: { pts: number; label: string; tip: string }[]
+  bonus?: { label: string; tip: string }
+}[] = [
   {
     label: 'FASE DE GRUPOS',
     rules: [
@@ -367,11 +371,15 @@ const SCORING_SECTIONS = [
   {
     label: 'MATA-MATA',
     rules: [
-      { pts: 12, label: 'Acerto do placar exato (apenas tempo regulamentar)', tip: 'Cravou o placar dos 90 min (a prorrogação NÃO conta pro placar). Num empate, se você TAMBÉM acertar quem passa, ganha +2 de bônus → 14.' },
+      { pts: 12, label: 'Acerto do placar exato (apenas tempo regulamentar)', tip: 'Cravou o placar dos 90 min (a prorrogação NÃO conta pro placar).' },
       { pts: 8,  label: 'Acerto do resultado com score de um time', tip: 'Acertou o resultado (V/E/D) E o placar de um dos times, no tempo normal.' },
-      { pts: 5, label: 'Acerto do resultado apenas', tip: 'Acertou só o resultado (ex: empate). O classificado não soma nessa faixa.' },
-      { pts: '+2', label: 'BÔNUS: acertou quem passa em caso de empate', tip: 'Bônus de +2 por acertar quem se classifica num empate — vale igual na prorrogação OU nos pênaltis. Cravou o empate (12) + quem passa = 14. Acertou só o classificado (errou o placar) = 2.' },
+      { pts: 5,  label: 'Acerto do resultado apenas', tip: 'Acertou só o resultado (V/E/D) — ex: acertou que ia dar empate.' },
+      { pts: 2,  label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', tip: 'Errou o placar E o resultado, mas num empate acertou SÓ quem se classifica. Vale na prorrogação ou nos pênaltis.' },
     ],
+    bonus: {
+      label: 'acertou quem passa em caso de empate',
+      tip: 'Coisa diferente da faixa de 2: aqui é um BÔNUS que SOMA ao placar exato de um empate — cravou o empate (12) + acertou quem passa = 14. Vale igual na prorrogação ou nos pênaltis.',
+    },
   },
   {
     label: 'APOSTAS ESPECIAIS',
@@ -406,6 +414,16 @@ function ScoringRulesBox({ rules: _rules }: { rules: ScoringRule[] }) {
                 </div>
               ))}
             </div>
+            {section.bonus && (
+              <div className="mt-2 flex items-baseline gap-2 border-l-4 border-yellow bg-yellow/10 py-1.5 pl-2 pr-2">
+                <span className="font-display text-xl text-ink w-8 flex-shrink-0 text-right tabular-nums">+2</span>
+                <FloatingTooltip label={section.bonus.tip}>
+                  <span className="font-mono text-[11px] text-ink-2 cursor-default">
+                    <strong className="tracking-eyebrow">BÔNUS</strong> · {section.bonus.label}
+                  </span>
+                </FloatingTooltip>
+              </div>
+            )}
           </div>
         ))}
       </div>
