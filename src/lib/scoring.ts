@@ -12,16 +12,16 @@ import type { MatchStage } from '@/types'
 //   Placar exato (90 min)                     → 12 pts
 //   Resultado + placar de um time             →  8 pts
 //   Resultado correto (V/E/D)                 →  5 pts
-//   Acerto do classificado (só ele)           →  2 pts (num empate/pênaltis)
+//   Acerto do classificado (só ele)           →  2 pts (num empate: prorrog. ou pênaltis)
 //   Nada                                      →  0 pts
-//   BÔNUS: +2 por acertar quem se classifica  → SÓ soma no placar exato de um
-//     empate (12 → 14). Nas faixas 8/5 NÃO soma.
+//   BÔNUS: +2 SE ACERTAR QUEM PASSA EM CASO   → soma no placar exato de um empate
+//     DE EMPATE (prorrogação ou pênaltis)        (12 → 14). Nas faixas 8/5 NÃO soma.
 //   → jogo decidido no tempo normal: máx 12. Empate cravado + classificado: 14.
 //
 // O placar/resultado contam SÓ o tempo regulamentar (90 min) — gol na prorrogação
-// NÃO muda o placar. O +2 é um BÔNUS por acertar quem se classifica; só existe em
-// jogo que EMPATOU nos 90 min (pênaltis decidem quem passa) e apenas em cima do
-// placar exato. Acertar SÓ o classificado (errou placar/resultado) num empate = 2.
+// NÃO muda o placar. O +2 é um BÔNUS por acertar quem se classifica; vale em qualquer
+// EMPATE no tempo normal (decidido na prorrogação OU nos pênaltis — dá no mesmo), em
+// cima do placar exato. Acertar SÓ o classificado (errou placar/resultado) num empate = 2.
 //
 // Grupos — "gols do vencedor" (+7): exige o resultado E os gols do time VENCEDOR;
 // só os gols do perdedor (com resultado certo) vale 5. Em empate não há vencedor.
@@ -86,8 +86,9 @@ export function calculatePoints(
  * dos 90 min). O +2 é um BÔNUS por acertar quem se classifica e SÓ soma no placar
  * exato de um empate (12 → 14); nas faixas 8/5 não soma. Acertar só o classificado
  * (errou placar/resultado) num empate = 2. Jogo decidido nos 90 min: máx 12.
+ * O empate vale igual se foi decidido na prorrogação OU nos pênaltis.
  * `predictedAdvancer` = quem o usuário acha que passa (home/away).
- * `realAdvancer` = quem passou de verdade (pode ter sido nos pênaltis).
+ * `realAdvancer` = quem passou de verdade (prorrogação ou pênaltis).
  */
 export function calculateKoPoints(
   prediction: PredictionInput,
@@ -105,7 +106,7 @@ export function calculateKoPoints(
   // Escada — cada palpite cai em UMA faixa só (não é soma). O +2 é um BÔNUS por
   // acertar quem se classifica e SÓ soma no placar exato de um empate (12→14); nas
   // faixas 8/5 ele NÃO soma. "Só o classificado" (2) é a faixa de baixo: vale num
-  // empate (pênaltis) quando errou o placar E o resultado, mas acertou quem passa.
+  // empate (prorrogação ou pênaltis) quando errou o placar E o resultado, mas acertou quem passa.
   if (exactMatch) return drawInRegulation && advancerCorrect ? 14 : 12
   if (correctResult && oneTeamGoals) return 8
   if (correctResult) return 5

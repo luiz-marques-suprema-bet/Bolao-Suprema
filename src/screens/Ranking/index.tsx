@@ -367,10 +367,10 @@ const SCORING_SECTIONS = [
   {
     label: 'MATA-MATA',
     rules: [
-      { pts: 12, label: 'Acerto do placar exato (apenas tempo regulamentar)', tip: 'Cravou o placar dos 90 min (a prorrogação NÃO conta). Num empate que foi pros pênaltis, se você TAMBÉM acertar quem se classifica, ganha +2 de bônus → 14.' },
+      { pts: 12, label: 'Acerto do placar exato (apenas tempo regulamentar)', tip: 'Cravou o placar dos 90 min (a prorrogação NÃO conta pro placar). Num empate, se você TAMBÉM acertar quem passa, ganha +2 de bônus → 14.' },
       { pts: 8,  label: 'Acerto do resultado com score de um time', tip: 'Acertou o resultado (V/E/D) E o placar de um dos times, no tempo normal.' },
-      { pts: 5, label: 'Acerto do resultado apenas', tip: 'Acertou só o resultado (ex: empate). O classificado NÃO soma aqui — é 5, não é 5+2.' },
-      { pts: 2, label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', tip: 'Você acertou SÓ quem se classifica: errou o placar e o resultado, mas num empate (pênaltis) cravou quem passa.' },
+      { pts: 5, label: 'Acerto do resultado apenas', tip: 'Acertou só o resultado (ex: empate). O classificado não soma nessa faixa.' },
+      { pts: '+2', label: 'BÔNUS: acertou quem passa em caso de empate', tip: 'Bônus de +2 por acertar quem se classifica num empate — vale igual na prorrogação OU nos pênaltis. Cravou o empate (12) + quem passa = 14. Acertou só o classificado (errou o placar) = 2.' },
     ],
   },
   {

@@ -192,8 +192,9 @@ function MatchRowAdmin({
     setBusy(true)
     // Mata-mata empatado no tempo normal: settle_match_result gravaria winner='draw'
     // (não avança a chave nem pontua o "quem passa"). Usamos admin_update_match_status
-    // com o vencedor + método (decided_by) → triggers apuram (o +2 só sai nos pênaltis)
-    // + a próxima fase preenche sozinha.
+    // com o vencedor + método (decided_by) → triggers apuram (o +2 sai em qualquer
+    // empate; o método é só pra exibir "prorrogação" vs "pênaltis") + a próxima fase
+    // preenche sozinha.
     if (needsWinner && winnerPick && method) {
       const err = await updateMatchStatus(matchCode, 'finished', { homeScore: homeGoals, awayScore: awayGoals, winner: winnerPick, decidedBy: method })
       if (err) {
@@ -309,7 +310,7 @@ function MatchRowAdmin({
                 </div>
               </div>
               <div>
-                <div className="font-mono text-[9px] tracking-eyebrow text-ink-2 mb-1.5">COMO SE CLASSIFICOU? <span className="text-ink-4 normal-case tracking-normal">(pênaltis dá +2 pra quem acertou; prorrogação não)</span></div>
+                <div className="font-mono text-[9px] tracking-eyebrow text-ink-2 mb-1.5">COMO SE CLASSIFICOU? <span className="text-ink-4 normal-case tracking-normal">(só pra exibir; o +2 vale nos dois)</span></div>
                 <div className="flex gap-2 flex-wrap">
                   <button type="button" onClick={() => setMethod('penalties')}
                     className={cn('border-2 px-3 py-1 font-mono text-[11px] font-bold transition-colors',

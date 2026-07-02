@@ -32,12 +32,12 @@ const GROUP_RULES = [
 
 // Mata-mata (regras 5.2 oficiais). ESCADA: cada palpite cai em UMA faixa (não soma).
 // O placar conta só o tempo regulamentar. O +2 é um BÔNUS por acertar quem se
-// classifica e só soma no placar exato de um empate (12 → 14).
+// classifica em caso de empate — vale igual na prorrogação OU nos pênaltis.
 const KO_RULES = [
-  { pts: 12, label: 'Acerto do placar exato (apenas tempo regulamentar)',        detail: 'decidido nos 90 min vale 12; num empate (pênaltis), cravar o placar + acertar quem se classifica = 14 (bônus +2)', accent: 'bg-green' },
+  { pts: 12, label: 'Acerto do placar exato (apenas tempo regulamentar)',        detail: 'cravou o placar dos 90 min. Num empate, + acertar quem passa = 14 (bônus +2)', accent: 'bg-green' },
   { pts: 8,  label: 'Acerto do resultado com score de um time',                  detail: 'o resultado E o placar de um dos times',          accent: 'bg-yellow' },
-  { pts: 5,  label: 'Acerto do resultado apenas',                                detail: 'acertou só o resultado (V/E/D) — o classificado não soma aqui', accent: 'bg-yellow/60' },
-  { pts: 2,  label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', detail: 'errou o placar e o resultado, mas num empate (pênaltis) acertou quem se classifica', accent: 'bg-paper-deep' },
+  { pts: 5,  label: 'Acerto do resultado apenas',                                detail: 'acertou só o resultado (V/E/D)',                  accent: 'bg-yellow/60' },
+  { pts: 2,  label: 'Acerto do classificado (incluindo prorrogação e pênaltis)', detail: 'errou o placar e o resultado, mas num empate acertou quem se classifica', accent: 'bg-paper-deep' },
 ]
 
 const GENERAL_RULES = [
@@ -156,6 +156,12 @@ export function RegulamentoScreen() {
           <div className="ui-panel border-t-0 divide-y divide-hairline">
             <RulesBlock title="FASE DE GRUPOS" rules={GROUP_RULES} />
             <RulesBlock title="MATA-MATA (fase eliminatória)" rules={KO_RULES} />
+            <div className="border-l-4 border-l-green bg-green/10 px-5 py-3">
+              <div className="font-display text-xl text-green-deep leading-none">BÔNUS: +2 PONTOS</div>
+              <div className="mt-1 font-mono text-[11px] text-ink-2 leading-snug">
+                se acertar QUEM PASSA em caso de empate — vale igual na prorrogação ou nos pênaltis. Cravou o placar do empate (12) + acertou quem passa = <strong>14</strong>.
+              </div>
+            </div>
             <RulesBlock title="APOSTAS ESPECIAIS" rules={GENERAL_RULES} />
           </div>
         </section>
@@ -164,9 +170,9 @@ export function RegulamentoScreen() {
         <section className="grid md:grid-cols-2 gap-4">
           <InfoCard title="MATA-MATA" accent="border-l-4 border-l-green" items={[
             'O placar e o resultado (12 / 8 / 5) contam SÓ o tempo regulamentar (90 min).',
-            'É uma ESCADA: cada palpite vale UMA faixa, não soma entre elas (acertar só o resultado do empate = 5, não 5+2).',
-            'O +2 é um BÔNUS por acertar quem se classifica — só soma no placar exato de um empate (12 → 14).',
-            'Acertou SÓ o classificado (errou o placar e o resultado), num empate = 2.',
+            'BÔNUS: +2 se acertar quem passa em caso de empate — na prorrogação OU nos pênaltis, tanto faz.',
+            'Cravou o placar do empate (12) + acertou quem passa = 14. Acertou só o classificado (errou o placar) = 2.',
+            'Jogo decidido no tempo normal: sem bônus (o classificado já está no placar).',
           ]} />
           <InfoCard title="CANCELAMENTO" accent="border-l-4 border-l-red/60" items={[
             'Em caso de cancelamento, a organização pode anular a rodada ou considerar o resultado oficial.',

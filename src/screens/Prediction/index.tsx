@@ -1031,13 +1031,13 @@ const KO_STAGE_LABELS: Record<string, string> = {
 }
 const KO_STAGE_ORDER = ['round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final']
 
-// Mata-mata: ESCADA (uma faixa só). O +2 é bônus por acertar quem se classifica e
-// só soma no placar exato de um empate (12 → 14). "Resultado apenas" não soma.
+// Mata-mata: ESCADA (uma faixa só). O +2 é bônus por acertar quem passa em caso de
+// empate (prorrogação OU pênaltis, tanto faz); soma no placar exato do empate (12→14).
 const KO_POINTS_GUIDE = [
   { pts: '+12', label: 'Placar exato (tempo normal) · empate + quem passa = 14' },
   { pts: '+8',  label: 'Resultado com score de um time' },
-  { pts: '+5',  label: 'Resultado apenas (não soma o classificado)' },
-  { pts: '+2',  label: 'Só o classificado (num empate/pênaltis)' },
+  { pts: '+5',  label: 'Resultado apenas' },
+  { pts: '+2',  label: 'BÔNUS: quem passa em caso de empate (prorrog./pênaltis)' },
 ]
 
 function KnockoutTab() {
