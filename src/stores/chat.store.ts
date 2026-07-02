@@ -252,8 +252,20 @@ function sortMessages(messages: ChatMessage[]) {
 }
 
 function mergeMessage(messages: ChatMessage[], msg: ChatMessage) {
+  const existing = messages.find(m => m.id === msg.id)
   const without = messages.filter(m => m.id !== msg.id)
-  return sortMessages([...without, msg])
+  // Reações e votos de enquete vivem em tabelas próprias e são mantidos localmente
+  // (otimista + realtime). Mensagens vindas do poll/realtime NÃO os trazem, então ao
+  // re-mesclar preservamos os do que já está na tela — senão a reação "pisca" (some no
+  // merge e volta no próximo evento). O resync reaplica os valores do banco por cima.
+  const next: ChatMessage = existing
+    ? {
+        ...msg,
+        reactions: existing.reactions ?? msg.reactions,
+        poll: msg.poll && existing.poll ? { ...msg.poll, votes: existing.poll.votes } : msg.poll,
+      }
+    : msg
+  return sortMessages([...without, next])
 }
 
 function applyVotes(messages: ChatMessage[], votes: VoteRow[]) {
@@ -588,6 +600,18 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     set(s => {
       let merged = s.messages
       for (const m of snapshot.messages) merged = mergeMessage(merged, m)
+      // O merge preserva reações/votos locais; o snapshot traz os frescos do banco →
+      // reaplica por cima (autoritativo) pra pegar o que chegou com a aba em 2o plano.
+      const fresh = new Map(snapshot.messages.map(m => [m.id, m]))
+      merged = merged.map(m => {
+        const f = fresh.get(m.id)
+        if (!f) return m
+        return {
+          ...m,
+          reactions: f.reactions ?? m.reactions,
+          poll: m.poll && f.poll ? { ...m.poll, votes: f.poll.votes } : m.poll,
+        }
+      })
       return { messages: merged, pinnedId: snapshot.pinnedId }
     })
   },
